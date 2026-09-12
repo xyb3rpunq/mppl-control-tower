@@ -1,0 +1,141 @@
+{{define "org"}}
+{{$l := .Lang}}{{$a := .Analysis}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Struktur organisasi proyek{{else}}Project organisation{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Lima tingkat dari sponsor sampai pengguna akhir. Tiga posisi diisi nama mahasiswa; sisanya adalah peran yang harus ada tetapi belum memiliki orang - kenyataan yang lebih baik dinyatakan terbuka daripada disamarkan.{{else}}Five levels from sponsor to end user. Three positions carry student names; the rest are roles that must exist but have nobody assigned - a reality better stated openly than papered over.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{orgChart $l}}</div>
+  </figure>
+
+  <div class="role-grid">
+    {{range team}}
+    <article class="role-card level-{{.Level}}{{if .Optional}} optional{{end}}">
+      <header>
+        <span class="role-code">{{.Role}}</span>
+        <h3>{{tx .Title $l}}</h3>
+        {{if .Person}}<p class="role-person">{{.Person}} · {{.NIM}}</p>{{else}}<p class="role-person unassigned">{{if eq $l "id"}}belum ada nama{{else}}unassigned{{end}}</p>{{end}}
+      </header>
+      <ul class="dash">{{range .Responsibili}}<li>{{tx . $l}}</li>{{end}}</ul>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Matriks RACI{{else}}RACI matrix{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}R mengerjakan, A bertanggung jawab akhir dan menyetujui, C dimintai masukan, I diberi tahu. Aturan mainnya: tepat satu A per baris, dan minimal satu R. Kedua aturan itu diperiksa uji otomatis, bukan sekadar dipercaya - matriks RACI dengan dua A pada satu baris berarti tidak ada yang benar-benar bertanggung jawab.{{else}}R does the work, A is accountable and approves, C is consulted, I is informed. The rules: exactly one A per row, at least one R. Both are checked by automated tests rather than trusted - a RACI row with two As means nobody is truly accountable.{{end}}</p>
+  <div class="table-wrap">
+    <table class="data raci">
+      <thead>
+        <tr>
+          <th>{{if eq $l "id"}}Fase WBS{{else}}WBS phase{{end}}</th>
+          {{range raciRoles}}<th class="num">{{.}}</th>{{end}}
+        </tr>
+      </thead>
+      <tbody>
+        {{range raci}}
+        {{$row := .}}
+        <tr>
+          <th>{{.Phase}} {{tx .Name $l}}</th>
+          {{range raciRoles}}
+          {{$v := index $row.Assignment .}}
+          <td class="num raci-{{if $v}}{{$v}}{{else}}none{{end}}">{{if $v}}{{$v}}{{else}}·{{end}}</td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Pembebanan sumber daya{{else}}Resource loading{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}CPM menganggap sumber daya tak terbatas: kalau dua aktivitas boleh paralel, CPM menjadwalkannya paralel - tak peduli keduanya membutuhkan orang yang sama. Histogram di bawah memeriksa asumsi itu terhadap kapasitas nyata. Batang merah adalah hari ketika satu orang dijadwalkan mengerjakan lebih dari satu pekerjaan penuh waktu.{{else}}CPM assumes unlimited resources: if two activities may run in parallel, CPM schedules them in parallel - regardless of whether they need the same person. The histogram below tests that assumption against real capacity. Red bars are days when one person is scheduled for more than one full-time job.{{end}}
+  </p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{resourceHistogram $l}}</div>
+  </figure>
+
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Beban per peran{{else}}Load per role{{end}}</caption>
+      <thead><tr><th>{{t $l "t.role"}}</th><th class="num">{{if eq $l "id"}}Hari-orang{{else}}Person-days{{end}}</th><th class="num">{{if eq $l "id"}}Puncak{{else}}Peak{{end}}</th><th class="num">{{if eq $l "id"}}Utilisasi{{else}}Utilisation{{end}}</th><th class="num">{{if eq $l "id"}}Hari lebih beban{{else}}Over-days{{end}}</th></tr></thead>
+      <tbody>
+        {{range $a.Resources.Roles}}
+        <tr class="{{if .OverDays}}has-conflict{{end}}">
+          <th>{{.Role}}</th>
+          <td class="num">{{num .TotalDays 1 $l}}</td>
+          <td class="num">{{num .PeakLoad 1 $l}}</td>
+          <td class="num">{{pct .Utilisation 0 $l}}</td>
+          <td class="num">{{if .OverDays}}<strong class="neg">{{.OverDays}}</strong>{{else}}0{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <table class="data">
+      <caption>{{if eq $l "id"}}Bentrokan terberat{{else}}Worst conflicts{{end}}</caption>
+      <thead><tr><th>{{t $l "t.role"}}</th><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th class="num">{{if eq $l "id"}}Beban{{else}}Load{{end}}</th><th>{{t $l "t.activity"}}</th></tr></thead>
+      <tbody>
+        {{range $i, $c := $a.Resources.Conflicts}}
+        {{if lt (f $i) 10.0}}
+        <tr>
+          <th>{{$c.Role}}</th>
+          <td class="small">{{dateShort (dateAt $c.Day) $l}}</td>
+          <td class="num neg">{{num $c.Load 1 $l}} / {{num $c.Capacity 1 $l}}</td>
+          <td class="small">{{range $j, $act := $c.Activities}}{{if $j}}, {{end}}<code>{{$act}}</code>{{end}}</td>
+        </tr>
+        {{end}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Jadwalnya sah secara matematis, tetapi tidak bisa dijalankan{{else}}The schedule is mathematically valid yet undeliverable{{end}}</h4>
+    <p>{{if eq $l "id"}}Ada {{len $a.Resources.Conflicts}} hari-peran dengan beban melebihi kapasitas. Yang paling jelas: satu Backend Developer dijadwalkan mengerjakan A17 dan A19 pada hari yang sama, dan satu Frontend Developer mengerjakan A22 dan A23 bersamaan. Kedua bentrokan itu tidak akan pernah terlihat dari Gantt chart biasa.{{else}}There are {{len $a.Resources.Conflicts}} role-days loaded beyond capacity. The clearest: one Backend Developer scheduled on both A17 and A19 the same day, and one Frontend Developer on A22 and A23 at once. Neither clash is visible in an ordinary Gantt chart.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Geser A19 memakai total float-nya yang {{(taskOf "A19").TotalFloat}} hari - itu menyelesaikan bentrokan backend tanpa menyentuh jalur kritis sama sekali. Untuk frontend, A23 punya float {{(taskOf "A23").TotalFloat}} hari, cukup untuk digeser setelah A22 selesai.{{else}}Shift A19 into its {{(taskOf "A19").TotalFloat}} days of total float - that clears the backend clash without touching the critical path at all. For frontend, A23 holds {{(taskOf "A23").TotalFloat}} days of float, enough to move it after A22 completes.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Analisis pemangku kepentingan{{else}}Stakeholder analysis{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Kuadran menentukan strategi: kuasa tinggi dan kepentingan tinggi dikelola erat; kuasa tinggi tetapi kepentingan rendah dijaga kepuasannya; kepentingan tinggi tetapi kuasa rendah diberi informasi; sisanya dipantau.{{else}}The quadrant sets the strategy: high power and high interest are managed closely; high power but low interest are kept satisfied; high interest but low power are kept informed; the rest are monitored.{{end}}</p>
+  <div class="two-col grid-and-table">
+    <figure class="figure">
+      <div class="figure-body scrollable">{{powerInterest $l}}</div>
+    </figure>
+    <table class="data">
+      <thead><tr><th></th><th>{{if eq $l "id"}}Pemangku kepentingan{{else}}Stakeholder{{end}}</th><th class="num">K</th><th class="num">I</th><th>{{if eq $l "id"}}Strategi{{else}}Strategy{{end}}</th></tr></thead>
+      <tbody>
+        {{range stakeholders}}
+        <tr>
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx .Name $l}}<br><span class="small muted">{{tx .Need $l}}</span></td>
+          <td class="num">{{.Power}}</td>
+          <td class="num">{{.Interest}}</td>
+          <td class="small">{{tx .Strategy $l}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Rencana komunikasi{{else}}Communication plan{{end}}</h2>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Dari{{else}}From{{end}}</th><th>{{if eq $l "id"}}Ke{{else}}To{{end}}</th><th>{{if eq $l "id"}}Frekuensi{{else}}Frequency{{end}}</th><th>{{if eq $l "id"}}Media{{else}}Medium{{end}}</th><th>{{if eq $l "id"}}Tujuan{{else}}Purpose{{end}}</th></tr></thead>
+    <tbody>
+      {{range commsPlan}}
+      <tr>
+        <td>{{tx .From $l}}</td><td>{{tx .To $l}}</td>
+        <td>{{tx .Frequency $l}}</td><td>{{tx .Medium $l}}</td>
+        <td class="small">{{tx .Purpose $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

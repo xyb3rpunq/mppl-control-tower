@@ -1,0 +1,119 @@
+{{define "material"}}
+{{$l := .Lang}}{{$a := .Analysis}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Sembilan area pengetahuan manajemen proyek{{else}}Nine project management knowledge areas{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Kerangka sembilan area ini berasal dari Modul 2 MPPL dan dipakai sebagai dasar Tugas 2. Kolom terakhir bukan klaim - ia menunjuk ke artefak konkret di situs ini yang membuktikan area tersebut benar-benar dikerjakan, bukan sekadar disebut.{{else}}This nine-area framing comes from MPPL Module 2 and underpins Assignment 2. The last column is not a claim - it points to a concrete artefact on this site proving the area was actually worked, not merely named.{{end}}
+  </p>
+  <div class="note-box">
+    <p>{{if eq $l "id"}}Catatan: PMBOK edisi kelima memekarkan daftar ini menjadi sepuluh dengan menambahkan <em>Project Stakeholder Management</em>. Materi kuliah memakai sembilan, jadi sembilan yang dipakai di sini - area kesepuluh tetap dikerjakan dan buktinya ada pada grid kuasa-kepentingan di halaman Organisasi.{{else}}Note: PMBOK fifth edition expands this to ten by adding <em>Project Stakeholder Management</em>. The course material uses nine, so nine is what is used here - the tenth area is still covered, with its evidence in the power-interest grid on the Organisation page.{{end}}</p>
+  </div>
+  <div class="ka-grid">
+    {{range knowledgeAreas}}
+    <article class="ka-card">
+      <header>
+        <span class="ka-no">{{.No}}</span>
+        <h3>{{tx .Name $l}}</h3>
+      </header>
+      <p class="ka-content">{{tx .Content $l}}</p>
+      <p class="ka-evidence"><strong>{{t $l "t.evidence"}}:</strong> {{tx .Evidence $l}}</p>
+      <a class="ka-link" href="{{$.BaseURL}}{{pathFor .Route $l}}">{{if eq $l "id"}}buka artefaknya{{else}}open the artefact{{end}} →</a>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Siklus hidup proyek{{else}}Project lifecycle{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Empat tahap sesuai Tugas 3: konsepsi, perencanaan, eksekusi, operasi. Kolom fase WBS menunjukkan bagian mana dari Work Breakdown Structure yang jatuh pada tiap tahap - pemetaan yang sering hilang ketika siklus hidup dan WBS disusun terpisah.{{else}}Four phases per Assignment 3: conception, planning, execution, operation. The WBS phase column shows which part of the Work Breakdown Structure falls in each - a mapping often lost when the lifecycle and the WBS are written separately.{{end}}</p>
+  <div class="lifecycle">
+    {{range lifecycle}}
+    <article class="lc-card">
+      <header>
+        <h3>{{tx .Name $l}}</h3>
+        {{if .WBSCodes}}<p class="lc-wbs">{{if eq $l "id"}}Fase WBS{{else}}WBS phases{{end}}: {{range $i, $c := .WBSCodes}}{{if $i}}, {{end}}<code>{{$c}}</code>{{end}}</p>{{else}}<p class="lc-wbs muted">{{if eq $l "id"}}Sebelum WBS disusun{{else}}Before the WBS exists{{end}}</p>{{end}}
+      </header>
+      <p class="lc-goal"><strong>{{if eq $l "id"}}Tujuan{{else}}Goal{{end}}:</strong> {{tx .Goal $l}}</p>
+      <h4>{{if eq $l "id"}}Kegiatan utama{{else}}Key activities{{end}}</h4>
+      <ul class="dash">{{range .Activities}}<li>{{tx . $l}}</li>{{end}}</ul>
+      <p class="lc-out"><strong>{{if eq $l "id"}}Keluaran{{else}}Outputs{{end}}:</strong> {{tx .Outputs $l}}</p>
+      <p class="lc-watch"><strong>{{if eq $l "id"}}Yang perlu diperhatikan{{else}}Watch for{{end}}:</strong> {{tx .Watch $l}}</p>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Dari materi kuliah ke fitur yang menjalankannya{{else}}From course material to the feature that runs it{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Setiap baris memetakan satu bahan kuliah ke bagian aplikasi ini yang benar-benar mengimplementasikannya sebagai kode yang dijalankan dan diuji.{{else}}Each row maps one piece of course material to the part of this application that genuinely implements it as executed, tested code.{{end}}</p>
+  <table class="data wide-first">
+    <thead><tr><th>{{if eq $l "id"}}Materi{{else}}Material{{end}}</th><th>{{if eq $l "id"}}Isi pokok{{else}}Core content{{end}}</th><th>{{if eq $l "id"}}Diimplementasikan sebagai{{else}}Implemented as{{end}}</th></tr></thead>
+    <tbody>
+      <tr>
+        <th>Modul 2 — {{if eq $l "id"}}Area Pengetahuan Manajemen Proyek{{else}}Project Management Knowledge Areas{{end}}</th>
+        <td>{{if eq $l "id"}}Keahlian manajerial dan sembilan area pengetahuan yang harus dicakup sebuah proyek.{{else}}Managerial skills and the nine knowledge areas a project must cover.{{end}}</td>
+        <td><code>internal/model/org.go</code> — {{if eq $l "id"}}sembilan area dengan tautan bukti; tabel di halaman ini{{else}}nine areas with evidence links; the table on this page{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Pertemuan 3 — Perencanaan Proyek Perangkat Lunak{{else}}Session 3 — Software Project Planning{{end}}</th>
+        <td>{{if eq $l "id"}}Perbedaan inisiasi dan perencanaan; area yang harus direncanakan.{{else}}The difference between initiation and planning; which areas must be planned.{{end}}</td>
+        <td><code>internal/model/charter.go</code> — {{if eq $l "id"}}Project Charter terstruktur, lingkup, asumsi, batasan{{else}}structured Project Charter, scope, assumptions, constraints{{end}}</td>
+      </tr>
+      <tr>
+        <th>Modul 4 — {{if eq $l "id"}}Perencanaan Waktu Proyek{{else}}Project Time Planning{{end}}</th>
+        <td>{{if eq $l "id"}}Definisi aktivitas, urutan, estimasi durasi, CPM, PERT, GERT, kompresi jadwal, resource levelling.{{else}}Activity definition, sequencing, duration estimation, CPM, PERT, GERT, schedule compression, resource levelling.{{end}}</td>
+        <td><code>internal/schedule</code>, <code>internal/simulate</code>, <code>internal/resource</code> — {{if eq $l "id"}}forward/backward pass empat relasi PDM, PERT, Monte Carlo, histogram sumber daya{{else}}four-relation PDM forward/backward pass, PERT, Monte Carlo, resource histogram{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Pertemuan 7 — MS Project{{else}}Session 7 — MS Project{{end}}</th>
+        <td>{{if eq $l "id"}}Gantt chart, penyusunan tugas dan milestone, outline WBS, penugasan sumber daya.{{else}}Gantt charts, task and milestone entry, WBS outlining, resource assignment.{{end}}</td>
+        <td><code>internal/render/gantt.go</code> — {{if eq $l "id"}}Gantt dengan jalur kritis, batang float, batang realisasi, dan panah ketergantungan, digambar tanpa perangkat lunak berbayar{{else}}a Gantt with critical path, float bars, actual bars, and dependency arrows, drawn without paid software{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Pertemuan 9 — Manajemen Mutu Proyek{{else}}Session 9 — Project Quality Management{{end}}</th>
+        <td>{{if eq $l "id"}}Perencanaan mutu, quality assurance, quality control, Seven Basic Tools, Six Sigma, biaya kualitas.{{else}}Quality planning, assurance, control, the Seven Basic Tools, Six Sigma, cost of quality.{{end}}</td>
+        <td><code>internal/quality</code> — {{if eq $l "id"}}peta kendali X-bar dengan aturan Nelson, Pareto berbobot keparahan, Cpk, dan empat kategori biaya kualitas{{else}}X-bar control chart with Nelson rules, severity-weighted Pareto, Cpk, and the four cost-of-quality categories{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Tugas 2 — 9 Area Pengetahuan{{else}}Assignment 2 — Nine Knowledge Areas{{end}}</th>
+        <td>{{if eq $l "id"}}Penetapan topik proyek dan pemetaan informasi untuk sembilan area.{{else}}Choosing the project topic and mapping information for the nine areas.{{end}}</td>
+        <td>{{if eq $l "id"}}Seluruh model data proyek di situs ini{{else}}The entire project data model on this site{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Tugas 3 — Siklus Hidup Proyek{{else}}Assignment 3 — Project Lifecycle{{end}}</th>
+        <td>{{if eq $l "id"}}Empat tahap: konsepsi, perencanaan, eksekusi, operasi.{{else}}Four phases: conception, planning, execution, operation.{{end}}</td>
+        <td><code>internal/model/org.go</code> — {{if eq $l "id"}}bagian siklus hidup di halaman ini, dipetakan ke fase WBS{{else}}the lifecycle section on this page, mapped to WBS phases{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Tugas 5 & 10 — Struktur Organisasi & RACI{{else}}Assignments 5 & 10 — Organisation & RACI{{end}}</th>
+        <td>{{if eq $l "id"}}Bagan hirarki lima tingkat, uraian peran, matriks RACI, jalur komunikasi.{{else}}A five-level hierarchy, role descriptions, RACI matrix, communication channels.{{end}}</td>
+        <td><code>internal/model/org.go</code> + <code>internal/render/gantt.go</code> — {{if eq $l "id"}}bagan organisasi SVG dan matriks RACI yang divalidasi uji otomatis{{else}}an SVG org chart and a RACI matrix validated by automated tests{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Tugas 6 — Project Charter & WBS{{else}}Assignment 6 — Project Charter & WBS{{end}}</th>
+        <td>{{if eq $l "id"}}Piagam lengkap, WBS 5 fase dan 15 paket kerja, kamus WBS, Gantt, RACI.{{else}}Full charter, a 5-phase 15-package WBS, WBS dictionary, Gantt, RACI.{{end}}</td>
+        <td>{{if eq $l "id"}}Halaman Piagam & Lingkup, diperluas ke 35 aktivitas agar CPM punya sesuatu untuk dikerjakan{{else}}The Charter & Scope page, extended to 35 activities so CPM has something to work with{{end}}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Dokumen sumber di folder mata kuliah{{else}}Source documents in the course folder{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Aplikasi ini dibangun dari dua puluh dua berkas pada folder Manajemen Proyek Perangkat Lunak. Satu di antaranya - dokumen dukungan Oracle bernomor 2665704.1 tentang kueri PostgreSQL pada Oracle Linux Virtualization Manager - tidak berkaitan dengan mata kuliah ini dan tampaknya tersimpan di sana karena kekeliruan.{{else}}This application is built from twenty-two files in the Software Project Management folder. One of them - Oracle support document 2665704.1 on PostgreSQL queries for Oracle Linux Virtualization Manager - has nothing to do with this course and appears to have landed there by mistake.{{end}}</p>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Berkas{{else}}File{{end}}</th><th>{{if eq $l "id"}}Dipakai untuk{{else}}Used for{{end}}</th></tr></thead>
+    <tbody>
+      <tr><td><code>Tugas 6 - Project Chart dan WBS.pdf</code></td><td>{{if eq $l "id"}}Piagam proyek, WBS, RACI, anggaran, risiko{{else}}Project charter, WBS, RACI, budget, risks{{end}}</td></tr>
+      <tr><td><code>Tugas 10 - MPPL.pdf</code></td><td>{{if eq $l "id"}}Bagan organisasi lima tingkat, jalur komunikasi{{else}}Five-level org chart, communication channels{{end}}</td></tr>
+      <tr><td><code>tugas 5 mppl.pdf</code></td><td>{{if eq $l "id"}}Uraian tanggung jawab dua belas peran{{else}}Responsibilities for twelve roles{{end}}</td></tr>
+      <tr><td><code>Tugas 2 - Pengembangan SI Alumni & Tracer Study.pdf</code></td><td>{{if eq $l "id"}}Sembilan area pengetahuan, deskripsi masalah{{else}}Nine knowledge areas, problem description{{end}}</td></tr>
+      <tr><td><code>tugas sesi 3_Proyek_Tracer_Study.pdf</code></td><td>{{if eq $l "id"}}Empat tahap siklus hidup{{else}}Four lifecycle phases{{end}}</td></tr>
+      <tr><td><code>Modul 2_MPPL.pdf</code>, <code>Modul 4_MPPL.pdf</code>, <code>Pertemuan 3_MPPL.pdf</code></td><td>{{if eq $l "id"}}Teori area pengetahuan, CPM/PERT, perencanaan{{else}}Knowledge area theory, CPM/PERT, planning{{end}}</td></tr>
+      <tr><td><code>Pertemuan 7_MPPL.pptx</code>, <code>Pertemuan 9_MPPL.pptx</code></td><td>{{if eq $l "id"}}Gantt & MS Project, manajemen mutu Schwalbe bab 8{{else}}Gantt & MS Project, Schwalbe chapter 8 quality management{{end}}</td></tr>
+      <tr class="muted"><td><code>Document 2665704.1.pdf</code></td><td>{{if eq $l "id"}}Tidak terkait mata kuliah — dokumen Oracle Linux Virtualization Manager{{else}}Unrelated to the course — an Oracle Linux Virtualization Manager document{{end}}</td></tr>
+    </tbody>
+  </table>
+</section>
+{{end}}

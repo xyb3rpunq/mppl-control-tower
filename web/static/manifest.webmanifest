@@ -1,0 +1,14 @@
+{
+  "name": "Control Tower MPPL",
+  "short_name": "Control Tower",
+  "description": "Ruang kendali kuantitatif untuk proyek perangkat lunak: CPM, PERT, Monte Carlo, Earned Value, risiko, dan mutu.",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "lang": "id",
+  "icons": [
+    { "src": "img/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

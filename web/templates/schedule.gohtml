@@ -1,0 +1,110 @@
+{{define "schedule"}}
+{{$l := .Lang}}{{$a := .Analysis}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Diagram Gantt{{else}}Gantt chart{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Batang gelap adalah jalur kritis - aktivitas yang molor sehari akan menunda seluruh proyek sehari. Batang bayangan di sebelah kanan adalah total float: ruang gerak yang dimiliki aktivitas itu. Garis tipis di bawah setiap batang adalah realisasi sampai tanggal data.{{else}}Dark bars are the critical path - slip one day and the whole project slips one day. The shadow bar to the right is total float: the room that activity holds. The thin line beneath each bar is the actual progress up to the data date.{{end}}
+  </p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{gantt $l}}</div>
+    <figcaption class="below">
+      <p class="legend">
+        <span class="swatch crit"></span> {{if eq $l "id"}}jalur kritis{{else}}critical path{{end}}
+        <span class="swatch plan"></span> {{if eq $l "id"}}rencana{{else}}plan{{end}}
+        <span class="swatch float"></span> {{t $l "t.totalFloat"}}
+        <span class="swatch actual"></span> {{if eq $l "id"}}realisasi{{else}}actual{{end}}
+        <span class="swatch overrun"></span> {{if eq $l "id"}}realisasi melampaui rencana{{else}}actual exceeds plan{{end}}
+      </p>
+    </figcaption>
+  </figure>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Diagram jaringan Activity-on-Node{{else}}Activity-on-Node network{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Tata letaknya berlapis menurut early start, sehingga sumbu mendatar tetap bermakna waktu - bukan sekadar disusun agar rapi. Setiap kotak memuat enam angka standar CPM.{{else}}The layout is layered by early start, so the horizontal axis still means time - it is not merely arranged to look tidy. Each box carries the six standard CPM figures.{{end}}
+  </p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{network $l}}</div>
+  </figure>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Tabel CPM lengkap{{else}}Full CPM table{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Semua angka di bawah dihasilkan forward pass dan backward pass pada <code>internal/schedule</code>, bukan dimasukkan manual. Kolom TF dan FF adalah tempat seluruh keputusan penjadwalan sebenarnya diambil.{{else}}Every figure below comes from the forward and backward passes in <code>internal/schedule</code>, not from manual entry. The TF and FF columns are where scheduling decisions are actually made.{{end}}
+  </p>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead>
+        <tr>
+          <th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th>
+          <th class="num">d</th><th class="num">ES</th><th class="num">EF</th>
+          <th class="num">LS</th><th class="num">LF</th>
+          <th class="num">TF</th><th class="num">FF</th>
+          <th>{{t $l "t.start"}}</th><th>{{t $l "t.finish"}}</th>
+          <th>{{if eq $l "id"}}Pendahulu{{else}}Predecessors{{end}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range activities}}
+        {{$t := taskOf .ID}}
+        <tr class="{{if isCritical .ID}}is-critical{{end}}{{if .Milestone}} is-milestone{{end}}">
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx .Name $l}}</td>
+          <td class="num">{{$t.Duration}}</td>
+          <td class="num">{{$t.ES}}</td><td class="num">{{$t.EF}}</td>
+          <td class="num">{{$t.LS}}</td><td class="num">{{$t.LF}}</td>
+          <td class="num {{if eq $t.TotalFloat 0}}zero-float{{end}}">{{$t.TotalFloat}}</td>
+          <td class="num">{{$t.FreeFloat}}</td>
+          <td class="small">{{dateShort (startDate .ID) $l}}</td>
+          <td class="small">{{dateShort (finishDate .ID) $l}}</td>
+          <td class="small">{{range $i, $p := .Pred}}{{if $i}}, {{end}}<code>{{$p.ID}}</code>{{if ne $p.Type "FS"}} <em>{{$p.Type}}</em>{{end}}{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Jalur kritis{{else}}The critical path{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Rantai berikut adalah satu jalur tersambung dari awal sampai akhir proyek tanpa float sama sekali. Panjangnya {{len $a.Plan.CriticalPath}} simpul dari total {{len (activities)}} - artinya hampir tiga perempat jaringan tidak punya ruang gerak. Proyek serapat ini tidak punya tempat menyerap kejutan.{{else}}The chain below is one connected path from project start to finish with no float at all. It runs {{len $a.Plan.CriticalPath}} nodes out of {{len (activities)}} - meaning nearly three quarters of the network has no room to move. A network this tight has nowhere to absorb surprises.{{end}}
+  </p>
+  <ol class="path-chain">
+    {{$acts := activityByID}}
+    {{range $a.Plan.CriticalPath}}
+    {{$act := index $acts .}}{{$t := taskOf .}}
+    <li class="{{if $act.Milestone}}milestone{{end}}">
+      <code>{{.}}</code>
+      <span>{{tx $act.Name $l}}</span>
+      <em>{{$t.Duration}} {{if eq $l "id"}}hari{{else}}d{{end}}</em>
+    </li>
+    {{end}}
+  </ol>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Aktivitas dengan float terbesar{{else}}Activities with the most float{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Di sinilah ruang gerak proyek berada. Kalau jalur kritis perlu dipercepat, orang dan uang paling murah diambil dari aktivitas-aktivitas ini - bukan dari mana pun.{{else}}This is where the project's slack lives. If the critical path needs compressing, people and money come most cheaply from these activities - not from anywhere else.{{end}}</p>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">{{t $l "t.totalFloat"}}</th><th class="num">{{t $l "t.freeFloat"}}</th><th>{{if eq $l "id"}}Artinya{{else}}Meaning{{end}}</th></tr></thead>
+    <tbody>
+      {{range activities}}
+      {{$t := taskOf .ID}}
+      {{if gt (f $t.TotalFloat) 0.0}}
+      <tr>
+        <td><code>{{.ID}}</code></td>
+        <td>{{tx .Name $l}}</td>
+        <td class="num">{{$t.TotalFloat}}</td>
+        <td class="num">{{$t.FreeFloat}}</td>
+        <td class="small">{{if eq $t.TotalFloat $t.FreeFloat}}{{if eq $l "id"}}Float sepenuhnya milik aktivitas ini; memakainya tidak mengganggu siapa pun.{{else}}The float belongs entirely to this activity; spending it disturbs nobody.{{end}}{{else}}{{if eq $l "id"}}Sebagian float dibagi dengan aktivitas lain di jalur yang sama - memakainya lebih dari {{$t.FreeFloat}} hari akan menggeser penerusnya.{{else}}Part of this float is shared along the path - spending more than {{$t.FreeFloat}} days will move the successor.{{end}}{{end}}</td>
+      </tr>
+      {{end}}
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

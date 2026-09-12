@@ -1,0 +1,149 @@
+{{define "pert"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$p := .Analysis.PERT}}{{$sim := .Analysis.Sim}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Dua cara menjawab pertanyaan yang sama{{else}}Two ways to answer the same question{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Pertanyaannya sederhana: berapa peluang proyek ini benar-benar selesai dalam 17 minggu? PERT menjawabnya dengan aljabar di sepanjang jalur kritis. Monte Carlo menjawabnya dengan menjalankan ulang seluruh jaringan sepuluh ribu kali. Keduanya sampai pada kesimpulan yang sama - lewat jalan yang sangat berbeda - dan perbedaan jalan itulah yang membuat keduanya layak ditampilkan berdampingan.{{else}}The question is simple: what are the odds this project actually finishes in 17 weeks? PERT answers with algebra along the critical path. Monte Carlo answers by re-running the whole network ten thousand times. Both reach the same conclusion by very different routes, and that difference is why both belong side by side.{{end}}
+  </p>
+
+  <div class="compare-grid">
+    <div class="compare-card">
+      <h3>PERT</h3>
+      <p class="big">{{pct ($p.ProbabilityBy (f $a.Plan.Duration)) 2 $l}}</p>
+      <dl class="mini">
+        <dt>te {{if eq $l "id"}}jalur kritis{{else}}critical path{{end}}</dt><dd>{{num $p.ExpectedDuration 2 $l}} {{t $l "t.days"}}</dd>
+        <dt>sigma</dt><dd>{{num $p.StdDev 3 $l}}</dd>
+        <dt>{{if eq $l "id"}}varians{{else}}variance{{end}}</dt><dd>{{num $p.Variance 3 $l}}</dd>
+        <dt>Z</dt><dd>{{num ($p.ZScore (f $a.Plan.Duration)) 3 $l}}</dd>
+      </dl>
+      <p class="small muted">{{if eq $l "id"}}Hanya melihat jalur kritis. Jalur lain yang float-nya tipis dan ketidakpastiannya besar sama sekali tidak terhitung.{{else}}Sees only the critical path. Other paths with thin float and large uncertainty are not counted at all.{{end}}</p>
+    </div>
+    <div class="compare-card accent">
+      <h3>Monte Carlo</h3>
+      <p class="big">{{pct $sim.OnTimeProb 2 $l}}</p>
+      <dl class="mini">
+        <dt>{{if eq $l "id"}}rerata{{else}}mean{{end}}</dt><dd>{{num $sim.Mean 1 $l}} {{t $l "t.days"}}</dd>
+        <dt>sigma</dt><dd>{{num $sim.StdDev 2 $l}}</dd>
+        <dt>{{if eq $l "id"}}rentang{{else}}range{{end}}</dt><dd>{{num $sim.Min 0 $l}}–{{num $sim.Max 0 $l}}</dd>
+        <dt>{{if eq $l "id"}}iterasi{{else}}iterations{{end}}</dt><dd>{{num (f $sim.Iterations) 0 $l}}</dd>
+      </dl>
+      <p class="small muted">{{if eq $l "id"}}Jalur kritis dibiarkan berpindah sendiri dari iterasi ke iterasi - itulah sebabnya angkanya lebih pesimistis.{{else}}The critical path is free to move from iteration to iteration - which is why the figure comes out more pessimistic.{{end}}</p>
+    </div>
+  </div>
+
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Mengapa rerata simulasi {{num $sim.Mean 1 $l}} hari, bukan {{$a.Plan.Duration}}?{{else}}Why is the simulated mean {{num $sim.Mean 1 $l}} days rather than {{$a.Plan.Duration}}?{{end}}</h4>
+    <p>{{if eq $l "id"}}Dua sebab, dan keduanya struktural. Pertama, estimasi tiga titiknya condong: jarak M ke P lebih jauh daripada O ke M, karena pekerjaan perangkat lunak memang lebih sering meleset ke arah lama. Kedua - dan ini yang lebih menipu - <strong>merge bias</strong>: setiap kali beberapa jalur bertemu di satu simpul, yang menentukan adalah yang PALING TERLAMBAT. Aktivitas A24 pada proyek ini menunggu empat pendahulu sekaligus; peluang keempatnya sama-sama tepat waktu jauh lebih kecil daripada peluang satu di antaranya tepat waktu.{{else}}Two reasons, both structural. First, the three-point estimates are skewed: M to P is a longer reach than O to M, because software work genuinely misses towards slower. Second - and this one deceives more - <strong>merge bias</strong>: wherever several paths converge on a node, the LATEST one decides. Activity A24 here waits on four predecessors at once; the odds of all four being on time are far smaller than the odds of any one of them being on time.{{end}}</p>
+    <p>{{if eq $l "id"}}Jadwal deterministik {{$a.Plan.Duration}} hari bukan estimasi yang salah hitung. Ia adalah estimasi yang benar untuk pertanyaan yang keliru: "berapa lama kalau setiap aktivitas persis sesuai durasi paling mungkin?" Jawaban atas pertanyaan itu memang {{$a.Plan.Duration}} hari - dan peluang terjadinya {{pct $sim.OnTimeProb 2 $l}}.{{else}}The deterministic {{$a.Plan.Duration}}-day schedule is not a miscalculation. It is the correct answer to the wrong question: "how long if every activity lands exactly on its most likely duration?" The answer to that is indeed {{$a.Plan.Duration}} days - with a {{pct $sim.OnTimeProb 2 $l}} chance of happening.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Sebaran durasi proyek{{else}}Project duration distribution{{end}}</h2>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{simHistogram $l}}</div>
+  </figure>
+  <table class="data">
+    <caption>{{if eq $l "id"}}Tingkat keyakinan dan tanggal selesai yang menyertainya{{else}}Confidence levels and the finish dates they imply{{end}}</caption>
+    <thead><tr><th>{{if eq $l "id"}}Keyakinan{{else}}Confidence{{end}}</th><th class="num">{{t $l "t.duration"}}</th><th class="num">{{if eq $l "id"}}Selisih dari rencana{{else}}Gap from plan{{end}}</th><th>{{if eq $l "id"}}Tanggal selesai{{else}}Finish date{{end}}</th><th>{{if eq $l "id"}}Layak dijanjikan?{{else}}Fit to promise?{{end}}</th></tr></thead>
+    <tbody>
+      <tr><th>{{if eq $l "id"}}Rencana (deterministik){{else}}Plan (deterministic){{end}}</th><td class="num">{{$a.Plan.Duration}}</td><td class="num">—</td><td>{{date $a.FinishDatePlan $l}}</td><td><span class="pill bad">{{pct $sim.OnTimeProb 1 $l}}</span></td></tr>
+      <tr><th>P50</th><td class="num">{{num $sim.P50 0 $l}}</td><td class="num">+{{num (subf $sim.P50 (f $a.Plan.Duration)) 0 $l}}</td><td>{{date ($a.FinishDateAt $sim.P50) $l}}</td><td><span class="pill warn">{{if eq $l "id"}}koin dilempar{{else}}coin flip{{end}}</span></td></tr>
+      <tr class="highlight"><th>P80</th><td class="num">{{num $sim.P80 0 $l}}</td><td class="num">+{{num (subf $sim.P80 (f $a.Plan.Duration)) 0 $l}}</td><td>{{date ($a.FinishDateAt $sim.P80) $l}}</td><td><span class="pill ok">{{if eq $l "id"}}ya - inilah angka untuk sponsor{{else}}yes - this is the sponsor number{{end}}</span></td></tr>
+      <tr><th>P90</th><td class="num">{{num $sim.P90 0 $l}}</td><td class="num">+{{num (subf $sim.P90 (f $a.Plan.Duration)) 0 $l}}</td><td>{{date ($a.FinishDateAt $sim.P90) $l}}</td><td><span class="pill ok">{{if eq $l "id"}}konservatif{{else}}conservative{{end}}</span></td></tr>
+      <tr><th>P95</th><td class="num">{{num $sim.P95 0 $l}}</td><td class="num">+{{num (subf $sim.P95 (f $a.Plan.Duration)) 0 $l}}</td><td>{{date ($a.FinishDateAt $sim.P95) $l}}</td><td><span class="pill neutral">{{if eq $l "id"}}terlalu longgar untuk proyek kuliah{{else}}too loose for a course project{{end}}</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="band" data-wasm-panel hidden>
+  <h2>{{if eq $l "id"}}Jalankan simulasinya sendiri{{else}}Run the simulation yourself{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Mesin Monte Carlo yang sama dikompilasi ke WebAssembly dan berjalan di peramban Anda. Ubah jumlah iterasi, ganti benih acaknya, atau tukar sebarannya dari beta-PERT ke segitiga - lalu lihat seberapa sedikit kesimpulannya berubah. Itulah tanda hasilnya tidak bergantung pada pilihan parameter.{{else}}The same Monte Carlo engine, compiled to WebAssembly and running in your browser. Change the iteration count, swap the random seed, or switch the distribution from beta-PERT to triangular - then see how little the conclusion moves. That is the sign the result does not hinge on parameter choice.{{end}}</p>
+  <form class="sim-form" data-sim-form>
+    <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
+      <select name="iterations">
+        <option value="1000">1.000</option>
+        <option value="10000" selected>10.000</option>
+        <option value="50000">50.000</option>
+        <option value="100000">100.000</option>
+      </select>
+    </label>
+    <label><span>{{if eq $l "id"}}Benih acak{{else}}Random seed{{end}}</span>
+      <input type="number" name="seed" value="20210801" min="1" step="1">
+    </label>
+    <label><span>{{if eq $l "id"}}Sebaran{{else}}Distribution{{end}}</span>
+      <select name="distribution">
+        <option value="pert" selected>beta-PERT</option>
+        <option value="triangular">{{if eq $l "id"}}segitiga{{else}}triangular{{end}}</option>
+      </select>
+    </label>
+    <button type="submit">{{if eq $l "id"}}Jalankan{{else}}Run{{end}}</button>
+  </form>
+  <div class="live-out sim-out">
+    <div><span>P({{if eq $l "id"}}tepat waktu{{else}}on time{{end}})</span><strong data-sim="onTime">—</strong></div>
+    <div><span>{{if eq $l "id"}}Rerata{{else}}Mean{{end}}</span><strong data-sim="mean">—</strong></div>
+    <div><span>sigma</span><strong data-sim="stdDev">—</strong></div>
+    <div><span>P50</span><strong data-sim="p50">—</strong></div>
+    <div><span>P80</span><strong data-sim="p80">—</strong></div>
+    <div><span>P90</span><strong data-sim="p90">—</strong></div>
+    <div><span>{{if eq $l "id"}}Rentang{{else}}Range{{end}}</span><strong data-sim="range">—</strong></div>
+    <div><span>{{if eq $l "id"}}Waktu hitung{{else}}Compute time{{end}}</span><strong data-sim="elapsed">—</strong></div>
+  </div>
+  <div class="figure-body scrollable" data-sim-chart></div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Sensitivitas: aktivitas mana yang sebenarnya menentukan{{else}}Sensitivity: which activities actually decide{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Korelasi peringkat Spearman antara durasi setiap aktivitas dan durasi total proyek, diukur di seluruh {{num (f $sim.Iterations) 0 $l}} iterasi. Batang yang lebih panjang berarti menambah cadangan waktu di situ berdampak paling besar. Perhatikan: aktivitas teratas bukan yang paling lama atau paling mahal.{{else}}Spearman rank correlation between each activity's duration and total project duration, measured across all {{num (f $sim.Iterations) 0 $l}} iterations. A longer bar means buffer added there pays best. Note: the top activity is neither the longest nor the costliest.{{end}}
+  </p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{tornado $l 14}}</div>
+  </figure>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">rho</th><th class="num">{{if eq $l "id"}}Porsi iterasi kritis{{else}}Share of iterations critical{{end}}</th><th class="num">{{t $l "t.duration"}}</th><th class="num">O–P</th></tr></thead>
+    <tbody>
+      {{$acts := activityByID}}
+      {{range $sim.Sensitivity}}
+      {{$act := index $acts .ID}}
+      <tr>
+        <td><code>{{.ID}}</code></td>
+        <td>{{tx .Name $l}}</td>
+        <td class="num">{{num .Correlation 3 $l}}</td>
+        <td class="num">{{pct .CriticalRate 0 $l}}</td>
+        <td class="num">{{$act.Duration}}</td>
+        <td class="num small">{{$act.Optimistic}}–{{$act.Pessimistic}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Estimasi tiga titik per aktivitas{{else}}Three-point estimates per activity{{end}}</h2>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">O</th><th class="num">M</th><th class="num">P</th><th class="num">te</th><th class="num">sigma</th><th class="num">{{if eq $l "id"}}varians{{else}}variance{{end}}</th><th class="num">{{if eq $l "id"}}kecondongan{{else}}skew{{end}}</th></tr></thead>
+      <tbody>
+        {{range activities}}
+        {{if not .Milestone}}
+        <tr class="{{if isCritical .ID}}is-critical{{end}}">
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx .Name $l}}</td>
+          <td class="num">{{.Optimistic}}</td>
+          <td class="num">{{.Duration}}</td>
+          <td class="num">{{.Pessimistic}}</td>
+          <td class="num">{{num (pertTe .) 2 $l}}</td>
+          <td class="num">{{num (pertSd .) 3 $l}}</td>
+          <td class="num">{{num (pertVar .) 3 $l}}</td>
+          <td class="num small">{{num (pertSkew .) 2 $l}}</td>
+        </tr>
+        {{end}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">{{if eq $l "id"}}Kolom kecondongan adalah (P − M) ÷ (M − O). Nilai di atas 1 berarti ekor pesimistisnya lebih panjang daripada ekor optimistis - dan di situlah te menjadi lebih besar daripada M.{{else}}The skew column is (P − M) ÷ (M − O). Above 1 means the pessimistic tail is longer than the optimistic one - and that is where te exceeds M.{{end}}</p>
+</section>
+{{end}}

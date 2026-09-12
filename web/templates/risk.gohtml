@@ -1,0 +1,102 @@
+{{define "risk"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$r := .Analysis.Risk}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Berapa rupiah cadangan yang sebenarnya dibutuhkan{{else}}How much reserve is actually needed{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Yang membedakan analisis risiko kuantitatif dari daftar kekhawatiran berwarna adalah satu pertanyaan yang bisa dijawab dengan angka: berapa rupiah cadangan yang harus disiapkan? Jawabannya adalah jumlah Expected Monetary Value dari risiko <em>residual</em> - risiko setelah rencana mitigasi dijalankan. Memakai risiko inheren akan melebih-lebihkan cadangan dan mengunci anggaran yang sebenarnya masih bisa dipakai.{{else}}What separates quantitative risk analysis from a colour-coded worry list is one question answerable in numbers: how much reserve must be set aside? The answer is the sum of Expected Monetary Value across <em>residual</em> risks - what remains after the response plan runs. Using inherent risk overstates the reserve and locks up budget that is still usable.{{end}}
+  </p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}EMV inheren{{else}}Inherent EMV{{end}}</p><p class="kpi-value">{{rpShort $r.TotalEMV $l}}</p><p class="kpi-note">{{if eq $l "id"}}sebelum mitigasi{{else}}before mitigation{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}EMV residual{{else}}Residual EMV{{end}}</p><p class="kpi-value">{{rpShort $r.TotalResidualEMV $l}}</p><p class="kpi-note">{{if eq $l "id"}}setelah mitigasi - inilah dasar cadangan{{else}}after mitigation - the basis for reserve{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Cadangan tersedia{{else}}Reserve available{{end}}</p><p class="kpi-value">{{rpShort (contingency) $l}}</p><p class="kpi-note">{{if eq $l "id"}}menutup {{pct $r.ReserveCoverage 1 $l}} paparan{{else}}covers {{pct $r.ReserveCoverage 1 $l}} of exposure{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Kekurangan{{else}}Shortfall{{end}}</p><p class="kpi-value">{{rpShort $r.ReserveGap $l}}</p><p class="kpi-note">{{if eq $l "id"}}paparan jadwal {{num $r.ScheduleExposure 1 $l}} hari kerja{{else}}schedule exposure {{num $r.ScheduleExposure 1 $l}} working days{{end}}</p></div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Peta panas probabilitas-dampak{{else}}Probability-impact heat map{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Dua peta yang sama, sebelum dan sesudah mitigasi. Bandingkan perpindahan setiap kode risiko: itulah ukuran seberapa berguna rencana mitigasinya, bukan sekadar ada atau tidak ada.{{else}}The same map twice, before and after mitigation. Compare where each risk code moves: that is the measure of how useful the response plan is, rather than merely whether one exists.{{end}}</p>
+  <div class="two-col matrices">
+    <figure class="figure">
+      <div class="figure-body scrollable">{{riskMatrix $l (printf "%s" (index (dict "id" "Risiko inheren - sebelum mitigasi" "en" "Inherent risk - before mitigation") $l)) false}}</div>
+    </figure>
+    <figure class="figure">
+      <div class="figure-body scrollable">{{riskMatrix $l (printf "%s" (index (dict "id" "Risiko residual - sesudah mitigasi" "en" "Residual risk - after mitigation") $l)) true}}</div>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Risk register{{else}}Risk register{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Enam risiko pertama berasal langsung dari Project Charter. Sisanya muncul ketika jaringan aktivitas didekomposisi ke level 3 dan ketergantungan nyata antar-pekerjaan terlihat - risiko yang tidak akan pernah ditemukan dari WBS level paket kerja.{{else}}The first six come straight from the Project Charter. The rest surfaced once the activity network was decomposed to level 3 and the real dependencies became visible - risks a work-package-level WBS would never reveal.{{end}}</p>
+  <div class="risk-list">
+    {{range $r.TopByEMV}}
+    <article class="risk-card sev-{{.Severity}}">
+      <header>
+        <code class="risk-id">{{.ID}}</code>
+        <h3>{{tx .Title $l}}</h3>
+        <span class="pill status-{{.Status}}">{{t $l (printf "st.%s" .Status)}}</span>
+      </header>
+      <p class="risk-cat">{{tx .Category $l}} · {{t $l "t.owner"}}: <strong>{{.Owner}}</strong>{{if .WBS}} · WBS {{.WBS}}{{end}}</p>
+
+      <div class="risk-grid">
+        <div>
+          <h4>{{if eq $l "id"}}Sebab{{else}}Cause{{end}}</h4>
+          <p>{{tx .Cause $l}}</p>
+        </div>
+        <div>
+          <h4>{{if eq $l "id"}}Akibat{{else}}Effect{{end}}</h4>
+          <p>{{tx .Effect $l}}</p>
+        </div>
+      </div>
+
+      <table class="data compact risk-numbers">
+        <thead><tr><th></th><th class="num">{{t $l "t.probability"}}</th><th class="num">{{t $l "t.impact"}}</th><th class="num">EMV</th><th class="num">{{t $l "t.score"}}</th></tr></thead>
+        <tbody>
+          <tr><th>{{if eq $l "id"}}Inheren{{else}}Inherent{{end}}</th><td class="num">{{pct .Probability 0 $l}}</td><td class="num">{{rp .Impact $l}}</td><td class="num">{{rp .EMV $l}}</td><td class="num"><span class="score sev-{{.Severity}}" title="{{t $l (printf "rs.%s" .Severity)}}">{{.Score}}</span></td></tr>
+          <tr><th>{{if eq $l "id"}}Residual{{else}}Residual{{end}}</th><td class="num">{{pct .ResidualProb 0 $l}}</td><td class="num">{{rp .ResidualImpact $l}}</td><td class="num">{{rp .ResidualEMV $l}}</td><td class="num"><span class="score sev-{{.ResidualSeverity}}" title="{{t $l (printf "rs.%s" .ResidualSeverity)}}">{{.ResidualScore}}</span></td></tr>
+          <tr class="total"><th>{{if eq $l "id"}}Penurunan{{else}}Reduction{{end}}</th><td class="num" colspan="3">{{pct .Reduction 0 $l}} {{if eq $l "id"}}dari EMV{{else}}of EMV{{end}}</td><td class="num">{{if .ScheduleImpact}}+{{.ScheduleImpact}}h{{else}}—{{end}}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="risk-response">
+        <p><strong>{{t $l "t.response"}} ({{t $l (printf "rp.%s" .Response)}}):</strong> {{tx .Mitigation $l}}</p>
+        <p class="trigger"><strong>{{if eq $l "id"}}Pemicu{{else}}Trigger{{end}}:</strong> {{tx .Trigger $l}}</p>
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Paparan menurut kategori{{else}}Exposure by category{{end}}</h2>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.category"}}</th><th class="num">{{if eq $l "id"}}Jumlah{{else}}Count{{end}}</th><th class="num">EMV {{if eq $l "id"}}inheren{{else}}inherent{{end}}</th><th class="num">EMV {{if eq $l "id"}}residual{{else}}residual{{end}}</th><th class="num">{{if eq $l "id"}}Porsi paparan{{else}}Share of exposure{{end}}</th></tr></thead>
+    <tbody>
+      {{range $r.ByCategory}}
+      <tr>
+        <th>{{tx .Category $l}}</th>
+        <td class="num">{{.Count}}</td>
+        <td class="num">{{rp .EMV $l}}</td>
+        <td class="num">{{rp .ResidualEMV $l}}</td>
+        <td class="num">{{pct (div .ResidualEMV $r.TotalResidualEMV) 1 $l}}</td>
+      </tr>
+      {{end}}
+      <tr class="total">
+        <th>{{t $l "t.total"}}</th>
+        <td class="num">{{len $r.Risks}}</td>
+        <td class="num">{{rp $r.TotalEMV $l}}</td>
+        <td class="num"><strong>{{rp $r.TotalResidualEMV $l}}</strong></td>
+        <td class="num">100%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note-box bad">
+    <h4>{{if eq $l "id"}}Cadangan kontinjensi hanya menutup {{pct $r.ReserveCoverage 0 $l}} paparan{{else}}Contingency covers only {{pct $r.ReserveCoverage 0 $l}} of exposure{{end}}</h4>
+    <p>{{if eq $l "id"}}Project Charter menyisihkan Rp 1,5 juta untuk "maintenance & kontinjensi". Setelah estimasi bottom-up dan struktur berlapis diterapkan, yang tersedia sebagai cadangan kontinjensi sejati adalah {{rp (contingency) $l}}, sementara EMV residual seluruh risiko {{rp $r.TotalResidualEMV $l}}. Kekurangannya {{rp $r.ReserveGap $l}}.{{else}}The charter sets aside IDR 1.5 million for "maintenance & contingency". After the bottom-up estimate and the layered structure are applied, true contingency comes to {{rp (contingency) $l}} while residual EMV across all risks is {{rp $r.TotalResidualEMV $l}}. The gap is {{rp $r.ReserveGap $l}}.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Ada dua jalan sah, dan keduanya harus diputuskan sekarang, bukan saat risikonya terjadi. Naikkan cadangan menjadi sekitar {{rp $r.TotalResidualEMV $l}} - yang berarti memangkas lingkup senilai selisihnya. Atau perkuat mitigasi pada tiga risiko ber-EMV residual tertinggi sampai paparan totalnya turun ke tingkat yang tertutup. Jalan ketiga - berharap tidak terjadi apa-apa - bukan rencana manajemen risiko.{{else}}Two legitimate paths, and both must be decided now rather than when the risk materialises. Raise the reserve to about {{rp $r.TotalResidualEMV $l}} - which means cutting scope by the difference. Or strengthen mitigation on the three highest residual-EMV risks until total exposure drops to a covered level. The third path - hoping nothing happens - is not a risk management plan.{{end}}</p>
+  </div>
+</section>
+{{end}}

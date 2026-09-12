@@ -1,0 +1,116 @@
+{{define "dashboard"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$s := .Analysis.Snapshot}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Lima angka yang menentukan nasib proyek{{else}}The five numbers that decide this project{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Setiap kartu di bawah dihitung ulang dari model data proyek setiap kali situs ini dibangun. Tidak ada yang diketik manual. Klik tautan pada tiap kartu untuk melihat rumus dan penurunannya.{{else}}Every card below is recomputed from the project data model on each build. None of it is typed by hand. Follow the link on each card for the formula and its derivation.{{end}}
+  </p>
+  <div class="kpi-grid">
+    <div class="kpi {{if lt $s.SPI 0.95}}bad{{else}}good{{end}}">
+      <p class="kpi-label">SPI · Schedule Performance Index</p>
+      <p class="kpi-value">{{idx $s.SPI $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}EV {{rpShort $s.EV $l}} dibagi PV {{rpShort $s.PV $l}}{{else}}EV {{rpShort $s.EV $l}} over PV {{rpShort $s.PV $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/biaya/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if lt $s.CPI 0.95}}bad{{else}}good{{end}}">
+      <p class="kpi-label">CPI · Cost Performance Index</p>
+      <p class="kpi-value">{{idx $s.CPI $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}Tiap Rp 1.000 menghasilkan pekerjaan Rp {{num (mul $s.CPI 1000.0) 0 $l}}{{else}}Every IDR 1,000 buys IDR {{num (mul $s.CPI 1000.0) 0 $l}} of work{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/biaya/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if gt $s.EACTypical (totalBudget)}}bad{{else}}good{{end}}">
+      <p class="kpi-label">EAC · {{if eq $l "id"}}proyeksi biaya akhir{{else}}forecast at completion{{end}}</p>
+      <p class="kpi-value">{{rpShort $s.EACTypical $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}Pagu {{rpShort (totalBudget) $l}} · selisih{{else}}Cap {{rpShort (totalBudget) $l}} · gap{{end}} {{signed (subf (totalBudget) $s.EACTypical) $l}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/biaya/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if lt $a.Sim.OnTimeProb 0.5}}bad{{else}}good{{end}}">
+      <p class="kpi-label">P({{if eq $l "id"}}tepat waktu{{else}}on time{{end}}) · Monte Carlo</p>
+      <p class="kpi-value">{{pct $a.Sim.OnTimeProb 1 $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}P80 = {{num $a.Sim.P80 0 $l}} hari kerja → {{date ($a.FinishDateAt $a.Sim.P80) $l}}{{else}}P80 = {{num $a.Sim.P80 0 $l}} working days → {{date ($a.FinishDateAt $a.Sim.P80) $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/pert/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if gt $a.Risk.ReserveGap 0.0}}bad{{else}}good{{end}}">
+      <p class="kpi-label">{{if eq $l "id"}}Cakupan cadangan risiko{{else}}Risk reserve coverage{{end}}</p>
+      <p class="kpi-value">{{pct $a.Risk.ReserveCoverage 0 $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}Cadangan {{rpShort (contingency) $l}} vs EMV residual {{rpShort $a.Risk.TotalResidualEMV $l}}{{else}}Reserve {{rpShort (contingency) $l}} vs residual EMV {{rpShort $a.Risk.TotalResidualEMV $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/risiko/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi neutral">
+      <p class="kpi-label">SV(t) · Earned Schedule</p>
+      <p class="kpi-value">{{signedN $s.SVt 1 $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}hari kerja terhadap rencana; ES = {{num $s.ES 2 $l}}{{else}}working days versus plan; ES = {{num $s.ES 2 $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/biaya/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  {{$svg := sCurve $l}}
+  <figure class="figure">
+    <figcaption>
+      <h3>{{if eq $l "id"}}Kurva-S Earned Value{{else}}Earned Value S-curve{{end}}</h3>
+      <p>{{if eq $l "id"}}Jarak tegak antara EV dan PV adalah varians jadwal; jarak tegak antara EV dan AC adalah varians biaya. Jarak MENDATAR antara keduanya adalah keterlambatan dalam satuan waktu - itulah yang paling sering terlewat dibaca.{{else}}The vertical gap between EV and PV is schedule variance; between EV and AC, cost variance. The HORIZONTAL gap between them is the delay in time units - the reading most often missed.{{end}}</p>
+    </figcaption>
+    <div class="figure-body scrollable">{{$svg}}</div>
+  </figure>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Temuan{{else}}Findings{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Temuan berikut tidak ditulis tetap. Semuanya lahir dari perbandingan metrik terhadap ambang, sehingga kalau datanya diperbaiki, temuannya ikut hilang dengan sendirinya.{{else}}These findings are not hard-coded. Each is produced by comparing a metric against a threshold, so correcting the data makes the finding disappear on its own.{{end}}
+  </p>
+  <div class="findings">
+    {{range $a.Findings}}
+    <article class="finding sev-{{.Severity}}">
+      <header>
+        <span class="sev-badge">{{t $l (printf "sv.%s" .Severity)}}</span>
+        <h3>{{tx .Title $l}}</h3>
+      </header>
+      <p>{{tx .Detail $l}}</p>
+      <p class="finding-metric"><span>{{if eq $l "id"}}metrik pemicu{{else}}trigger metric{{end}}</span> <code>{{tx .Metric $l}}</code></p>
+      <p class="finding-action"><strong>{{t $l "t.recommend"}}:</strong> {{tx .Action $l}}</p>
+      <a class="finding-link" href="{{$.BaseURL}}{{pathFor .Route $l}}">{{if eq $l "id"}}lihat perhitungannya{{else}}see the working{{end}} →</a>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Ringkasan proyek{{else}}Project at a glance{{end}}</h2>
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Jadwal{{else}}Schedule{{end}}</caption>
+      <tbody>
+        <tr><th>{{if eq $l "id"}}Mulai{{else}}Start{{end}}</th><td>{{date .Charter.StartDate $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Durasi rencana{{else}}Planned duration{{end}}</th><td>{{$a.Plan.Duration}} {{t $l "t.days"}} ({{weeks (f $a.Plan.Duration) $l}} {{t $l "t.weeks"}})</td></tr>
+        <tr><th>{{if eq $l "id"}}Selesai menurut kalender kerja{{else}}Finish per working calendar{{end}}</th><td><strong>{{date $a.FinishDatePlan $l}}</strong></td></tr>
+        <tr><th>{{if eq $l "id"}}Target Project Charter{{else}}Charter target{{end}}</th><td>{{date .Charter.TargetFinish $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Selisih akibat hari libur{{else}}Gap caused by holidays{{end}}</th><td>{{len $a.HolidaysInPlan}} {{if eq $l "id"}}hari libur di dalam rentang proyek{{else}}holidays inside the project window{{end}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Simpul kritis{{else}}Critical nodes{{end}}</th><td>{{len $a.Plan.CriticalPath}} {{if eq $l "id"}}dari{{else}}of{{end}} {{len (activities)}}</td></tr>
+      </tbody>
+    </table>
+    <table class="data">
+      <caption>{{if eq $l "id"}}Anggaran{{else}}Budget{{end}}</caption>
+      <tbody>
+        <tr><th>BAC · {{if eq $l "id"}}biaya aktivitas{{else}}activity cost{{end}}</th><td>{{rp $a.BAC $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Cadangan kontinjensi{{else}}Contingency reserve{{end}}</th><td>{{rp (contingency) $l}}</td></tr>
+        <tr><th>Cost baseline</th><td>{{rp $a.Baseline $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Cadangan manajemen{{else}}Management reserve{{end}}</th><td>{{rp $a.MgmtReserve $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Pagu Project Charter{{else}}Charter cap{{end}}</th><td><strong>{{rp (totalBudget) $l}}</strong></td></tr>
+        <tr><th>{{if eq $l "id"}}Proyeksi akhir (EAC){{else}}Forecast (EAC){{end}}</th><td class="{{if gt $s.EACTypical (totalBudget)}}neg{{end}}"><strong>{{rp $s.EACTypical $l}}</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band callout-band">
+  <div class="callout">
+    <h3>{{if eq $l "id"}}Mengapa situs ini ada{{else}}Why this site exists{{end}}</h3>
+    <p>{{if eq $l "id"}}Proyek perangkat lunak di Indonesia rutin gagal pada jadwal dan biaya, dan nyaris tidak ada yang menjalankan hitungan yang sebenarnya sudah bisa memperingatkan sejak awal. Perkakas yang mampu melakukannya - MS Project, Primavera - berbayar dan tertutup.{{else}}Software projects in Indonesia routinely fail on schedule and cost, and almost nobody runs the arithmetic that would have warned them early. The tools that can - MS Project, Primavera - are paid and closed.{{end}}</p>
+    <p>{{if eq $l "id"}}Aplikasi ini menjalankan seluruh hitungan itu sebagai kode Go yang terbuka dan teruji, lalu membuktikannya pada satu kasus nyata berskala nasional: <a href="{{.BaseURL}}{{pathFor "/coretax/" $l}}">proyek Coretax DJP senilai Rp 1,34 triliun</a>. Pola kegagalannya identik dengan proyek kuliah Rp 14,8 juta di situs ini - hanya skalanya yang berbeda sekitar sembilan puluh ribu kali.{{else}}This application runs all of that arithmetic as open, tested Go code, then proves it against one real national-scale case: <a href="{{.BaseURL}}{{pathFor "/coretax/" $l}}">the IDR 1.34 trillion Coretax DJP project</a>. Its failure pattern is identical to the IDR 14.8 million student project on this site - only the scale differs, by about ninety thousand times.{{end}}</p>
+  </div>
+</section>
+{{end}}

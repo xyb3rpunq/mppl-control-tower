@@ -1,0 +1,124 @@
+{{define "base"}}<!doctype html>
+<html lang="{{.Lang}}" data-route="{{.Page.Route}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<meta name="description" content="{{.Desc}}">
+<link rel="canonical" href="{{.Canonical}}">
+<link rel="alternate" hreflang="{{.OtherLang}}" href="{{.AltURL}}">
+<link rel="alternate" hreflang="{{.Lang}}" href="{{.Canonical}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{.Desc}}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="{{if eq .Lang "id"}}id_ID{{else}}en_US{{end}}">
+<meta name="theme-color" content="#0b1020">
+<link rel="stylesheet" href="{{.BaseURL}}/assets/css/app.css">
+<link rel="manifest" href="{{.BaseURL}}/assets/manifest.webmanifest">
+<link rel="icon" href="{{.BaseURL}}/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+// Tema dipulihkan sebelum halaman digambar supaya tidak ada kedipan putih
+// pada tema gelap. Ini satu-satunya skrip yang harus berjalan seblokir ini.
+try {
+  var m = localStorage.getItem('ct-theme');
+  if (m) document.documentElement.dataset.theme = m;
+} catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#utama">{{.T "site.skip"}}</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{.BaseURL}}{{pathFor "/" .Lang}}">
+      <span class="brand-mark" aria-hidden="true">◉</span>
+      <span class="brand-text">
+        <strong>{{.T "site.name"}}</strong>
+        <small>{{.T "site.tagline"}}</small>
+      </span>
+    </a>
+    <div class="topbar-actions">
+      <a class="chip" href="{{.AltURL}}" hreflang="{{.OtherLang}}" rel="alternate">{{upper .OtherLang}}</a>
+      <button class="chip" type="button" data-theme-toggle aria-label="{{.T "site.theme"}}">◐</button>
+      <a class="chip" href="https://github.com/xyb3rpunq/mppl-control-tower" rel="noopener">{{.T "site.sourceCode"}}</a>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="sidenav" aria-label="{{.T "site.menu"}}">
+    <ol>
+      {{$root := .}}
+      {{range .Pages}}
+      <li{{if eq .Route $root.Page.Route}} class="current"{{end}}>
+        <a href="{{$root.BaseURL}}{{pathFor .Route $root.Lang}}"{{if eq .Route $root.Page.Route}} aria-current="page"{{end}}>
+          <span class="nav-icon" aria-hidden="true">{{.Icon}}</span>
+          <span class="nav-label">{{.NavLabel $root.Lang}}</span>
+        </a>
+      </li>
+      {{end}}
+    </ol>
+    <div class="sidenav-foot">
+      <p class="muted small">{{.T "site.builtWith"}}</p>
+      <p class="muted small">{{.T "site.offline"}}</p>
+    </div>
+  </nav>
+
+  <main id="utama">
+    <div class="page-head">
+      <p class="eyebrow">{{.Charter.Code}} · {{tx .Charter.ShortName .Lang}}</p>
+      <h1>{{.Page.NavLabel .Lang}}</h1>
+      <p class="lede">{{tx .Page.Summary .Lang}}</p>
+      <p class="page-meta">
+        <span class="tag">{{.T "site.dataDate"}}: <strong>{{date .Analysis.StatusDate .Lang}}</strong></span>
+        <span class="tag">SPI {{idx .Analysis.Snapshot.SPI .Lang}}</span>
+        <span class="tag">CPI {{idx .Analysis.Snapshot.CPI .Lang}}</span>
+        <span class="tag health-{{.Analysis.Health}}">{{.T (printf "h.%s" .Analysis.Health)}}</span>
+      </p>
+    </div>
+
+    {{.Content}}
+
+    <footer class="page-foot">
+      <p>{{tx .Charter.Course .Lang}} · {{.Charter.Advisor}}</p>
+      <p class="muted small">{{.T "site.updated"}}: {{.BuildTime}} · <a href="{{.BaseURL}}/data/metrik.json">metrik.json</a> · <a href="{{.BaseURL}}/data/aktivitas.csv">aktivitas.csv</a> · <a href="{{.BaseURL}}/data/risiko.csv">risiko.csv</a></p>
+    </footer>
+  </main>
+</div>
+
+<script src="{{.BaseURL}}/assets/js/app.js" defer></script>
+</body>
+</html>
+{{end}}
+
+{{/* ---------------------------------------------------------------- partial */}}
+
+{{define "kpi"}}
+<div class="kpi {{.class}}">
+  <p class="kpi-label">{{.label}}</p>
+  <p class="kpi-value">{{.value}}</p>
+  <p class="kpi-note">{{.note}}</p>
+</div>
+{{end}}
+
+{{define "finding"}}
+<article class="finding sev-{{.Severity}}">
+  <header>
+    <span class="sev-badge">{{.Severity}}</span>
+    <h3>{{.Title}}</h3>
+  </header>
+  <p>{{.Detail}}</p>
+  <p class="finding-metric"><span>metrik</span> <code>{{.Metric}}</code></p>
+  <p class="finding-action"><strong>{{.ActionLabel}}:</strong> {{.Action}}</p>
+</article>
+{{end}}
+
+{{define "figure"}}
+<figure class="figure">
+  <figcaption>
+    <h3>{{.title}}</h3>
+    <p>{{.caption}}</p>
+  </figcaption>
+  <div class="figure-body{{if .scroll}} scrollable{{end}}">{{.svg}}</div>
+</figure>
+{{end}}

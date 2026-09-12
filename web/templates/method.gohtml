@@ -1,0 +1,101 @@
+{{define "method"}}
+{{$l := .Lang}}{{$a := .Analysis}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Bagaimana situs ini dibangun{{else}}How this site is built{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Satu basis kode Go dipakai dua kali. Sebagai generator situs statis, ia merender seluruh halaman dan seluruh grafik SVG di sisi server, sehingga situsnya utuh tanpa JavaScript, bisa dicetak jadi PDF apa adanya, dan terbaca mesin pengindeks. Dikompilasi ke WebAssembly, paket hitung yang sama berjalan di dalam peramban - sehingga menggeser tanggal data menghitung ulang CPM, Earned Value, dan Monte Carlo secara langsung, tanpa server.{{else}}One Go codebase, used twice. As a static site generator it renders every page and every SVG chart server-side, so the site works with JavaScript off, prints to PDF as-is, and is readable by indexers. Compiled to WebAssembly, the same computation packages run inside the browser - so moving the data date recomputes CPM, Earned Value, and Monte Carlo live, with no server.{{end}}
+  </p>
+  <div class="arch">
+    <div class="arch-col">
+      <h3>internal/</h3>
+      <ul class="pkg-list">
+        <li><code>workcal</code> — {{if eq $l "id"}}kalender hari kerja, hari libur, pemetaan indeks ke tanggal{{else}}working calendar, holidays, index-to-date mapping{{end}}</li>
+        <li><code>schedule</code> — {{if eq $l "id"}}CPM empat relasi PDM, float, jalur kritis, PERT{{else}}CPM with four PDM relations, float, critical path, PERT{{end}}</li>
+        <li><code>evm</code> — {{if eq $l "id"}}PV, EV, AC, indeks, tiga EAC, TCPI, Earned Schedule{{else}}PV, EV, AC, indices, three EACs, TCPI, Earned Schedule{{end}}</li>
+        <li><code>simulate</code> — {{if eq $l "id"}}Monte Carlo, PRNG berbenih, beta-PERT, Spearman{{else}}Monte Carlo, seeded PRNG, beta-PERT, Spearman{{end}}</li>
+        <li><code>risk</code> — {{if eq $l "id"}}EMV, matriks 5×5, kecukupan cadangan{{else}}EMV, 5×5 matrix, reserve adequacy{{end}}</li>
+        <li><code>resource</code> — {{if eq $l "id"}}histogram beban, deteksi over-alokasi{{else}}load histogram, over-allocation detection{{end}}</li>
+        <li><code>quality</code> — {{if eq $l "id"}}peta kendali, aturan Nelson, Pareto, Cpk, biaya kualitas{{else}}control chart, Nelson rules, Pareto, Cpk, cost of quality{{end}}</li>
+        <li><code>coretax</code> — {{if eq $l "id"}}metrik turunan studi kasus, skenario transisi{{else}}case study derived metrics, transition scenarios{{end}}</li>
+        <li><code>render</code> — {{if eq $l "id"}}pembangun SVG dan seluruh jenis grafik{{else}}SVG builder and every chart type{{end}}</li>
+        <li><code>model</code> — {{if eq $l "id"}}sumber tunggal kebenaran seluruh data proyek{{else}}single source of truth for all project data{{end}}</li>
+      </ul>
+    </div>
+    <div class="arch-col">
+      <h3>cmd/</h3>
+      <ul class="pkg-list">
+        <li><code>site</code> — {{if eq $l "id"}}generator situs statis; menulis {{len .Pages}} rute × 2 bahasa, sitemap, CSV, dan JSON metrik{{else}}static site generator; writes {{len .Pages}} routes × 2 languages, sitemap, CSV, and a metrics JSON{{end}}</li>
+        <li><code>wasm</code> — {{if eq $l "id"}}paket hitung yang sama dikompilasi ke WebAssembly untuk perhitungan ulang di peramban{{else}}the same computation packages compiled to WebAssembly for in-browser recomputation{{end}}</li>
+      </ul>
+      <h3>{{if eq $l "id"}}Keputusan teknis{{else}}Technical decisions{{end}}</h3>
+      <ul class="dash">
+        <li>{{if eq $l "id"}}Nol dependensi pihak ketiga. Seluruh grafik, statistik, dan format angka ditulis sendiri - yang berarti setiap angka bisa ditelusuri sampai ke barisnya.{{else}}Zero third-party dependencies. Every chart, statistic, and number format is written here - meaning every figure is traceable to its line.{{end}}</li>
+        <li>{{if eq $l "id"}}Generator acak berbenih tetap. Tanpa itu, angka Monte Carlo di dasbor akan berubah setiap kali situs dibangun dan mustahil diverifikasi pembaca.{{else}}A fixed-seed random generator. Without it, the Monte Carlo figures would shift on every build and no reader could verify them.{{end}}</li>
+        <li>{{if eq $l "id"}}Grafik dirender di server sebagai SVG inline, memakai CSS custom property untuk warna - satu berkas yang sama tampil benar di tema terang dan gelap tanpa digambar ulang.{{else}}Charts render server-side as inline SVG using CSS custom properties for colour - one file renders correctly in both light and dark themes without redrawing.{{end}}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Asumsi yang dipakai, dinyatakan terbuka{{else}}Assumptions used, stated openly{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Setiap model berdiri di atas asumsi. Yang membedakan model yang berguna dari model yang menyesatkan bukan ketiadaan asumsi, melainkan apakah asumsinya bisa dilihat dan digugat.{{else}}Every model rests on assumptions. What separates a useful model from a misleading one is not the absence of assumptions but whether they can be seen and challenged.{{end}}</p>
+  <table class="data wide-first">
+    <thead><tr><th>{{t $l "t.assumption"}}</th><th>{{if eq $l "id"}}Alasan{{else}}Rationale{{end}}</th><th>{{if eq $l "id"}}Jika keliru{{else}}If wrong{{end}}</th></tr></thead>
+    <tbody>
+      <tr>
+        <th>{{if eq $l "id"}}Kemajuan dalam satu aktivitas linear terhadap durasinya{{else}}Progress within an activity is linear in duration{{end}}</th>
+        <td>{{if eq $l "id"}}Aturan percent-complete paling sederhana dan paling bisa diaudit.{{else}}The simplest and most auditable percent-complete rule.{{end}}</td>
+        <td>{{if eq $l "id"}}Aturan lain (0/100, 50/50) memberi EV berbeda. Yang penting: aturannya disepakati di awal, bukan dipilih belakangan.{{else}}Other rules (0/100, 50/50) give different EV. What matters: agree the rule up front, not after the fact.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Durasi antar-aktivitas saling bebas{{else}}Activity durations are independent{{end}}</th>
+        <td>{{if eq $l "id"}}Syarat agar varians PERT boleh dijumlahkan dan sampel Monte Carlo boleh diambil terpisah.{{else}}Required for PERT variances to add and for Monte Carlo samples to be drawn separately.{{end}}</td>
+        <td>{{if eq $l "id"}}Satu pengembang mengerjakan A16, A17, dan A18 berurutan - kalau ia melambat, ketiganya melambat. Ketidakpastian sesungguhnya lebih besar daripada yang dilaporkan simulasi.{{else}}One developer runs A16, A17, and A18 in sequence - if they slow, all three slow. Real uncertainty is larger than the simulation reports.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}CPI stabil untuk proyeksi EAC{{else}}CPI is stable for the EAC forecast{{end}}</th>
+        <td>{{if eq $l "id"}}Asumsi standar pada EAC = BAC ÷ CPI.{{else}}The standard assumption behind EAC = BAC ÷ CPI.{{end}}</td>
+        <td>{{if eq $l "id"}}Proyek ini sudah {{pct $a.Snapshot.PercentComplete 0 $l}} selesai - di atas ambang dua puluh persen ketika CPI mulai stabil, jadi asumsinya cukup aman di sini.{{else}}This project is {{pct $a.Snapshot.PercentComplete 0 $l}} complete - above the twenty percent threshold where CPI stabilises, so the assumption holds reasonably here.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Kalender hari libur{{else}}The holiday calendar{{end}}</th>
+        <td>{{if eq $l "id"}}Tiga dari lima hari libur ditandai asumsi karena tanggalnya belum ditetapkan lewat keputusan resmi saat dokumen proyek disusun.{{else}}Three of five holidays are flagged assumed because their dates were not yet fixed by decree when the project documents were written.{{end}}</td>
+        <td>{{if eq $l "id"}}Setiap satu hari libur yang meleset menggeser tanggal selesai satu hari kerja. Daftarnya ada di halaman Piagam agar bisa dikoreksi tanpa menyentuh kode.{{else}}Each misplaced holiday shifts the finish by one working day. The list is on the Charter page so it can be corrected without touching code.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Data realisasi proyek SIATS{{else}}SIATS actual-progress data{{end}}</th>
+        <td>{{if eq $l "id"}}Tanggal mulai, durasi, dan biaya aktual per aktivitas disusun sebagai skenario pelaksanaan yang wajar, karena proyek ini adalah tugas kuliah yang tidak benar-benar dieksekusi.{{else}}Per-activity actual start, duration, and cost are constructed as a plausible execution scenario, since this project is coursework and was not actually executed.{{end}}</td>
+        <td>{{if eq $l "id"}}Angka Earned Value akan berbeda. Yang tidak berubah adalah rumus dan cara membacanya - dan itulah yang diajarkan halaman ini.{{else}}The Earned Value figures would differ. What does not change is the formulas and how to read them - which is what this page teaches.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Peluang kegagalan cutover Coretax 35%{{else}}A 35% Coretax cutover failure probability{{end}}</th>
+        <td>{{if eq $l "id"}}Andaian untuk memperagakan perhitungan EMV strategi transisi. Ditandai sebagai skenario, bukan fakta.{{else}}An assumption used to demonstrate the EMV calculation across transition strategies. Flagged as scenario, not fact.{{end}}</td>
+        <td>{{if eq $l "id"}}Titik impasnya {{pct (breakEven 0.12 0.10) 3 $l}}. Selama peluang gagalnya di atas angka itu, kesimpulannya tidak berubah - dan angka itu sangat kecil.{{else}}The break-even is {{pct (breakEven 0.12 0.10) 3 $l}}. As long as failure probability exceeds that, the conclusion holds - and that figure is very small.{{end}}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Yang belum tertutup{{else}}What is not covered{{end}}</h2>
+  <ul class="dash gap-list">
+    <li>{{if eq $l "id"}}<strong>Korelasi antar durasi aktivitas.</strong> Simulasi Monte Carlo mengambil sampel setiap aktivitas secara bebas. Menambahkan korelasi akan melebarkan sebaran dan menggeser P80 lebih jauh - artinya angka jadwal di situs ini masih terlalu optimistis, bukan terlalu pesimistis.{{else}}<strong>Correlation between activity durations.</strong> The Monte Carlo samples each activity independently. Adding correlation would widen the distribution and push P80 further out - meaning the schedule figures here are still too optimistic, not too pessimistic.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Resource-constrained scheduling.</strong> Over-alokasi dideteksi dan ditampilkan, tetapi jadwalnya tidak dihitung ulang dengan batasan kapasitas. Jadwal yang benar-benar terbatas sumber daya akan lebih panjang daripada 85 hari kerja.{{else}}<strong>Resource-constrained scheduling.</strong> Over-allocation is detected and displayed but the schedule is not recomputed under capacity limits. A genuinely resource-constrained schedule would run longer than 85 working days.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Simulasi biaya Monte Carlo.</strong> Ketidakpastian disimulasikan pada durasi saja; biaya masih dihitung deterministik dari CPI. Sebaran EAC akan lebih informatif daripada tiga titik EAC.{{else}}<strong>Monte Carlo cost simulation.</strong> Uncertainty is simulated on duration only; cost is still derived deterministically from CPI. An EAC distribution would be more informative than three EAC points.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Kalender per sumber daya.</strong> Semua peran memakai kalender kerja yang sama. Periode ujian kampus - risiko R08 pada register - belum tercermin sebagai ketidaktersediaan di kalender.{{else}}<strong>Per-resource calendars.</strong> All roles share one working calendar. The campus exam period - risk R08 in the register - is not yet reflected as unavailability in the calendar.{{end}}</li>
+  </ul>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Data terbuka{{else}}Open data{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Seluruh angka di situs ini tersedia dalam bentuk mesin. Silakan dipakai, diperiksa, atau dibantah.{{else}}Every figure on this site is available in machine-readable form. Use it, check it, or dispute it.{{end}}</p>
+  <div class="download-grid">
+    <a class="dl" href="{{.BaseURL}}/data/metrik.json"><strong>metrik.json</strong><span>{{if eq $l "id"}}seluruh metrik Earned Value, simulasi, risiko, dan mutu{{else}}all Earned Value, simulation, risk, and quality metrics{{end}}</span></a>
+    <a class="dl" href="{{.BaseURL}}/data/aktivitas.csv"><strong>aktivitas.csv</strong><span>{{if eq $l "id"}}41 simpul dengan ES, EF, LS, LF, float, dan Earned Value{{else}}41 nodes with ES, EF, LS, LF, float, and Earned Value{{end}}</span></a>
+    <a class="dl" href="{{.BaseURL}}/data/risiko.csv"><strong>risiko.csv</strong><span>{{if eq $l "id"}}12 risiko dengan EMV inheren dan residual{{else}}12 risks with inherent and residual EMV{{end}}</span></a>
+    <a class="dl" href="{{.BaseURL}}/sitemap.xml"><strong>sitemap.xml</strong><span>{{if eq $l "id"}}seluruh rute dalam dua bahasa{{else}}every route in both languages{{end}}</span></a>
+  </div>
+</section>
+{{end}}

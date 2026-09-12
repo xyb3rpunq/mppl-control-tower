@@ -1,0 +1,179 @@
+{{define "charter"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$c := .Charter}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}1. Project Charter{{else}}1. Project Charter{{end}}</h2>
+  <p class="section-intro">{{tx $c.Background $l}}</p>
+
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Informasi umum{{else}}General information{{end}}</caption>
+      <tbody>
+        <tr><th>{{if eq $l "id"}}Nama proyek{{else}}Project name{{end}}</th><td>{{tx $c.Name $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Kode{{else}}Code{{end}}</th><td>{{$c.Code}} · v{{$c.Version}}</td></tr>
+        <tr><th>Project Sponsor</th><td>{{tx $c.Sponsor $l}}</td></tr>
+        <tr><th>Project Manager</th><td>{{$c.Manager}} ({{$c.ManagerNIM}})</td></tr>
+        <tr><th>{{if eq $l "id"}}Dosen pembimbing{{else}}Supervisor{{end}}</th><td>{{$c.Advisor}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Tanggal piagam{{else}}Charter date{{end}}</th><td>{{date $c.CharterDate $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Mulai{{else}}Start{{end}}</th><td>{{date $c.StartDate $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><td>{{$c.DurationWeeks}} {{t $l "t.weeks"}} = {{$a.Plan.Duration}} {{t $l "t.days"}}</td></tr>
+      </tbody>
+    </table>
+    <table class="data">
+      <caption>{{if eq $l "id"}}Anggaran versi Project Charter{{else}}Charter budget allocation{{end}}</caption>
+      <tbody>
+        {{range charterAlloc}}
+        <tr><th>{{tx .Label $l}}</th><td>{{rp .Amount $l}}</td></tr>
+        {{end}}
+        <tr class="total"><th>{{t $l "t.total"}}</th><td><strong>{{rp (totalBudget) $l}}</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Catatan pemeriksaan: tanggal selesai pada piagam tidak konsisten dengan kalender kerja{{else}}Verification note: the charter finish date is inconsistent with the working calendar{{end}}</h4>
+    <p>{{if eq $l "id"}}Piagam menyebut target Februari 2026 dengan durasi 17 minggu dari {{date $c.StartDate $l}}. Tujuh belas minggu kalender polos berakhir {{date $c.TargetFinish $l}}. Tetapi 85 hari kerja - setelah akhir pekan dan {{len $a.HolidaysInPlan}} hari libur dikeluarkan - baru berakhir <strong>{{date $a.FinishDatePlan $l}}</strong>. Selisihnya lima hari kerja, dan seluruhnya jatuh setelah jalur kritis tidak lagi punya float.{{else}}The charter targets February 2026 with 17 weeks from {{date $c.StartDate $l}}. Seventeen plain calendar weeks end on {{date $c.TargetFinish $l}}. But 85 working days - once weekends and {{len $a.HolidaysInPlan}} holidays are removed - only end on <strong>{{date $a.FinishDatePlan $l}}</strong>. The gap is five working days, all of them falling after the critical path has run out of float.{{end}}</p>
+    <table class="data compact">
+      <thead><tr><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th>{{if eq $l "id"}}Hari libur{{else}}Holiday{{end}}</th><th>{{if eq $l "id"}}Status{{else}}Status{{end}}</th></tr></thead>
+      <tbody>
+        {{range $a.HolidaysInPlan}}
+        <tr>
+          <td>{{date .Date $l}}</td>
+          <td>{{if eq $l "id"}}{{.NameID}}{{else}}{{.NameEN}}{{end}}</td>
+          <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}asumsi{{else}}assumed{{end}}</span>{{else}}<span class="pill ok">{{if eq $l "id"}}tetap{{else}}fixed{{end}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="three-col">
+    <div class="card">
+      <h3>{{if eq $l "id"}}Tujuan proyek{{else}}Objectives{{end}}</h3>
+      <ol class="tick">{{range $c.Objectives}}<li>{{tx . $l}}</li>{{end}}</ol>
+    </div>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Termasuk lingkup{{else}}In scope{{end}}</h3>
+      <ul class="tick">{{range $c.InScope}}<li>{{tx . $l}}</li>{{end}}</ul>
+    </div>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Di luar lingkup{{else}}Out of scope{{end}}</h3>
+      <ul class="cross">{{range $c.OutScope}}<li>{{tx . $l}}</li>{{end}}</ul>
+    </div>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Deliverable{{else}}Deliverables{{end}}</h3>
+      <ol class="tick">{{range $c.Deliverables}}<li>{{tx . $l}}</li>{{end}}</ol>
+    </div>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Asumsi{{else}}Assumptions{{end}}</h3>
+      <ul class="dash">{{range $c.Assumptions}}<li>{{tx . $l}}</li>{{end}}</ul>
+    </div>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Batasan{{else}}Constraints{{end}}</h3>
+      <ul class="dash">{{range $c.Constraints}}<li>{{tx . $l}}</li>{{end}}</ul>
+    </div>
+  </div>
+
+  <h3>{{if eq $l "id"}}Kriteria keberhasilan{{else}}Success criteria{{end}}</h3>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Kriteria{{else}}Criterion{{end}}</th><th>{{t $l "t.target"}}</th><th>{{if eq $l "id"}}Status menurut data{{else}}Status per the data{{end}}</th></tr></thead>
+    <tbody>
+      {{range $c.SuccessCriteria}}
+      <tr>
+        <td>{{tx .Label $l}}</td>
+        <td class="num">{{if eq .Unit "Rp"}}{{rp .Target $l}}{{else}}{{num .Target 0 $l}} {{.Unit}}{{end}}</td>
+        <td>
+          {{if eq .MetricKey "budget"}}<span class="pill bad">{{if eq $l "id"}}terancam - EAC {{rpShort $a.Snapshot.EACTypical $l}}{{else}}at risk - EAC {{rpShort $a.Snapshot.EACTypical $l}}{{end}}</span>
+          {{else if eq .MetricKey "schedule"}}<span class="pill bad">{{if eq $l "id"}}terancam - P80 = {{num $a.Sim.P80 0 $l}} hari kerja{{else}}at risk - P80 = {{num $a.Sim.P80 0 $l}} working days{{end}}</span>
+          {{else}}<span class="pill neutral">{{if eq $l "id"}}belum dapat diukur sebelum go-live{{else}}not measurable before go-live{{end}}</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}2. Work Breakdown Structure{{else}}2. Work Breakdown Structure{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}WBS asli pada tugas berhenti di level paket kerja: 5 fase, 15 paket. Aplikasi ini memecahnya lebih jauh menjadi 35 aktivitas ditambah 5 milestone, karena CPM tidak bisa menemukan jalur kritis yang bermakna pada WBS yang setiap fasenya hanya satu rantai lurus - tanpa aktivitas paralel, semua pekerjaan tampak kritis dan float selalu nol.{{else}}The original WBS stops at work-package level: 5 phases, 15 packages. This application decomposes further into 35 activities plus 5 milestones, because CPM cannot find a meaningful critical path in a WBS whose every phase is a single straight chain - without parallel activities everything looks critical and float is always zero.{{end}}
+  </p>
+
+  {{$totalBudget := 0.0}}
+  <div class="wbs-tree">
+    {{range wbsPhases}}
+    {{$phase := .}}
+    <details class="wbs-phase" open>
+      <summary>
+        <span class="wbs-code">{{.Code}}</span>
+        <span class="wbs-name">{{tx .Name $l}}</span>
+        <span class="wbs-meta">{{.Weeks}} {{t $l "t.weeks"}} · {{tx .Milestone $l}}</span>
+      </summary>
+      {{range .Packages}}
+      {{$pkg := .}}
+      <div class="wbs-package">
+        <p class="wbs-package-head"><span class="wbs-code">{{.Code}}</span> {{tx .Name $l}}</p>
+        <table class="data compact">
+          <thead>
+            <tr>
+              <th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th>
+              <th class="num">{{t $l "t.duration"}}</th>
+              <th class="num">O / M / P</th>
+              <th class="num">{{t $l "t.budget"}}</th>
+              <th class="num">{{t $l "t.totalFloat"}}</th>
+              <th>{{if eq $l "id"}}Pendahulu{{else}}Predecessors{{end}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range activities}}
+            {{if eq .WBS $pkg.Code}}
+            {{$task := taskOf .ID}}
+            <tr class="{{if isCritical .ID}}is-critical{{end}}{{if .Milestone}} is-milestone{{end}}">
+              <td><code>{{.ID}}</code></td>
+              <td>{{tx .Name $l}}</td>
+              <td class="num">{{if .Milestone}}—{{else}}{{.Duration}}{{end}}</td>
+              <td class="num small">{{if .Milestone}}—{{else}}{{.Optimistic}} / {{.Duration}} / {{.Pessimistic}}{{end}}</td>
+              <td class="num">{{rp (budgetOf .) $l}}</td>
+              <td class="num">{{$task.TotalFloat}}</td>
+              <td class="small">{{range $i, $p := .Pred}}{{if $i}}, {{end}}<code>{{$p.ID}}</code>{{end}}</td>
+            </tr>
+            {{end}}
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{end}}
+    </details>
+    {{end}}
+  </div>
+
+  <div class="note-box">
+    <h4>{{if eq $l "id"}}Pemeriksaan aturan 100%{{else}}The 100% rule check{{end}}</h4>
+    <p>{{if eq $l "id"}}Aturan 100% menyatakan WBS harus memuat seluruh pekerjaan proyek - tidak kurang, dan tidak lebih. Pemeriksaannya di sini bersifat aritmetis: jumlah anggaran seluruh aktivitas harus sama persis dengan BAC, dan setiap aktivitas harus punya tepat satu paket kerja induk. Keduanya diuji otomatis di <code>internal/model</code> sehingga tidak bisa melenceng diam-diam.{{else}}The 100% rule says a WBS must contain all of the project's work - no less, and no more. The check here is arithmetic: the sum of activity budgets must equal BAC exactly, and every activity must have exactly one parent work package. Both are tested automatically in <code>internal/model</code> so neither can drift unnoticed.{{end}}</p>
+    <ul class="dash">
+      <li>{{if eq $l "id"}}Jumlah aktivitas{{else}}Activity count{{end}}: <strong>{{len (activities)}}</strong> ({{if eq $l "id"}}35 aktivitas + 5 milestone{{else}}35 activities + 5 milestones{{end}})</li>
+      <li>{{if eq $l "id"}}Jumlah anggaran aktivitas{{else}}Sum of activity budgets{{end}}: <strong>{{rp $a.BAC $l}}</strong> = BAC</li>
+      <li>{{if eq $l "id"}}Total hari-orang{{else}}Total person-days{{end}}: <strong>{{num $a.Resources.TotalPersonDays 1 $l}}</strong></li>
+      <li>{{if eq $l "id"}}Simpul di jalur kritis{{else}}Nodes on the critical path{{end}}: <strong>{{len $a.Plan.CriticalPath}}</strong> {{if eq $l "id"}}dari{{else}}of{{end}} {{len (activities)}}</li>
+    </ul>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}3. Rekonsiliasi anggaran{{else}}3. Budget reconciliation{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Piagam menetapkan pagu dari atas ke bawah: Rp 16 juta dibagi lima pos. Estimasi rinci berjalan dari bawah ke atas: tarif per peran dikali hari-orang per aktivitas. Keduanya nyaris tidak pernah bertemu persis, dan cara menjembataninya bukan dengan memaksa salah satunya - melainkan dengan menempatkan selisihnya sebagai cadangan yang dinyatakan terbuka.{{else}}The charter sets the cap top-down: IDR 16 million across five lines. The detailed estimate runs bottom-up: role rates times person-days per activity. The two almost never meet exactly, and the way to bridge them is not to force one of them - it is to name the difference openly as reserve.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{budgetWaterfall $l}}</div>
+  </figure>
+  <table class="data">
+    <caption>{{if eq $l "id"}}Tarif harian per peran (basis estimasi bottom-up){{else}}Daily rate per role (bottom-up estimate basis){{end}}</caption>
+    <thead><tr><th>{{t $l "t.role"}}</th><th class="num">{{if eq $l "id"}}Tarif / hari-orang{{else}}Rate / person-day{{end}}</th><th class="num">{{if eq $l "id"}}Kapasitas / hari{{else}}Capacity / day{{end}}</th></tr></thead>
+    <tbody>
+      {{$rc := rateCard}}{{$cap := capacity}}
+      {{range sortedRoles $rc}}
+      <tr><th>{{.}}</th><td class="num">{{rp (index $rc .) $l}}</td><td class="num">{{num (index $cap .) 1 $l}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

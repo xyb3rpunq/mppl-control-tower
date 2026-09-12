@@ -1,0 +1,65 @@
+name: uji
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uji:
+    name: Uji & vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          check-latest: true
+          cache: true
+
+      - name: Periksa format
+        run: |
+          keluar=$(gofmt -l .)
+          if [ -n "$keluar" ]; then
+            echo "Berkas berikut belum diformat dengan gofmt:"
+            echo "$keluar"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Uji dengan deteksi balapan
+        run: go test -race -count=1 ./...
+
+      - name: Uji cakupan
+        run: |
+          go test -count=1 -coverprofile=cover.out ./internal/...
+          go tool cover -func=cover.out | tail -1
+
+      # Mesin hitung yang sama harus tetap bisa dikompilasi ke WebAssembly.
+      # Kalau langkah ini gagal, panel interaktif di situs akan diam-diam
+      # hilang tanpa ada yang menyadarinya sampai seseorang membukanya.
+      - name: Kompilasi WebAssembly
+        run: GOOS=js GOARCH=wasm go build -o /tmp/mppl.wasm ./cmd/wasm
+
+      - name: Bangun situs
+        run: go run ./cmd/site -out /tmp/dist -base "https://xyb3rpunq.github.io/mppl-control-tower"
+
+      - name: Periksa keluaran build
+        run: |
+          set -e
+          test -f /tmp/dist/index.html
+          test -f /tmp/dist/en/index.html
+          test -f /tmp/dist/coretax/index.html
+          test -f /tmp/dist/sitemap.xml
+          test -f /tmp/dist/sw.js
+          test -f /tmp/dist/data/metrik.json
+          halaman=$(find /tmp/dist -name index.html | wc -l)
+          echo "halaman dihasilkan: $halaman"
+          test "$halaman" -eq 24

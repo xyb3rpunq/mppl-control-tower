@@ -1,0 +1,177 @@
+{{define "cost"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$s := .Analysis.Snapshot}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Potret Earned Value pada {{date $a.StatusDate $l}}{{else}}Earned Value snapshot at {{date $a.StatusDate $l}}{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Earned Value menyatukan lingkup, jadwal, dan biaya dalam satu satuan - rupiah - sehingga ketiganya bisa dibandingkan langsung. Tanpa EV, yang bisa dilakukan hanya membandingkan uang keluar dengan uang dianggarkan, dan perbandingan itu tidak memberi tahu apa pun tentang seberapa banyak pekerjaan yang benar-benar sudah jadi.{{else}}Earned Value unites scope, schedule, and cost in one unit - money - so all three compare directly. Without EV you can only compare money spent against money budgeted, and that says nothing about how much work actually exists.{{end}}
+  </p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">PV · Planned Value</p><p class="kpi-value">{{rpShort $s.PV $l}}</p><p class="kpi-note">{{if eq $l "id"}}yang seharusnya selesai{{else}}what should be done{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">EV · Earned Value</p><p class="kpi-value">{{rpShort $s.EV $l}}</p><p class="kpi-note">{{if eq $l "id"}}yang nyatanya selesai{{else}}what is done{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">AC · Actual Cost</p><p class="kpi-value">{{rpShort $s.AC $l}}</p><p class="kpi-note">{{if eq $l "id"}}yang nyatanya keluar{{else}}what was spent{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">BAC · Budget at Completion</p><p class="kpi-value">{{rpShort $s.BAC $l}}</p><p class="kpi-note">{{if eq $l "id"}}jumlah anggaran seluruh aktivitas{{else}}sum of all activity budgets{{end}}</p></div>
+  </div>
+
+  <table class="data wide-first">
+    <caption>{{if eq $l "id"}}Seluruh metrik turunan, dengan rumus dan substitusinya{{else}}All derived metrics, with formula and substitution{{end}}</caption>
+    <thead><tr><th>{{if eq $l "id"}}Metrik{{else}}Metric{{end}}</th><th>{{t $l "t.formula"}}</th><th class="num">{{if eq $l "id"}}Nilai{{else}}Value{{end}}</th><th>{{t $l "t.reading"}}</th></tr></thead>
+    <tbody>
+      <tr>
+        <th>SV · Schedule Variance</th><td><code>EV − PV</code></td>
+        <td class="num neg">{{signed $s.SV $l}}</td>
+        <td>{{if eq $l "id"}}Pekerjaan senilai {{rpShort (abs $s.SV) $l}} yang seharusnya sudah ada, belum ada.{{else}}Work worth {{rpShort (abs $s.SV) $l}} that should exist does not.{{end}}</td>
+      </tr>
+      <tr>
+        <th>CV · Cost Variance</th><td><code>EV − AC</code></td>
+        <td class="num neg">{{signed $s.CV $l}}</td>
+        <td>{{if eq $l "id"}}Uang {{rpShort (abs $s.CV) $l}} keluar tanpa pekerjaan yang menyertainya.{{else}}{{rpShort (abs $s.CV) $l}} left the budget with no work to show for it.{{end}}</td>
+      </tr>
+      <tr>
+        <th>SPI</th><td><code>EV ÷ PV</code></td>
+        <td class="num {{if lt $s.SPI 1.0}}neg{{end}}">{{num $s.SPI 4 $l}}</td>
+        <td>{{if eq $l "id"}}Kecepatan proyek {{pct $s.SPI 1 $l}} dari yang direncanakan.{{else}}The project is running at {{pct $s.SPI 1 $l}} of planned pace.{{end}}</td>
+      </tr>
+      <tr>
+        <th>CPI</th><td><code>EV ÷ AC</code></td>
+        <td class="num {{if lt $s.CPI 1.0}}neg{{end}}">{{num $s.CPI 4 $l}}</td>
+        <td>{{if eq $l "id"}}Setiap Rp 1.000 menghasilkan pekerjaan senilai Rp {{num (mul $s.CPI 1000.0) 0 $l}}.{{else}}Every IDR 1,000 buys IDR {{num (mul $s.CPI 1000.0) 0 $l}} of work.{{end}}</td>
+      </tr>
+      <tr class="group-start">
+        <th>ES · Earned Schedule</th><td><code>t | PV(t) = EV</code></td>
+        <td class="num">{{num $s.ES 2 $l}}</td>
+        <td>{{if eq $l "id"}}Kemajuan hari ini setara posisi rencana pada hari kerja ke-{{num $s.ES 0 $l}}.{{else}}Today's progress matches the plan's position at working day {{num $s.ES 0 $l}}.{{end}}</td>
+      </tr>
+      <tr>
+        <th>SV(t)</th><td><code>ES − AT</code></td>
+        <td class="num neg">{{signedN $s.SVt 2 $l}}</td>
+        <td>{{if eq $l "id"}}Tertinggal {{num (abs $s.SVt) 1 $l}} hari kerja - kalimat yang bisa dibawa ke rapat sponsor.{{else}}{{num (abs $s.SVt) 1 $l}} working days behind - a sentence that survives a sponsor meeting.{{end}}</td>
+      </tr>
+      <tr>
+        <th>SPI(t)</th><td><code>ES ÷ AT</code></td>
+        <td class="num {{if lt $s.SPIt 1.0}}neg{{end}}">{{num $s.SPIt 4 $l}}</td>
+        <td>{{if eq $l "id"}}Tidak menyesatkan di akhir proyek seperti SPI berbasis rupiah.{{else}}Does not mislead near project end the way money-based SPI does.{{end}}</td>
+      </tr>
+      <tr class="group-start">
+        <th>EAC {{if eq $l "id"}}optimistis{{else}}optimistic{{end}}</th><td><code>AC + (BAC − EV)</code></td>
+        <td class="num">{{rp $s.EACOptimistic $l}}</td>
+        <td>{{if eq $l "id"}}Varians dianggap kejadian sekali; sisa pekerjaan berjalan sesuai rencana.{{else}}Variance treated as a one-off; remaining work runs to plan.{{end}}</td>
+      </tr>
+      <tr class="highlight">
+        <th>EAC {{if eq $l "id"}}tipikal{{else}}typical{{end}}</th><td><code>BAC ÷ CPI</code></td>
+        <td class="num neg"><strong>{{rp $s.EACTypical $l}}</strong></td>
+        <td>{{if eq $l "id"}}Varians biaya dianggap terus berlanjut. Inilah varian yang paling sering dipakai - dan yang melampaui pagu {{rp (totalBudget) $l}}.{{else}}Cost variance assumed to continue. This is the most-used variant - and it exceeds the {{rp (totalBudget) $l}} cap.{{end}}</td>
+      </tr>
+      <tr>
+        <th>EAC {{if eq $l "id"}}pesimistis{{else}}pessimistic{{end}}</th><td><code>AC + (BAC − EV) ÷ (CPI × SPI)</code></td>
+        <td class="num neg">{{rp $s.EACPessimistic $l}}</td>
+        <td>{{if eq $l "id"}}Telat dan boros sama-sama berlanjut.{{else}}Late and overspent both continue.{{end}}</td>
+      </tr>
+      <tr>
+        <th>ETC · Estimate to Complete</th><td><code>EAC − AC</code></td>
+        <td class="num">{{rp $s.ETC $l}}</td>
+        <td>{{if eq $l "id"}}Uang yang masih harus dikeluarkan menurut EAC tipikal.{{else}}Money still to be spent per the typical EAC.{{end}}</td>
+      </tr>
+      <tr>
+        <th>VAC · Variance at Completion</th><td><code>BAC − EAC</code></td>
+        <td class="num neg">{{signed $s.VAC $l}}</td>
+        <td>{{if eq $l "id"}}Kelebihan biaya yang diproyeksikan saat proyek selesai.{{else}}Projected overrun at completion.{{end}}</td>
+      </tr>
+      <tr>
+        <th>TCPI</th><td><code>(BAC − EV) ÷ (BAC − AC)</code></td>
+        <td class="num neg">{{num $s.TCPI 4 $l}}</td>
+        <td>{{if eq $l "id"}}Sisa pekerjaan harus dikerjakan {{pct (subf (div $s.TCPI $s.CPI) 1.0) 1 $l}} lebih efisien daripada capaian sejauh ini. Angka seperti ini perlu penjelasan, bukan harapan.{{else}}Remaining work must run {{pct (subf (div $s.TCPI $s.CPI) 1.0) 1 $l}} more efficiently than achieved so far. A figure like this needs an explanation, not hope.{{end}}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="band" data-wasm-panel hidden>
+  <h2>{{if eq $l "id"}}Geser tanggal data{{else}}Move the data date{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Panel ini dihitung oleh mesin Go yang sama, dikompilasi ke WebAssembly dan berjalan di dalam peramban Anda. Tidak ada server yang dihubungi. Geser tanggalnya dan perhatikan CPI: setelah proyek melewati sekitar dua puluh persen, indeks itu nyaris tidak pernah membaik sendiri.{{else}}This panel is computed by the same Go engine, compiled to WebAssembly and running inside your browser. No server is contacted. Move the date and watch CPI: past roughly twenty percent complete, that index almost never recovers on its own.{{end}}</p>
+  <div class="live-panel">
+    <label class="live-control">
+      <span>{{.T "site.dataDate"}}</span>
+      <input type="date" data-status-date value="{{$a.StatusDate}}">
+    </label>
+    <p class="small muted" data-bounds-note>{{if eq $l "id"}}Data realisasi tersedia sampai __MAX__. Di luar rentang itu Earned Value berhenti tumbuh sementara Planned Value terus naik, sehingga SPI yang anjlok hanyalah artefak kehabisan data - bukan temuan.{{else}}Actual-progress data runs through __MAX__. Beyond that, Earned Value stops growing while Planned Value keeps rising, so a collapsing SPI is an artefact of exhausted data - not a finding.{{end}}</p>
+    <div class="live-out">
+      <div><span>SPI</span><strong data-out="spi">—</strong></div>
+      <div><span>CPI</span><strong data-out="cpi">—</strong></div>
+      <div><span>SV(t)</span><strong data-out="svt">—</strong></div>
+      <div><span>EV</span><strong data-out="ev">—</strong></div>
+      <div><span>AC</span><strong data-out="ac">—</strong></div>
+      <div><span>EAC</span><strong data-out="eac">—</strong></div>
+      <div><span>VAC</span><strong data-out="vac">—</strong></div>
+      <div><span>TCPI</span><strong data-out="tcpi">—</strong></div>
+      <div><span>{{if eq $l "id"}}Selesai{{else}}Complete{{end}}</span><strong data-out="complete">—</strong></div>
+      <div><span>{{if eq $l "id"}}Waktu berjalan{{else}}Time elapsed{{end}}</span><strong data-out="elapsed">—</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Kurva-S dan proyeksi biaya{{else}}S-curve and cost forecast{{end}}</h2>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{sCurve $l}}</div>
+  </figure>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Struktur anggaran berlapis{{else}}Layered budget structure{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Manajer proyek boleh menarik dari cadangan kontinjensi tanpa persetujuan tambahan; cadangan manajemen butuh keputusan sponsor. Perbedaan wewenang itulah alasan kedua lapis ini dipisah, bukan sekadar kerapian pencatatan.{{else}}A project manager may draw contingency without further approval; management reserve requires a sponsor decision. That difference in authority is why the two layers are separated - not mere bookkeeping tidiness.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{budgetWaterfall $l}}</div>
+  </figure>
+  <div class="note-box bad">
+    <h4>{{if eq $l "id"}}Proyeksi menembus seluruh cadangan{{else}}The forecast punches through every reserve{{end}}</h4>
+    <p>{{if eq $l "id"}}EAC tipikal {{rp $s.EACTypical $l}} melampaui BAC {{rp $a.BAC $l}} sebesar {{rp (abs $s.VAC) $l}}. Cadangan kontinjensi {{rp (contingency) $l}} dan cadangan manajemen {{rp $a.MgmtReserve $l}} kalau digabung hanya {{rp (addf (contingency) $a.MgmtReserve) $l}} - masih kurang {{rp (subf $s.EACTypical (totalBudget)) $l}} terhadap pagu.{{else}}The typical EAC of {{rp $s.EACTypical $l}} exceeds BAC of {{rp $a.BAC $l}} by {{rp (abs $s.VAC) $l}}. Contingency of {{rp (contingency) $l}} plus management reserve of {{rp $a.MgmtReserve $l}} comes to only {{rp (addf (contingency) $a.MgmtReserve) $l}} - still {{rp (subf $s.EACTypical (totalBudget)) $l}} short of the cap.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Ini keputusan sponsor, bukan keputusan tim. Ajukan sekarang - bukan di minggu ke-15 ketika pilihannya tinggal memotong pengujian.{{else}}This is a sponsor decision, not a team decision. Raise it now - not in week 15, when the only remaining option is cutting testing.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Earned Value per fase{{else}}Earned Value by phase{{end}}</h2>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.phase"}}</th><th class="num">{{t $l "t.budget"}}</th><th class="num">PV</th><th class="num">EV</th><th class="num">AC</th><th class="num">SPI</th><th class="num">CPI</th><th class="num">{{if eq $l "id"}}Selesai{{else}}Complete{{end}}</th></tr></thead>
+    <tbody>
+      {{range $a.Phases}}
+      <tr>
+        <th>{{.Code}} {{tx .Name $l}}</th>
+        <td class="num">{{rp .Budget $l}}</td>
+        <td class="num">{{rp .PV $l}}</td>
+        <td class="num">{{rp .EV $l}}</td>
+        <td class="num">{{rp .AC $l}}</td>
+        <td class="num {{if and (gt .SPI 0.0) (lt .SPI 1.0)}}neg{{end}}">{{if gt .SPI 0.0}}{{num .SPI 3 $l}}{{else}}—{{end}}</td>
+        <td class="num {{if and (gt .CPI 0.0) (lt .CPI 1.0)}}neg{{end}}">{{if gt .CPI 0.0}}{{num .CPI 3 $l}}{{else}}—{{end}}</td>
+        <td class="num">{{pct .Percent 0 $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Rincian per aktivitas{{else}}Activity-level detail{{end}}</h2>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">{{t $l "t.budget"}}</th><th class="num">{{if eq $l "id"}}% rencana{{else}}% plan{{end}}</th><th class="num">{{if eq $l "id"}}% aktual{{else}}% actual{{end}}</th><th class="num">EV</th><th class="num">AC</th><th class="num">CV</th><th>{{t $l "t.status"}}</th></tr></thead>
+      <tbody>
+        {{range $a.Rows}}
+        <tr>
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx .Name $l}}</td>
+          <td class="num">{{rp .Budget $l}}</td>
+          <td class="num">{{pct .PlannedProgress 0 $l}}</td>
+          <td class="num">{{pct .ActualProgress 0 $l}}</td>
+          <td class="num">{{rp .EV $l}}</td>
+          <td class="num">{{rp .AC $l}}</td>
+          <td class="num {{if lt .CV 0.0}}neg{{end}}">{{if ne .AC 0.0}}{{signed .CV $l}}{{else}}—{{end}}</td>
+          <td><span class="pill status-{{.Status}}">{{t $l (printf "as.%s" .Status)}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}

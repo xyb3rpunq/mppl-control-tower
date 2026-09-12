@@ -1,0 +1,68 @@
+{{define "formulas"}}
+{{$l := .Lang}}{{$ex := .Examples}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Setiap rumus di halaman ini benar-benar dijalankan{{else}}Every formula on this page is actually executed{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Ini bukan ringkasan buku teks. Setiap rumus di bawah adalah dokumentasi dari kode Go yang berjalan di <code>internal/</code>, dan kolom contoh hitungnya disuntikkan dari angka yang benar-benar dihitung engine pada tanggal data {{date .Analysis.StatusDate $l}}. Kalau data proyek diubah, contohnya ikut berubah - sehingga halaman ini tidak akan pernah memuat angka yang berbeda dari halaman analisisnya.{{else}}This is not a textbook summary. Each formula below documents Go code running in <code>internal/</code>, and its worked example is injected from figures the engine genuinely computes at data date {{date .Analysis.StatusDate $l}}. Change the project data and the examples change with it - so this page can never carry numbers that differ from the analysis pages.{{end}}
+  </p>
+  <nav class="toc">
+    {{range formulaGroups}}
+    <a href="#g-{{.Key}}">{{tx .Name $l}}</a>
+    {{end}}
+  </nav>
+</section>
+
+{{range formulaGroups}}
+{{$g := .}}
+<section class="band" id="g-{{.Key}}">
+  <h2>{{tx .Name $l}}</h2>
+  <p class="section-intro">{{tx .Desc $l}}</p>
+
+  {{range formulasIn $g.Key}}
+  {{$f := .}}
+  <article class="formula-card">
+    <header>
+      <h3>{{tx .Name $l}}</h3>
+      <a class="formula-route" href="{{$.BaseURL}}{{pathFor .Route $l}}">{{if eq $l "id"}}dipakai di{{else}}used on{{end}} {{.Route}} →</a>
+    </header>
+
+    <pre class="notation"><code>{{tx .Notation $l}}</code></pre>
+
+    <div class="formula-body">
+      <div class="symbols">
+        <h4>{{if eq $l "id"}}Simbol{{else}}Symbols{{end}}</h4>
+        <dl>
+          {{range .Symbols}}
+          <dt><code>{{.Sym}}</code></dt>
+          <dd>{{tx .Desc $l}}</dd>
+          {{end}}
+        </dl>
+      </div>
+
+      <div class="explain">
+        <h4>{{t $l "t.meaning"}}</h4>
+        <p>{{tx .Meaning $l}}</p>
+        <h4>{{t $l "t.reading"}}</h4>
+        <p>{{tx .Reading $l}}</p>
+        <h4 class="pitfall-head">{{if eq $l "id"}}Jebakan{{else}}Pitfall{{end}}</h4>
+        <p class="pitfall">{{tx .Pitfall $l}}</p>
+      </div>
+    </div>
+
+    {{$e := index $ex $f.Key}}
+    {{if $e.Substitution}}
+    <div class="worked-example">
+      <h4>{{t $l "t.example"}}</h4>
+      <pre><code>{{$e.Substitution}}</code></pre>
+      <p class="result"><strong>{{$e.Result}}</strong></p>
+      <p class="comment">{{tx $e.Comment $l}}</p>
+    </div>
+    {{end}}
+
+    <p class="formula-source">{{t $l "t.source"}}: {{tx .Source $l}}</p>
+  </article>
+  {{end}}
+</section>
+{{end}}
+{{end}}

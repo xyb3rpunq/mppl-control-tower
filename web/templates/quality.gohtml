@@ -1,0 +1,147 @@
+{{define "quality"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$cc := .Analysis.Control}}{{$coq := .Analysis.COQ}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Standar mutu yang bisa diperiksa{{else}}Quality standards that can be checked{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Project Charter menyebut enam standar mutu. Standar yang tidak bisa diukur bukan standar - itu harapan. Tabel di bawah menerjemahkan keenamnya menjadi angka beserta sumber pengukurannya.{{else}}The charter names six quality standards. A standard that cannot be measured is not a standard - it is a hope. The table below turns all six into numbers, each with its measurement source.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{metricBars $l}}</div>
+  </figure>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Metrik{{else}}Metric{{end}}</th><th class="num">{{t $l "t.target"}}</th><th class="num">{{t $l "t.actual"}}</th><th class="num">{{if eq $l "id"}}Jarak{{else}}Gap{{end}}</th><th>{{t $l "t.status"}}</th><th>{{t $l "t.source"}}</th></tr></thead>
+    <tbody>
+      {{range $a.Metrics}}
+      <tr>
+        <th>{{tx .Name $l}}</th>
+        <td class="num">{{num .Target 1 $l}} {{.Unit}}</td>
+        <td class="num">{{num .Actual 1 $l}} {{.Unit}}</td>
+        <td class="num">{{if .Met}}—{{else}}{{num .Gap 1 $l}}{{end}}</td>
+        <td>{{if .Met}}<span class="pill ok">{{if eq $l "id"}}tercapai{{else}}met{{end}}</span>{{else}}<span class="pill bad">{{if eq $l "id"}}belum{{else}}not met{{end}}</span>{{end}}</td>
+        <td class="small muted">{{tx .Source $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Peta kendali waktu respons{{else}}Response time control chart{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Batas kendali dihitung dari data proses itu sendiri; batas spesifikasi berasal dari Project Charter. Keduanya sering tertukar, padahal maknanya berlawanan: satu memberi tahu apa yang <em>biasa</em> dilakukan proses, satunya apa yang <em>diminta</em> pelanggan.{{else}}Control limits come from the process data itself; the specification limit comes from the Project Charter. The two are routinely confused although they mean opposite things: one says what the process <em>usually</em> does, the other what the customer <em>asked for</em>.{{end}}
+  </p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{controlChart $l}}</div>
+  </figure>
+
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Parameter peta kendali{{else}}Control chart parameters{{end}}</caption>
+      <tbody>
+        <tr><th>CL · {{if eq $l "id"}}garis tengah{{else}}centre line{{end}}</th><td class="num">{{num $cc.CenterLine 4 $l}} {{if eq $l "id"}}detik{{else}}s{{end}}</td></tr>
+        <tr><th>UCL · {{if eq $l "id"}}batas kendali atas{{else}}upper control limit{{end}}</th><td class="num">{{num $cc.UCL 4 $l}}</td></tr>
+        <tr><th>LCL · {{if eq $l "id"}}batas kendali bawah{{else}}lower control limit{{end}}</th><td class="num">{{num $cc.LCL 4 $l}}</td></tr>
+        <tr><th>sigma {{if eq $l "id"}}proses{{else}}process{{end}} (R̄ ÷ d₂)</th><td class="num">{{num $cc.Sigma 4 $l}}</td></tr>
+        <tr><th>USL · {{if eq $l "id"}}batas spesifikasi{{else}}specification limit{{end}}</th><td class="num">{{num $cc.Spec 1 $l}}</td></tr>
+        <tr><th>Cpk</th><td class="num">{{num $cc.Cpk 3 $l}}</td></tr>
+        <tr class="total"><th>{{if eq $l "id"}}Status proses{{else}}Process status{{end}}</th><td>{{if $cc.InControl}}<span class="pill ok">{{if eq $l "id"}}terkendali{{else}}in control{{end}}</span>{{else}}<span class="pill bad">{{if eq $l "id"}}TIDAK terkendali{{else}}OUT of control{{end}}</span>{{end}}</td></tr>
+      </tbody>
+    </table>
+    <div class="card">
+      <h3>{{if eq $l "id"}}Aturan yang dilanggar{{else}}Rules violated{{end}}</h3>
+      {{if $cc.Violations}}
+      <ol class="violations">
+        {{range $cc.Violations}}
+        <li>
+          <span class="rule-badge">{{if eq $l "id"}}aturan{{else}}rule{{end}} {{.Rule}}</span>
+          <strong>{{if eq $l "id"}}minggu{{else}}week{{end}} {{add .Index 1}}</strong>
+          <p>{{tx .Text $l}}</p>
+        </li>
+        {{end}}
+      </ol>
+      {{else}}<p>{{if eq $l "id"}}Tidak ada pelanggaran aturan.{{else}}No rule violations.{{end}}</p>{{end}}
+      <div class="note-box warn compact">
+        <p>{{if eq $l "id"}}Perhatikan yang terjadi: tidak satu pun nilai melewati batas spesifikasi 3 detik, sehingga laporan biasa akan menyatakan semuanya baik-baik saja. Tetapi Cpk {{num $cc.Cpk 2 $l}} dihitung dari data masa lalu, dan aturan Nelson menunjukkan prosesnya sedang bergeser naik secara konsisten. Pada minggu ke-12 waktu respons sudah {{num (index $a.Control.Values 11) 2 $l}} detik dengan data uji 5.000 baris. Populasi alumni sesungguhnya jauh lebih besar.{{else}}Notice what is happening: not one value breaches the 3-second specification, so an ordinary report would call everything fine. But the Cpk of {{num $cc.Cpk 2 $l}} is computed from past data, and the Nelson rules show a consistent upward drift. By week 12 response time reached {{num (index $a.Control.Values 11) 2 $l}} seconds on a 5,000-row test set. The real alumni population is far larger.{{end}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Diagram Pareto cacat{{else}}Defect Pareto chart{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Cacat dibobot menurut keparahan - kritis 5, mayor 3, minor 1 - karena Pareto atas jumlah mentah menyesatkan. Sepuluh cacat kosmetik tidak setara dengan dua cacat yang membuat kuesioner gagal tersimpan.{{else}}Defects are weighted by severity - critical 5, major 3, minor 1 - because a Pareto on raw counts misleads. Ten cosmetic defects do not equal two that lose a submitted questionnaire.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{paretoChart $l}}</div>
+  </figure>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Modul{{else}}Module{{end}}</th><th class="num">{{if eq $l "id"}}Kritis{{else}}Critical{{end}}</th><th class="num">{{if eq $l "id"}}Mayor{{else}}Major{{end}}</th><th class="num">{{if eq $l "id"}}Minor{{else}}Minor{{end}}</th><th class="num">{{t $l "t.total"}}</th><th class="num">{{if eq $l "id"}}Berbobot{{else}}Weighted{{end}}</th><th class="num">{{if eq $l "id"}}Jam rework{{else}}Rework hours{{end}}</th></tr></thead>
+    <tbody>
+      {{range defects}}
+      <tr>
+        <th>{{tx .Module $l}}</th>
+        <td class="num {{if .Critical}}neg{{end}}">{{.Critical}}</td>
+        <td class="num">{{.Major}}</td>
+        <td class="num">{{.Minor}}</td>
+        <td class="num">{{.Total}}</td>
+        <td class="num"><strong>{{.Weighted}}</strong></td>
+        <td class="num">{{num .ReworkHours 0 $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Diagram sebab-akibat{{else}}Cause-and-effect diagrams{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Dikenal juga sebagai fishbone atau Ishikawa. Cabangnya memakai 6M yang lazim untuk sektor jasa. Baris terakhir pada tiap diagram adalah akar penyebab setelah menelusuri lima lapis pertanyaan "mengapa".{{else}}Also known as fishbone or Ishikawa. The branches use the 6M framing common in services. The last line under each diagram is the root cause after five rounds of asking "why".{{end}}</p>
+  {{range fishbones}}
+  <figure class="figure">
+    <figcaption><h3>{{tx .Effect $l}}</h3></figcaption>
+    <div class="figure-body scrollable wide">{{fishbone . $l}}</div>
+    <figcaption class="below">
+      <p class="root-cause"><strong>{{if eq $l "id"}}Akar penyebab{{else}}Root cause{{end}}:</strong> {{tx .RootCause $l}}</p>
+    </figcaption>
+  </figure>
+  {{end}}
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Biaya kualitas{{else}}Cost of quality{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Dua kategori pertama adalah biaya kesesuaian - uang yang dikeluarkan agar cacat tidak terjadi. Dua terakhir adalah biaya ketidaksesuaian - uang yang keluar karena cacat sudah terjadi. Rasio di antaranya menjawab satu pertanyaan: proyek ini lebih banyak mencegah, atau lebih banyak membereskan?{{else}}The first two are conformance costs - money spent so defects do not happen. The last two are non-conformance - money spent because they did. The ratio between them answers one question: does this project prevent more, or clean up more?{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{coqBars $l}}</div>
+  </figure>
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Rincian pos biaya kualitas{{else}}Cost of quality line items{{end}}</caption>
+      <thead><tr><th>{{t $l "t.category"}}</th><th>{{if eq $l "id"}}Pos{{else}}Item{{end}}</th><th class="num">{{if eq $l "id"}}Jumlah{{else}}Amount{{end}}</th><th>{{t $l "t.status"}}</th></tr></thead>
+      <tbody>
+        {{range coqItems}}
+        <tr>
+          <td class="small">{{.Category}}</td>
+          <td>{{tx .Label $l}}</td>
+          <td class="num">{{rp .Amount $l}}</td>
+          <td>{{if .Actual}}<span class="pill ok">{{if eq $l "id"}}terjadi{{else}}incurred{{end}}</span>{{else}}<span class="pill neutral">{{if eq $l "id"}}proyeksi{{else}}projected{{end}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <table class="data">
+      <caption>{{if eq $l "id"}}Ringkasan{{else}}Summary{{end}}</caption>
+      <tbody>
+        <tr><th>{{if eq $l "id"}}Pencegahan{{else}}Prevention{{end}}</th><td class="num">{{rp $coq.Prevention $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Penilaian{{else}}Appraisal{{end}}</th><td class="num">{{rp $coq.Appraisal $l}}</td></tr>
+        <tr class="total"><th>{{if eq $l "id"}}Biaya kesesuaian{{else}}Conformance{{end}}</th><td class="num"><strong>{{rp $coq.Conformance $l}}</strong></td></tr>
+        <tr><th>{{if eq $l "id"}}Kegagalan internal{{else}}Internal failure{{end}}</th><td class="num">{{rp $coq.InternalFailure $l}}</td></tr>
+        <tr><th>{{if eq $l "id"}}Kegagalan eksternal (proyeksi){{else}}External failure (projected){{end}}</th><td class="num">{{rp $coq.ExternalFailure $l}}</td></tr>
+        <tr class="total"><th>{{if eq $l "id"}}Biaya ketidaksesuaian{{else}}Non-conformance{{end}}</th><td class="num"><strong>{{rp $coq.Nonconformance $l}}</strong></td></tr>
+        <tr class="highlight"><th>{{if eq $l "id"}}Rasio{{else}}Ratio{{end}}</th><td class="num neg"><strong>{{num $coq.Ratio 3 $l}}</strong></td></tr>
+        <tr><th>{{if eq $l "id"}}Total terhadap BAC{{else}}Total against BAC{{end}}</th><td class="num">{{pct $coq.ShareOfBudget 1 $l}}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-box warn">
+    <p>{{if eq $l "id"}}Rasio {{num $coq.Ratio 2 $l}} berada di bawah satu: proyek ini membayar akibat lebih banyak daripada mencegah sebab. Perhatikan juga bahwa {{rp $coq.ExternalFailure $l}} biaya kegagalan eksternal masih berupa proyeksi - kalau diisi nol seperti kebiasaan umum sebelum rilis, grafiknya akan memberi kesan keliru bahwa pencegahan sudah cukup.{{else}}A ratio of {{num $coq.Ratio 2 $l}} sits below one: this project pays for consequences more than for prevention. Note too that {{rp $coq.ExternalFailure $l}} of external failure is still projected - had it been recorded as zero, as is common before release, the chart would falsely suggest prevention is already sufficient.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Pindahkan sebagian anggaran ke muka. Gerbang mutu otomatis di pipeline CI seharga Rp 250 ribu menggantikan sebagian besar regression testing manual senilai Rp 380 ribu yang berulang setiap siklus perbaikan - dan itu belum menghitung kegagalan eksternal yang dicegahnya.{{else}}Move part of the budget forward. A Rp 250,000 automated CI quality gate displaces most of the Rp 380,000 manual regression testing that recurs every fix cycle - and that is before counting the external failure it prevents.{{end}}</p>
+  </div>
+</section>
+{{end}}

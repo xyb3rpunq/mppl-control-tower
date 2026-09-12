@@ -1,0 +1,145 @@
+{{define "coretax"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$d := .Analysis.Coretax}}{{$srcs := coretaxSources}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Proyek perangkat lunak termahal yang gagal secara terbuka{{else}}The most expensive software project to fail in public{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Coretax adalah sistem inti administrasi perpajakan Direktorat Jenderal Pajak. Ia menggantikan sistem yang dipakai sejak 2002, dibangun selama empat tahun oleh konsorsium internasional, menelan lebih dari Rp 1,3 triliun dana APBN, dan diluncurkan serentak untuk seluruh wajib pajak Indonesia pada 1 Januari 2025. Dalam bulan pertama, penerimaan perpajakan turun 34,5%.{{else}}Coretax is the core tax administration system of Indonesia's Directorate General of Taxes. It replaced a system in use since 2002, was built over four years by an international consortium, consumed more than IDR 1.3 trillion of state budget, and went live for every Indonesian taxpayer at once on 1 January 2025. In its first month, tax revenue fell 34.5%.{{end}}
+  </p>
+  <p class="section-intro">
+    {{if eq $l "id"}}Halaman ini menjalankan kasus itu lewat mesin yang sama yang menganalisis proyek kuliah di situs ini. Aturan mainnya ketat: setiap angka pada bagian <strong>fakta</strong> punya satu URL sumber publik; setiap angka pada bagian <strong>turunan</strong> adalah aritmetika atas fakta itu; dan setiap angka pada bagian <strong>skenario</strong> ditandai sebagai andaian, bukan fakta. Pemisahan itu bukan formalitas - inti pelajaran Coretax justru soal angka yang diyakini padahal tidak pernah diperiksa.{{else}}This page runs that case through the same engine that analyses the student project on this site. The rules are strict: every figure under <strong>facts</strong> carries a public source URL; every figure under <strong>derived</strong> is arithmetic on those facts; and every figure under <strong>scenarios</strong> is labelled as an assumption, not a fact. That separation is not a formality - the lesson of Coretax is precisely about numbers believed without ever being checked.{{end}}
+  </p>
+</section>
+
+<section class="band">
+  <h2><span class="badge verified">{{t $l "t.verified"}}</span> {{if eq $l "id"}}Fakta dengan sumber{{else}}Sourced facts{{end}}</h2>
+  <div class="fact-grid">
+    {{range coretaxFacts}}
+    <article class="fact-card">
+      <h3>{{tx .Label $l}}</h3>
+      <p class="fact-value">{{tx .Value $l}}</p>
+      <p class="fact-detail">{{tx .Detail $l}}</p>
+      <p class="fact-sources">
+        {{range .SourceIdx}}{{$s := index $srcs .}}<a href="{{$s.URL}}" rel="noopener nofollow" title="{{tx $s.Label $l}}">{{$s.Publisher}}</a>{{end}}
+      </p>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Linimasa{{else}}Timeline{{end}}</h2>
+  <ol class="timeline">
+    {{range coretaxTimeline}}
+    <li class="kind-{{.Kind}}">
+      <span class="tl-date">{{date .Date $l}}</span>
+      <span class="tl-kind">{{t $l (printf "ck.%s" .Kind)}}</span>
+      <p>{{tx .Label $l}}</p>
+      <p class="fact-sources">{{range .SourceIdx}}{{$s := index $srcs .}}<a href="{{$s.URL}}" rel="noopener nofollow">{{$s.Publisher}}</a>{{end}}</p>
+    </li>
+    {{end}}
+  </ol>
+</section>
+
+<section class="band">
+  <h2><span class="badge derived">{{t $l "t.derived"}}</span> {{if eq $l "id"}}Metrik turunan{{else}}Derived metrics{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Semua angka di bawah adalah aritmetika murni atas fakta di atas. Kolom rumus menunjukkan persis bagaimana masing-masing diperoleh.{{else}}Every figure below is pure arithmetic on the facts above. The formula column shows exactly how each is obtained.{{end}}</p>
+  <table class="data wide-first">
+    <thead><tr><th>{{if eq $l "id"}}Metrik{{else}}Metric{{end}}</th><th>{{t $l "t.formula"}}</th><th class="num">{{if eq $l "id"}}Nilai{{else}}Value{{end}}</th></tr></thead>
+    <tbody>
+      <tr><th>{{if eq $l "id"}}Total kontrak{{else}}Total contract{{end}}</th><td><code>1.228 M + 110,3 M</code></td><td class="num">{{rp $d.TotalContract $l}}</td></tr>
+      <tr><th>{{if eq $l "id"}}Kontrak sampai go-live{{else}}Award to go-live{{end}}</th><td><code>1 Jan 2025 − 1 Des 2020</code></td><td class="num">{{num (f $d.AwardToGoLiveDays) 0 $l}} {{if eq $l "id"}}hari{{else}}days{{end}} ({{num $d.AwardToGoLiveMonths 1 $l}} {{if eq $l "id"}}bulan{{else}}months{{end}})</td></tr>
+      <tr><th>{{if eq $l "id"}}Perpres sampai go-live{{else}}Regulation to go-live{{end}}</th><td><code>2025 − 2018</code></td><td class="num">{{num $d.PerpresToGoLiveYears 2 $l}} {{if eq $l "id"}}tahun{{else}}years{{end}}</td></tr>
+      <tr><th>{{if eq $l "id"}}Laju belanja{{else}}Burn rate{{end}}</th><td><code>{{if eq $l "id"}}total ÷ bulan{{else}}total ÷ months{{end}}</code></td><td class="num">{{rpShort $d.BurnPerMonth $l}} / {{if eq $l "id"}}bulan{{else}}month{{end}}</td></tr>
+      <tr><th>{{if eq $l "id"}}Laju belanja per anggota tim PSIAP{{else}}Burn per PSIAP team member{{end}}</th><td><code>{{if eq $l "id"}}laju ÷ 169 orang{{else}}burn ÷ 169 people{{end}}</code></td><td class="num">{{rpShort $d.BurnPerPersonMonth $l}} / {{if eq $l "id"}}orang/bulan{{else}}person-month{{end}}</td></tr>
+      <tr class="highlight"><th>{{if eq $l "id"}}Rasio paparan{{else}}Exposure ratio{{end}}</th><td><code>{{if eq $l "id"}}potensi hilang sebulan ÷ total kontrak{{else}}one month's potential loss ÷ total contract{{end}}</code></td><td class="num neg"><strong>{{ratio $d.ExposureRatio $l}}</strong></td></tr>
+      <tr><th>{{if eq $l "id"}}Kerugian per hari, Januari 2025{{else}}Loss per day, January 2025{{end}}</th><td><code>Rp 64 T ÷ 31</code></td><td class="num">{{rpShort $d.LossPerDayJanuary $l}}</td></tr>
+      <tr class="highlight"><th>{{if eq $l "id"}}Biaya proyek setara berapa hari kerugian{{else}}Project cost equals how many days of loss{{end}}</th><td><code>{{if eq $l "id"}}total kontrak ÷ kerugian per hari{{else}}total contract ÷ loss per day{{end}}</code></td><td class="num neg"><strong>{{num $d.DaysOfLossEqualToProject 2 $l}} {{if eq $l "id"}}hari{{else}}days{{end}}</strong></td></tr>
+      <tr><th>{{if eq $l "id"}}Target pajak tahunan (implisit){{else}}Implied annual tax target{{end}}</th><td><code>Rp 322,6 T ÷ 0,147</code></td><td class="num">{{rpShort $d.ImpliedAnnualTarget $l}}</td></tr>
+      <tr><th>{{if eq $l "id"}}Pengunduran tenggat perbaikan{{else}}Remediation deadline slip{{end}}</th><td><code>31 Jul − 31 Mei 2025</code></td><td class="num">{{$d.RemediationSlipDays}} {{if eq $l "id"}}hari{{else}}days{{end}}</td></tr>
+      <tr><th>{{if eq $l "id"}}Lama stabilisasi sampai evaluasi setahun{{else}}Stabilisation to the one-year review{{end}}</th><td><code>20 Jan 2026 − 1 Jan 2025</code></td><td class="num">{{$d.StabilisationDays}} {{if eq $l "id"}}hari{{else}}days{{end}}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note-box bad big-finding">
+    <h4>{{if eq $l "id"}}Angka tunggal paling penting dari seluruh kasus ini{{else}}The single most important number in this case{{end}}</h4>
+    <p class="huge">{{ratio $d.ExposureRatio $l}}</p>
+    <p>{{if eq $l "id"}}Potensi penerimaan pajak yang hilang dalam <em>satu bulan</em> - Rp 64 triliun menurut catatan Kementerian Keuangan - adalah {{ratio $d.ExposureRatio $l}} lipat seluruh biaya membangun sistemnya. Dibalik: seluruh anggaran Rp 1,34 triliun untuk membangun Coretax setara dengan kerugian penerimaan <strong>{{num $d.DaysOfLossEqualToProject 2 $l}} hari</strong> pada Januari 2025. Kurang dari enam belas jam.{{else}}The potential tax revenue lost in <em>one month</em> - IDR 64 trillion per Ministry of Finance records - is {{ratio $d.ExposureRatio $l}} the entire cost of building the system. Inverted: the whole IDR 1.34 trillion spent building Coretax equals <strong>{{num $d.DaysOfLossEqualToProject 2 $l}} days</strong> of January 2025's revenue loss. Under sixteen hours.{{end}}</p>
+    <p>{{if eq $l "id"}}Uang dibelanjakan untuk <em>membangun</em>. Nyaris tidak ada yang dibelanjakan untuk <em>mengamankan peralihannya</em>. Itulah kesalahan manajemen risiko yang sebenarnya - bukan kesalahan teknis.{{else}}The money went into <em>building</em>. Almost none went into <em>de-risking the transition</em>. That is the actual risk-management failure - not a technical one.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2><span class="badge scenario">{{t $l "t.scenario"}}</span> {{if eq $l "id"}}Empat strategi transisi, dibandingkan dengan EMV{{else}}Four transition strategies, compared by EMV{{end}}</h2>
+  <div class="note-box">
+    <p>{{if eq $l "id"}}<strong>Yang berupa fakta:</strong> biaya proyek Rp 1,34 triliun dan paparan Rp 64 triliun sebulan, keduanya bersumber publik. <strong>Yang berupa andaian:</strong> peluang kegagalan cutover 35% dan porsi paparan yang tersisa pada tiap strategi. Angka andaian itu dipasang untuk menunjukkan cara kerja perhitungannya, bukan untuk mengklaim tahu apa yang akan terjadi.{{else}}<strong>Facts:</strong> the IDR 1.34 trillion project cost and the IDR 64 trillion monthly exposure, both publicly sourced. <strong>Assumptions:</strong> a 35% cutover failure probability and the share of exposure each strategy leaves behind. Those assumed figures are here to show how the calculation works, not to claim knowledge of what would have happened.{{end}}</p>
+    <p>{{if eq $l "id"}}Yang membuat argumen ini bertahan adalah selisih orde besarannya. Selama paparan berada dua kali lipat orde di atas biaya proyek, urutan peringkat strateginya tidak berubah walaupun angka andaiannya digeser cukup jauh.{{else}}What keeps this argument standing is the order-of-magnitude gap. As long as exposure sits two orders above project cost, the ranking of these strategies does not change even when the assumed figures move substantially.{{end}}</p>
+  </div>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{scenarioBars $l}}</div>
+  </figure>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Strategi{{else}}Strategy{{end}}</th><th>{{t $l "t.assumption"}}</th><th class="num">{{if eq $l "id"}}Tambahan biaya{{else}}Extra cost{{end}}</th><th class="num">{{if eq $l "id"}}Kerugian harapan{{else}}Expected loss{{end}}</th><th class="num">{{if eq $l "id"}}Total biaya harapan{{else}}Total expected cost{{end}}</th></tr></thead>
+    <tbody>
+      {{range $a.Scenarios}}
+      <tr class="{{if eq .Key "bigbang"}}neg-row{{end}}{{if eq .Key "pilot"}}highlight{{end}}">
+        <th>{{tx .Name $l}}</th>
+        <td class="small">{{tx .Assumption $l}}<br><span class="muted">{{tx .Note $l}}</span></td>
+        <td class="num">{{if .ExtraCost}}{{rpShort .ExtraCost $l}}{{else}}—{{end}}</td>
+        <td class="num">{{rpShort .ExpectedLoss $l}}</td>
+        <td class="num"><strong>{{rpShort .TotalCost $l}}</strong></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Titik impas yang membuat argumennya tidak bisa dibantah dengan menggeser angka{{else}}The break-even that makes this argument robust to moving the numbers{{end}}</h4>
+    <p>{{if eq $l "id"}}Jalan paralel enam bulan yang menambah 12% biaya proyek mulai lebih murah daripada cutover serentak begitu peluang kegagalan cutover melewati <strong>{{pct (breakEven 0.12 0.10) 3 $l}}</strong>. Bukan tiga puluh lima persen - nol koma dua delapan persen. Pilot satu kantor wilayah yang menambah 5% biaya impas pada <strong>{{pct (breakEven 0.05 0.05) 3 $l}}</strong>.{{else}}A six-month parallel run costing 12% more than the project becomes cheaper than a big-bang cutover once the failure probability passes <strong>{{pct (breakEven 0.12 0.10) 3 $l}}</strong>. Not thirty-five percent - zero point two eight percent. A single-region pilot costing 5% more breaks even at <strong>{{pct (breakEven 0.05 0.05) 3 $l}}</strong>.{{end}}</p>
+    <p>{{if eq $l "id"}}Artinya: tidak perlu pesimis untuk membenarkan jalan paralel. Cukup mengakui bahwa peluang gagalnya bukan nol.{{else}}Which means: you need not be pessimistic to justify a parallel run. You need only concede that the probability of failure is not zero.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Cermin: apa yang sama dengan proyek kuliah ini{{else}}The mirror: what matches the student project{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Inilah alasan studi kasus ini ada di situs manajemen proyek perangkat lunak, bukan di situs berita. Pola kegagalannya identik; hanya skalanya yang berbeda sekitar sembilan puluh ribu kali lipat. Setiap temuan di bawah menunjuk ke halaman yang memuat perhitungannya.{{else}}This is why the case study sits on a software project management site rather than a news page. The failure pattern is identical; only the scale differs, by about ninety thousand times. Each finding below links to the page carrying its arithmetic.{{end}}</p>
+  <div class="lessons">
+    {{range coretaxLessons}}
+    <article class="lesson sev-{{.Severity}}">
+      <header>
+        <span class="sev-badge">{{t $l (printf "sv.%s" .Severity)}}</span>
+        <h3>{{tx .Title $l}}</h3>
+      </header>
+      <div class="lesson-body">
+        <div>
+          <h4>{{if eq $l "id"}}Yang terjadi pada Coretax{{else}}What happened on Coretax{{end}}</h4>
+          <p>{{tx .Finding $l}}</p>
+        </div>
+        <div>
+          <h4>{{if eq $l "id"}}Praktik MPPL yang seharusnya menangkapnya{{else}}The MPPL practice that should have caught it{{end}}</h4>
+          <p>{{tx .Practice $l}}</p>
+        </div>
+        <div class="mirror">
+          <h4>{{if eq $l "id"}}Gejala yang sama pada proyek SIATS{{else}}The same symptom in SIATS{{end}}</h4>
+          <p>{{tx .Mirror $l}}</p>
+          <a href="{{$.BaseURL}}{{pathFor .Route $l}}">{{if eq $l "id"}}lihat perhitungannya{{else}}see the working{{end}} →</a>
+        </div>
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Daftar sumber{{else}}Source list{{end}}</h2>
+  <ol class="sources">
+    {{range $i, $s := $srcs}}
+    <li>
+      <span class="src-num">[{{add $i 1}}]</span>
+      <a href="{{$s.URL}}" rel="noopener nofollow">{{tx $s.Label $l}}</a>
+      <span class="muted">— {{$s.Publisher}}, {{date $s.Date $l}}</span>
+    </li>
+    {{end}}
+  </ol>
+  <p class="small muted">{{if eq $l "id"}}Seluruh angka pada bagian fakta diambil dari sumber di atas per September 2026. Situs ini tidak berafiliasi dengan Direktorat Jenderal Pajak maupun pihak mana pun yang disebut. Analisis di halaman ini adalah kerja akademik untuk mata kuliah Manajemen Proyek Perangkat Lunak.{{else}}All figures in the facts section are drawn from the sources above as of September 2026. This site is not affiliated with the Directorate General of Taxes or any party named. The analysis here is academic work for a Software Project Management course.{{end}}</p>
+</section>
+{{end}}
