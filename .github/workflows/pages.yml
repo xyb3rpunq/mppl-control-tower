@@ -37,11 +37,14 @@ jobs:
           GOOS=js GOARCH=wasm go build -o web/static/js/mppl.wasm ./cmd/wasm
           cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/static/js/wasm_exec.js
 
-      - name: Bangun situs statis
-        run: go run ./cmd/site -out dist -base "${{ steps.pages.outputs.base_url || 'https://xyb3rpunq.github.io/mppl-control-tower' }}"
-
+      # configure-pages harus berjalan SEBELUM build: langkah inilah yang
+      # menghasilkan base_url, dan situs perlu tahu URL dasarnya saat merender
+      # tautan kanonis, hreflang, dan sitemap.
       - uses: actions/configure-pages@v5
         id: pages
+
+      - name: Bangun situs statis
+        run: go run ./cmd/site -out dist -base "${{ steps.pages.outputs.base_url }}"
 
       - uses: actions/upload-pages-artifact@v3
         with:
