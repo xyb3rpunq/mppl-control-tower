@@ -2,3 +2,9 @@ dist/
 cover.out
 *.test
 .DS_Store
+
+# Artefak hasil kompilasi WebAssembly. Keduanya dibangun ulang oleh CI dan
+# oleh perintah di README, jadi tidak perlu ikut masuk riwayat - berkas .wasm
+# saja hampir 5 MB dan berubah setiap kali kode hitung disentuh.
+web/static/js/mppl.wasm
+web/static/js/wasm_exec.js
