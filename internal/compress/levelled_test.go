@@ -19,7 +19,7 @@ func overtimeCost(r level.Result, base map[model.Role][]float64, roles []model.R
 	var c float64
 	for _, role := range roles {
 		for d := 0; d < r.Duration; d++ {
-			over := r.Usage[role][d] - base[role][d]
+			over := math.Max(r.Usage[role][d]-base[role][d], r.Excess[role][d])
 			if over <= 1e-9 {
 				continue
 			}
@@ -48,7 +48,7 @@ func TestLevelledOvertimeMatchesBruteForce(t *testing.T) {
 	}
 	caps := map[model.Role]float64{model.RoleBE: 1, model.RoleFE: 1, model.RoleOPS: 0.5}
 	opts := level.Options{Calendar: calendar(), Capacity: caps, Horizon: 12}
-	oc, err := compress.LevelledOvertime(acts, level.OptimizeOptions{Options: opts}, model.RateCard)
+	oc, err := compress.LevelledOvertime(acts, level.OptimizeOptions{Options: opts}, model.RateCard, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,16 +70,19 @@ func TestLevelledOvertimeMatchesBruteForce(t *testing.T) {
 		for r, row := range base {
 			grid[r] = append([]float64(nil), row...)
 		}
+		rc := map[model.Role][]float64{}
 		for i, role := range roles {
+			rc[role] = make([]float64, len(grid[role]))
 			for d := 0; d < days; d++ {
 				if mask&(1<<(i*days+d)) != 0 {
 					grid[role][d] += extra
+					rc[role][d] = 1 + extra
 				}
 			}
 		}
 		for _, order := range orders {
 			o := opts
-			o.Lite, o.CapGrid, o.Order = true, grid, order
+			o.Lite, o.CapGrid, o.RateCap, o.Order = true, grid, rc, order
 			r, err := level.Run(acts, o)
 			if err != nil {
 				t.Fatal(err)
@@ -121,14 +124,16 @@ func TestLevelledOvertimeMatchesBruteForce(t *testing.T) {
 func TestLevelledOvertimeOnTheProject(t *testing.T) {
 	c := calendar()
 	opts := level.Options{Calendar: c, Capacity: model.Capacity, UseWindows: true}
-	oc, err := compress.LevelledOvertime(model.Activities, level.OptimizeOptions{Options: opts}, model.RateCard)
+	oc, err := compress.LevelledOvertime(model.Activities, level.OptimizeOptions{Options: opts}, model.RateCard, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if oc.Levelled != 113 || oc.MinDuration != 108 || !oc.MinProven || oc.Bound.Value != 108 {
-		t.Fatalf("tanpa lembur %d, minimum %d, batas bawah %d, terbukti %v; mau 113, 108, 108, true", oc.Levelled, oc.MinDuration, oc.Bound.Value, oc.MinProven)
+	if oc.Levelled != 113 || oc.MinDuration != 101 || !oc.MinProven || oc.Bound.Value != 101 {
+		t.Fatalf("tanpa lembur %d, minimum %d, batas bawah %d, terbukti %v; mau 113, 101, 101, true", oc.Levelled, oc.MinDuration, oc.Bound.Value, oc.MinProven)
 	}
-	if len(oc.Points) != oc.Levelled-oc.MinDuration {
+	// Satu durasi bisa terlewati bila rencana termurahnya selesai sehari lebih
+	// awal; yang dijamin: durasi turun tegas dan berakhir di durasi minimum.
+	if len(oc.Points) == 0 || len(oc.Points) > oc.Levelled-oc.MinDuration || oc.Points[len(oc.Points)-1].Duration != oc.MinDuration {
 		t.Fatalf("%d rencana untuk %d hari yang bisa dibeli", len(oc.Points), oc.Levelled-oc.MinDuration)
 	}
 	H := 300
@@ -141,7 +146,7 @@ func TestLevelledOvertimeOnTheProject(t *testing.T) {
 	byIdx := model.Activities
 	prevCost := 0.0
 	for i, p := range oc.Points {
-		if p.Duration != oc.Levelled-1-i || p.Schedule.Duration != p.Duration {
+		if (i > 0 && p.Duration >= oc.Points[i-1].Duration) || p.Duration >= oc.Levelled || p.Schedule.Duration != p.Duration {
 			t.Errorf("rencana ke-%d berdurasi %d (jadwal %d)", i, p.Duration, p.Schedule.Duration)
 		}
 		if p.Cost <= prevCost {
@@ -188,12 +193,12 @@ func TestLevelledOvertimeOnTheProject(t *testing.T) {
 }
 
 func TestLevelledOvertimeEdgeCases(t *testing.T) {
-	if _, err := compress.LevelledOvertime(model.Activities, level.OptimizeOptions{}, model.RateCard); err == nil {
+	if _, err := compress.LevelledOvertime(model.Activities, level.OptimizeOptions{}, model.RateCard, 0); err == nil {
 		t.Error("tanpa kalender dan kapasitas seharusnya galat")
 	}
 	// Tanpa perebutan sumber daya, lembur tidak memotong apa pun.
 	acts := []model.Activity{{ID: "A", Duration: 3, Optimistic: 2, Pessimistic: 4, Team: []model.TeamSlot{{Role: model.RoleBE, Alloc: 1}}}}
-	oc, err := compress.LevelledOvertime(acts, level.OptimizeOptions{Options: level.Options{Calendar: calendar(), Capacity: map[model.Role]float64{model.RoleBE: 1}, Horizon: 10}}, model.RateCard)
+	oc, err := compress.LevelledOvertime(acts, level.OptimizeOptions{Options: level.Options{Calendar: calendar(), Capacity: map[model.Role]float64{model.RoleBE: 1}, Horizon: 10}}, model.RateCard, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

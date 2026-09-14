@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/workcal"
 )
@@ -418,4 +419,30 @@ func (fl *InFlight) laborFactor(i int) float64 {
 		return 0
 	}
 	return fl.CostFactor
+}
+
+// Deterministic mengembalikan opsi levelling jaringan sisa pada durasi paling
+// mungkin: aktivitas selesai tanpa durasi, aktivitas berjalan dengan sisa isi
+// pekerjaannya (dibulatkan ke atas, paling sedikit satu hari), dan setiap
+// aktivitas dirilis sesuai tanggal data. Dipakai untuk lantai jadwal yang bisa
+// dibuktikan dari hari keputusan, pembanding deterministik simulasi berjalan.
+func (fl *InFlight) Deterministic(acts []model.Activity, cal *workcal.Calendar, capacity map[model.Role]float64) level.Options {
+	idx := make(map[string]int, len(acts))
+	for i, a := range acts {
+		idx[a.ID] = i
+	}
+	return level.Options{
+		Calendar: cal, Capacity: capacity, UseWindows: true, ExamFactor: fl.ExamFactor,
+		DurationOf: func(a model.Activity) int {
+			i := idx[a.ID]
+			switch st := fl.State[i]; st.Kind {
+			case Completed:
+				return 0
+			case InProgress:
+				return int(math.Max(1, math.Ceil(float64(acts[i].Duration)-st.Elapsed-1e-9)))
+			}
+			return a.Duration
+		},
+		ReleaseOf: func(a model.Activity) int { return fl.Release[idx[a.ID]] },
+	}
 }

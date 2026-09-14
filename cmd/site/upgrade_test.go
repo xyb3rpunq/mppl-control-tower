@@ -123,14 +123,14 @@ func TestNoIndonesianMonthInEnglishFindings(t *testing.T) {
 }
 
 func TestNavigationOrderPlacesNewPages(t *testing.T) {
-	want := []string{"/", "/piagam/", "/jadwal/", "/optimasi/", "/pert/", "/simulasi-terpadu/", "/biaya/", "/prakiraan/", "/risiko/"}
+	want := []string{"/", "/piagam/", "/jadwal/", "/optimasi/", "/pert/", "/simulasi-terpadu/", "/biaya/", "/prakiraan/", "/keputusan/", "/risiko/"}
 	for i, route := range want {
 		if site.Pages[i].Route != route {
 			t.Errorf("urutan navigasi ke-%d = %s, mau %s", i, site.Pages[i].Route, route)
 		}
 	}
-	if len(site.Pages) != 15 {
-		t.Errorf("jumlah rute = %d, mau 15", len(site.Pages))
+	if len(site.Pages) != 16 {
+		t.Errorf("jumlah rute = %d, mau 16", len(site.Pages))
 	}
 }
 

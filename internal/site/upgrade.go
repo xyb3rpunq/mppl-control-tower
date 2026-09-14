@@ -59,7 +59,7 @@ func buildUpgrade(a *Analysis) error {
 	if a.Exact, err = compress.Exact(model.Activities, model.RateCard, a.Crash); err != nil {
 		return err
 	}
-	if a.Overtime, err = compress.LevelledOvertime(model.Activities, opts, model.RateCard); err != nil {
+	if a.Overtime, err = compress.LevelledOvertime(model.Activities, opts, model.RateCard, 0); err != nil {
 		return err
 	}
 	if a.Rentals, _, err = cost.Rentals(model.Activities); err != nil {
@@ -158,8 +158,8 @@ func upgradeFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "levelling SGS vs CPM", EN: "SGS levelling vs CPM"},
 			Action: model.Text{
-				ID: "Tambah kapasitas pada peran " + string(a.CriticalRole) + " selama fase pengembangan, dan geser pekerjaan ber-float agar tidak beririsan dengan ujian. " + a.overtimeActionID(),
-				EN: "Add capacity to the " + string(a.CriticalRole) + " role during development and move float-bearing work out of the exam window. " + a.overtimeActionEN(),
+				ID: "Geser pekerjaan ber-float agar tidak beririsan dengan ujian, dan putuskan percepatan dari tanggal data, bukan dari jadwal ini. " + a.overtimeActionID(),
+				EN: "Move float-bearing work out of the exam window, and decide acceleration from the data date, not from this schedule. " + a.overtimeActionEN(),
 			},
 		})
 	}
@@ -172,8 +172,8 @@ func upgradeFindings(a *Analysis) []Finding {
 		}
 		if a.JCL70.Feasible {
 			act = model.Text{
-				ID: "Untuk keyakinan 70% selesai tepat waktu DAN tepat anggaran, komitmennya adalah " + fmtInt(a.JCL70.Duration) + " hari kerja (" + fmtDate(a.FinishISO(int(a.JCL70.Duration))) + ") dengan anggaran " + fmtRp(a.JCL70.Budget) + ". Sampaikan pasangan angka itu, bukan dua P80 yang dilaporkan terpisah.",
-				EN: "For 70% confidence of finishing on time AND on budget, the commitment is " + fmtInt(a.JCL70.Duration) + " working days (" + fmtDateEN(a.FinishISO(int(a.JCL70.Duration))) + ") with a budget of " + fmtRp(a.JCL70.Budget) + ". Report that pair, not two P80s reported separately.",
+				ID: "Laporkan pasangan durasi dan anggaran pada JCL 70%, bukan dua P80 terpisah. Dari hari pertama proyek pasangan itu " + fmtInt(a.JCL70.Duration) + " hari kerja dengan " + fmtRp(a.JCL70.Budget) + "; setelah realisasi masuk, " + a.commitmentID(),
+				EN: "Report the duration-budget pair at a 70% JCL, not two separate P80s. From the project's first day that pair is " + fmtInt(a.JCL70.Duration) + " working days with " + fmtRp(a.JCL70.Budget) + "; now that actuals are in, " + a.commitmentEN(),
 			}
 		}
 		out = append(out, Finding{
@@ -216,24 +216,62 @@ func upgradeFindings(a *Analysis) []Finding {
 	return out
 }
 
-// overtimeActionID dan overtimeActionEN menyebut berapa hari yang bisa dibeli
-// dengan lembur sah pada jadwal yang bisa dijalankan, bukan pada jaringan CPM.
+// overtimeActionID dan overtimeActionEN merujuk ke opsi percepatan termurah
+// per hari dari tanggal data.
 func (a *Analysis) overtimeActionID() string {
-	ot := a.Overtime
-	p, ok := ot.PointAt(ot.MinDuration)
-	if !ok {
-		return "Lembur sah tidak memendekkan jadwal ini sama sekali."
+	d := a.Decision
+	if d == nil {
+		return ""
 	}
-	return "Kalau tanggal tetap dikunci, lembur sah paling banyak memotong " + fmtInt(float64(ot.Levelled-ot.MinDuration)) + " hari, sampai " + fmtInt(float64(ot.MinDuration)) + " hari kerja, dengan upah lembur " + fmtRp(p.Cost) + "."
+	base := d.Options[0]
+	c, ok := d.CheapestOption()
+	if !ok {
+		return "Dari tanggal data, lantai jadwalnya " + fmtInt(float64(base.Floor)) + " hari kerja dan tidak ada opsi yang memajukan komitmen JCL 70%."
+	}
+	return "Dari tanggal data, lantai jadwalnya " + fmtInt(float64(base.Floor)) + " hari kerja; percepatan termurah per hari adalah " + lowerFirst(c.Name.ID) + " - " + fmtInt(c.DaysEarlier) + " hari lebih awal seharga " + fmtRp(c.PricePerDay) + " per hari (halaman Keputusan Sponsor)."
 }
 
 func (a *Analysis) overtimeActionEN() string {
-	ot := a.Overtime
-	p, ok := ot.PointAt(ot.MinDuration)
-	if !ok {
-		return "Legal overtime does not shorten this schedule at all."
+	d := a.Decision
+	if d == nil {
+		return ""
 	}
-	return "If the date stays locked, legal overtime cuts at most " + fmtInt(float64(ot.Levelled-ot.MinDuration)) + " days, down to " + fmtInt(float64(ot.MinDuration)) + " working days, for " + fmtRp(p.Cost) + " in overtime pay."
+	base := d.Options[0]
+	c, ok := d.CheapestOption()
+	if !ok {
+		return "From the data date the schedule floor is " + fmtInt(float64(base.Floor)) + " working days and no option advances the 70% JCL commitment."
+	}
+	return "From the data date the schedule floor is " + fmtInt(float64(base.Floor)) + " working days; the cheapest acceleration per day is " + lowerFirst(c.Name.EN) + " - " + fmtInt(c.DaysEarlier) + " days earlier at " + fmtRp(c.PricePerDay) + " per day (Sponsor Decisions page)."
+}
+
+// commitmentID dan commitmentEN menyebut komitmen yang berlaku.
+func (a *Analysis) commitmentID() string {
+	if !a.ForecastJCL70.Feasible {
+		return "Komitmen yang berlaku ada di halaman Keputusan Sponsor."
+	}
+	return "Komitmen yang berlaku adalah JCL 70% berjalan: " + fmtInt(a.ForecastJCL70.Duration) + " hari kerja (" + fmtDate(a.FinishISO(int(a.ForecastJCL70.Duration))) + ") dengan anggaran " + fmtRp(a.ForecastJCL70.Budget) + "."
+}
+
+func (a *Analysis) commitmentEN() string {
+	if !a.ForecastJCL70.Feasible {
+		return "The commitment in force is on the Sponsor Decisions page."
+	}
+	return "the commitment in force is the in-flight 70% JCL: " + fmtInt(a.ForecastJCL70.Duration) + " working days (" + fmtDateEN(a.FinishISO(int(a.ForecastJCL70.Duration))) + ") with a budget of " + fmtRp(a.ForecastJCL70.Budget) + "."
+}
+
+// budgetRequestID dan budgetRequestEN menyebut permintaan anggaran tunggal.
+func (a *Analysis) budgetRequestID() string {
+	if a.Decision == nil || !a.ForecastJCL70.Feasible {
+		return ""
+	}
+	return "Permintaannya " + fmtRp(a.Decision.BudgetRequest) + " di atas pagu, dengan risiko sudah di dalamnya."
+}
+
+func (a *Analysis) budgetRequestEN() string {
+	if a.Decision == nil || !a.ForecastJCL70.Feasible {
+		return ""
+	}
+	return "The request is " + fmtRp(a.Decision.BudgetRequest) + " above the cap, with risk already inside it."
 }
 
 // OvertimeRoleText menulis jam lembur per peran, mis. "BE 32 jam, BA 3,6 jam".

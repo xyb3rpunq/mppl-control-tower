@@ -3,11 +3,11 @@ package site
 import (
 	"math"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/gert"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
-	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/simulate"
 )
 
@@ -89,6 +89,10 @@ func runSimulations(a *Analysis) error {
 	fc := base
 	fc.Layer, fc.InFlight, fc.ExamFactor = simulate.LayerResources, fl, fl.ExamFactor
 	jobs = append(jobs, func() (err error) { a.Forecast, err = simulate.RunIntegrated(model.Activities, fc); return })
+	if a.Decision, err = prepareDecision(a, fl); err != nil {
+		return err
+	}
+	jobs = append(jobs, decisionJobs(a, fl, fc)...)
 	pc := base
 	pc.Layer, pc.InFlight, pc.ExamFactor = simulate.LayerResources, prior, 0
 	jobs = append(jobs, func() (err error) { a.ForecastPrior, err = simulate.RunIntegrated(model.Activities, pc); return })
@@ -179,6 +183,7 @@ func finishClosure(a *Analysis) error {
 	if s.SPIt > 0 {
 		a.IEACt = s.AtDay + (float64(a.Plan.Duration)-s.ES)/s.SPIt
 	}
+	finishDecision(a)
 	return nil
 }
 
@@ -306,8 +311,8 @@ func closureFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "celah optimalitas = durasi terbaik - batas bawah", EN: "optimality gap = best duration - lower bound"},
 			Action: model.Text{
-				ID: "Berhenti mencari urutan yang lebih pintar. Satu-satunya cara memperpendek jadwal ini adalah menambah kapasitas pada peran " + string(a.CriticalRole) + " atau mengubah jaringan aktivitasnya.",
-				EN: "Stop looking for a smarter ordering. The only ways to shorten this schedule are adding capacity to the " + string(a.CriticalRole) + " role or changing the activity network.",
+				ID: "Berhenti mencari urutan yang lebih pintar. Jadwal ini hanya bisa diperpendek dengan menambah kapasitas - lembur atau orang baru pada peran " + string(a.CriticalRole) + ", dengan harga per hari di halaman Keputusan Sponsor - atau dengan mengubah jaringan aktivitasnya.",
+				EN: "Stop looking for a smarter ordering. This schedule can only be shortened by adding capacity - overtime or a new hire in the " + string(a.CriticalRole) + " role, with prices per day on the Sponsor Decisions page - or by changing the activity network.",
 			},
 		})
 	}
@@ -320,8 +325,8 @@ func closureFindings(a *Analysis) []Finding {
 		out = append(out, Finding{
 			Key: "crashing-hampir-impas", Severity: "baik", Route: "/optimasi/",
 			Title: model.Text{
-				ID: "Lima hari percepatan pertama hampir dibayar sendiri oleh sewa yang dihemat",
-				EN: "The first five days of acceleration nearly pay for themselves in saved rentals",
+				ID: "Pada jaringan CPM, lima hari percepatan pertama hampir dibayar sendiri oleh sewa yang dihemat",
+				EN: "On the CPM network, the first five days of acceleration nearly pay for themselves in saved rentals",
 			},
 			Detail: model.Text{
 				ID: "Pada jaringan CPM, crashing lima hari menelan premi " + fmtRp(crash5) + ", tetapi setiap hari proyek lebih pendek juga menghemat sewa server dan langganan sampai " + fmtRp(a.RentalDaily()) + ". Menurut pemrograman linear biaya total, biaya bersihnya hanya " + fmtRp(net5) + ". " + greedyNoteID(a),
@@ -329,8 +334,8 @@ func closureFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "LP biaya total = premi lembur PP 35/2021 + tarif sewa x rentang sewa", EN: "total-cost LP = overtime premium under Government Regulation 35/2021 + rental rate x rental span"},
 			Action: model.Text{
-				ID: "Ajukan percepatan lima hari ke sponsor sebagai biaya bersih " + fmtRp(net5) + ", bukan " + fmtRp(crash5) + ". Angka premi saja membuat keputusan yang murah tampak mahal.",
-				EN: "Put the five-day acceleration to the sponsor as a net " + fmtRp(net5) + ", not " + fmtRp(crash5) + ". The premium figure alone makes a cheap decision look expensive.",
+				ID: "Pakai pelajaran metodenya, bukan angkanya: nilai percepatan selalu sebagai biaya bersih setelah sewa (" + fmtRp(net5) + ", bukan " + fmtRp(crash5) + "), karena angka premi saja membuat keputusan murah tampak mahal. Jangan menjanjikan lima hari ini ke sponsor - jaringan CPM tidak bisa dijalankan; harga percepatan yang berlaku ada di halaman Keputusan Sponsor.",
+				EN: "Use the method's lesson, not its figure: always value acceleration as a net cost after rentals (" + fmtRp(net5) + ", not " + fmtRp(crash5) + "), because the premium alone makes a cheap decision look expensive. Do not promise these five days to the sponsor - the CPM network cannot be executed; the acceleration prices in force are on the Sponsor Decisions page.",
 			},
 		})
 	}
@@ -387,37 +392,49 @@ func closureFindings(a *Analysis) []Finding {
 		})
 	}
 
-	if ot := a.Overtime; ot.MinDuration < ot.Levelled {
-		if p, ok := ot.PointAt(ot.MinDuration); ok {
-			days := ot.Levelled - ot.MinDuration
-			cpm, _ := a.Exact.PointAt(a.Exact.Normal - days)
-			proof := model.Text{
-				ID: " Batas bawah pada kapasitas lembur maksimum juga " + fmtInt(float64(ot.Bound.Value)) + " hari, jadi tidak ada rencana lembur sah yang lebih pendek.",
-				EN: " The lower bound at maximum overtime capacity is also " + fmtInt(float64(ot.Bound.Value)) + " days, so no legal overtime plan is shorter.",
+	if d := a.Decision; d != nil && len(d.Options) > 1 && a.ForecastJCL70.Feasible {
+		base := d.Options[0]
+		var lines []string
+		var linesEN []string
+		for _, o := range d.Options[1:] {
+			if o.Assumption.ID != "" || !o.JCL70.Feasible {
+				continue
 			}
-			if !ot.MinProven {
-				proof = model.Text{
-					ID: " Batas bawah pada kapasitas lembur maksimum " + fmtInt(float64(ot.Bound.Value)) + " hari; celahnya belum tertutup.",
-					EN: " The lower bound at maximum overtime capacity is " + fmtInt(float64(ot.Bound.Value)) + " days; the gap is not closed.",
-				}
-			}
-			out = append(out, Finding{
-				Key: "lembur-jadwal-nyata", Severity: "tinggi", Route: "/optimasi/",
-				Title: model.Text{
-					ID: "Lembur sah hanya memotong " + fmtInt(float64(days)) + " hari dari jadwal yang bisa dijalankan",
-					EN: "Legal overtime cuts only " + fmtInt(float64(days)) + " days from the executable schedule",
-				},
-				Detail: model.Text{
-					ID: "Kurva crashing memotong jaringan CPM " + fmtInt(float64(a.Plan.Duration)) + " hari yang tidak bisa dijalankan, dan menyebut " + fmtInt(float64(days)) + " hari seharga " + fmtRp(cpm.CrashCost) + ". Pada jadwal levelling " + fmtInt(float64(ot.Levelled)) + " hari, lembur " + render.Num(ot.HoursPerDay, 1, "id") + " jam sehari untuk semua peran penuh waktu di luar periode ujian hanya mencapai " + fmtInt(float64(ot.MinDuration)) + " hari kerja." + proof.ID + " Rencana termurah yang ditemukan: " + a.OvertimeRoleText(p, "id") + ", upah lembur " + fmtRp(p.Cost) + " - bersih " + fmtRp(p.Net) + " setelah sewa yang dihemat.",
-					EN: "The crashing curve cuts the " + fmtInt(float64(a.Plan.Duration)) + "-day CPM network, which cannot be executed, and prices " + fmtInt(float64(days)) + " days at " + fmtRp(cpm.CrashCost) + ". On the " + fmtInt(float64(ot.Levelled)) + "-day levelled schedule, " + render.Num(ot.HoursPerDay, 1, "en") + " overtime hours a day for every full-time role outside the exam periods reach only " + fmtInt(float64(ot.MinDuration)) + " working days." + proof.EN + " The cheapest plan found: " + a.OvertimeRoleText(p, "en") + ", " + fmtRp(p.Cost) + " in overtime pay - net " + fmtRp(p.Net) + " after the rentals saved.",
-				},
-				Metric: model.Text{ID: "levelling dengan kapasitas + lembur sah (PP 35/2021) vs batas bawah energetik", EN: "levelling with capacity + legal overtime (Government Regulation 35/2021) vs energetic lower bound"},
-				Action: model.Text{
-					ID: "Jangan menjanjikan percepatan dari kurva crashing CPM. Untuk selesai sebelum " + fmtInt(float64(ot.MinDuration)) + " hari kerja, lembur tidak cukup: tambah orang pada peran " + string(a.CriticalRole) + " atau kurangi lingkup.",
-					EN: "Do not promise acceleration from the CPM crashing curve. To finish before " + fmtInt(float64(ot.MinDuration)) + " working days, overtime is not enough: add people to the " + string(a.CriticalRole) + " role or reduce scope.",
-				},
-			})
+			lines = append(lines, lowerFirst(o.Name.ID)+" memajukan "+fmtInt(o.DaysEarlier)+" hari (+"+fmtRp(o.ExtraBudget)+")")
+			linesEN = append(linesEN, lowerFirst(o.Name.EN)+" gains "+fmtInt(o.DaysEarlier)+" days (+"+fmtRp(o.ExtraBudget)+")")
 		}
+		missed := model.Text{}
+		if d.PlanMissed > 0 {
+			missed = model.Text{
+				ID: " Rencana lembur dari hari pertama proyek (" + fmtInt(float64(a.Overtime.Levelled)) + " → " + fmtInt(float64(a.Overtime.MinDuration)) + " hari) tidak bisa dibeli lagi: " + fmtInt(float64(d.PlanMissed)) + " hari-peran lemburnya jatuh sebelum tanggal data.",
+				EN: " The overtime plan from the project's first day (" + fmtInt(float64(a.Overtime.Levelled)) + " → " + fmtInt(float64(a.Overtime.MinDuration)) + " days) can no longer be bought: " + fmtInt(float64(d.PlanMissed)) + " of its overtime role-days fall before the data date.",
+			}
+		}
+		title := model.Text{ID: "Dari tanggal data, tidak ada opsi yang memajukan komitmen JCL 70%", EN: "From the data date, no option advances the 70% JCL commitment"}
+		act := model.Text{
+			ID: "Pertahankan komitmen tanpa percepatan: " + fmtInt(base.JCL70.Duration) + " hari kerja dengan " + fmtRp(base.JCL70.Budget) + ".",
+			EN: "Keep the commitment without acceleration: " + fmtInt(base.JCL70.Duration) + " working days with " + fmtRp(base.JCL70.Budget) + ".",
+		}
+		if c, ok := d.CheapestOption(); ok {
+			title = model.Text{
+				ID: "Dari tanggal data, percepatan termurah memajukan " + fmtInt(c.DaysEarlier) + " hari seharga " + fmtRp(c.PricePerDay) + " per hari",
+				EN: "From the data date, the cheapest acceleration gains " + fmtInt(c.DaysEarlier) + " days at " + fmtRp(c.PricePerDay) + " per day",
+			}
+			act = model.Text{
+				ID: "Beri sponsor dua harga, bukan satu janji: tanpa percepatan " + fmtInt(base.JCL70.Duration) + " hari kerja dengan " + fmtRp(base.JCL70.Budget) + ", atau " + lowerFirst(c.Name.ID) + " untuk " + fmtInt(c.JCL70.Duration) + " hari kerja dengan " + fmtRp(c.JCL70.Budget) + ". Putuskan dengan membandingkan " + fmtRp(c.PricePerDay) + " per hari dengan nilai satu hari lebih cepat bagi sponsor.",
+				EN: "Give the sponsor two prices, not one promise: no acceleration at " + fmtInt(base.JCL70.Duration) + " working days with " + fmtRp(base.JCL70.Budget) + ", or " + lowerFirst(c.Name.EN) + " for " + fmtInt(c.JCL70.Duration) + " working days with " + fmtRp(c.JCL70.Budget) + ". Decide by comparing " + fmtRp(c.PricePerDay) + " per day with what a day earlier is worth to the sponsor.",
+			}
+		}
+		out = append(out, Finding{
+			Key: "percepatan-tanggal-data", Severity: "tinggi", Route: "/keputusan/",
+			Title: title,
+			Detail: model.Text{
+				ID: "Keputusan percepatan diambil pada tanggal data, jadi dihitung dari sana." + missed.ID + " Tanpa percepatan, lantai jadwalnya " + fmtInt(float64(base.Floor)) + " hari kerja dan komitmen JCL 70% " + fmtInt(base.JCL70.Duration) + " hari. Pada titik JCL 70%: " + strings.Join(lines, "; ") + ".",
+				EN: "The acceleration decision is taken at the data date, so it is computed from there." + missed.EN + " Without acceleration the schedule floor is " + fmtInt(float64(base.Floor)) + " working days and the 70% JCL commitment " + fmtInt(base.JCL70.Duration) + " days. At the 70% JCL: " + strings.Join(linesEN, "; ") + ".",
+			},
+			Metric: model.Text{ID: "harga per hari = selisih anggaran JCL 70% / hari yang dimajukan", EN: "price per day = 70% JCL budget difference / days gained"},
+			Action: act,
+		})
 	}
 
 	if fl := a.InFlight; fl != nil && len(a.Forecast.Durations) > 0 {

@@ -73,6 +73,13 @@ var Pages = []Page{
 		},
 	},
 	{
+		Route: "/keputusan/", Template: "decision", NavKey: "nav.decision", Icon: "✓",
+		Summary: model.Text{
+			ID: "Paket keputusan sponsor dari tanggal data: satu komitmen yang berlaku, opsi percepatan beserta harga per hari, dan satu permintaan anggaran.",
+			EN: "The sponsor decision pack from the data date: one commitment in force, acceleration options with a price per day, and a single budget request.",
+		},
+	},
+	{
 		Route: "/risiko/", Template: "risk", NavKey: "nav.risk", Icon: "⚠",
 		Summary: model.Text{
 			ID: "Risk register dua belas entri dengan EMV, peta panas 5x5 sebelum dan sesudah mitigasi, serta uji kecukupan cadangan.",

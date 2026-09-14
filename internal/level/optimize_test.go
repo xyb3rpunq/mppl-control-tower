@@ -287,3 +287,145 @@ func TestOptimizeAndBoundRejectMissingInputs(t *testing.T) {
 		t.Error("LowerBound tanpa kapasitas seharusnya galat")
 	}
 }
+
+// TestLowerBoundIsSoundWhenCapacityExceedsBase: lembur dan orang baru membuat
+// grid kapasitas harian MELEBIHI kapasitas dasar. Penalaran yang tidak
+// bertanggal (durasi solo dan energi keturunan) harus memakai kapasitas harian
+// tertinggi, bukan kapasitas dasar - kalau tidak, batas bawah melampaui jadwal
+// yang benar-benar bisa dibuat.
+func TestLowerBoundIsSoundWhenCapacityExceedsBase(t *testing.T) {
+	c := cal(t)
+	caps := map[model.Role]float64{model.RoleBE: 1, model.RoleFE: 1, model.RoleOPS: 0.5}
+	fe := []model.TeamSlot{{Role: model.RoleFE, Alloc: 1}}
+	beam := []model.TeamSlot{{Role: model.RoleBE, Alloc: 1}}
+	instances := [][]model.Activity{
+		{
+			{ID: "X", Duration: 1, Team: fe},
+			{ID: "Y", Duration: 4, Team: beam, Pred: []model.Predecessor{model.FS("X")}},
+			{ID: "Z", Duration: 4, Team: beam, Pred: []model.Predecessor{model.FS("X")}},
+		},
+		{
+			{ID: "K1", Duration: 4, Team: beam},
+			{ID: "K2", Duration: 5, Team: []model.TeamSlot{{Role: model.RoleBE, Alloc: 1}, {Role: model.RoleFE, Alloc: 0.5}}, Pred: []model.Predecessor{model.FS("K1")}},
+			{ID: "K3", Duration: 3, Team: fe},
+			{ID: "K4", Duration: 3, Team: beam, Pred: []model.Predecessor{model.FS("K2"), model.FS("K3")}},
+		},
+		{
+			{ID: "D", Duration: 3, Team: []model.TeamSlot{{Role: model.RoleOPS, Alloc: 1}}},
+			{ID: "E", Duration: 2, Team: beam, Pred: []model.Predecessor{model.FS("D")}},
+			{ID: "F", Duration: 3, Team: beam},
+			{ID: "G", Duration: 1, Team: fe, Pred: []model.Predecessor{model.FS("E"), model.FS("F")}},
+		},
+	}
+	for n, acts := range instances {
+		grid := level.CapacityGrid(c, caps, false, 60)
+		rateCap := map[model.Role][]float64{model.RoleBE: make([]float64, 60)}
+		for d := range grid[model.RoleBE] {
+			grid[model.RoleBE][d] += 0.45
+			grid[model.RoleOPS][d] += 0.5
+			if d%3 != 2 { // lembur dua dari tiga hari, supaya laju berubah per hari
+				rateCap[model.RoleBE][d] = 1.45
+			}
+		}
+		for _, rc := range []map[model.Role][]float64{nil, rateCap} {
+			opts := level.Options{Calendar: c, Capacity: caps, CapGrid: grid, Horizon: 60, RateCap: rc}
+			b, err := level.LowerBound(acts, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			best := math.MaxInt32
+			ids := make([]string, len(acts))
+			for i, a := range acts {
+				ids[i] = a.ID
+			}
+			permute(ids, 0, func(order []string) {
+				o := opts
+				o.Order = append([]string(nil), order...)
+				r, err := level.Run(acts, o)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if r.Duration < best {
+					best = r.Duration
+				}
+			})
+			if b.Value > best {
+				t.Errorf("instans %d (laju lembur %v): batas bawah %d (%+v) melebihi jadwal terpendek %d pada grid di atas kapasitas dasar", n, rc != nil, b.Value, b, best)
+			}
+		}
+	}
+}
+
+// TestRateCapLetsOvertimeSpeedOneTask: lembur mempercepat satu pekerjaan tak
+// terbagi, sedangkan kapasitas tambahan tanpa RateCap (orang baru) tidak.
+func TestRateCapLetsOvertimeSpeedOneTask(t *testing.T) {
+	c := cal(t)
+	acts := []model.Activity{{ID: "A", Duration: 6, Team: be(1)}}
+	caps := map[model.Role]float64{model.RoleBE: 1}
+	grid := level.CapacityGrid(c, caps, false, 20)
+	rc := map[model.Role][]float64{model.RoleBE: make([]float64, 20)}
+	for d := range grid[model.RoleBE] {
+		grid[model.RoleBE][d] = 2 // orang kedua
+		rc[model.RoleBE][d] = 1.45
+	}
+	hire, err := level.Run(acts, level.Options{Calendar: c, Capacity: caps, CapGrid: grid, Horizon: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ot, err := level.Run(acts, level.Options{Calendar: c, Capacity: caps, CapGrid: grid, Horizon: 20, RateCap: rc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 6 hari kerja pada 1,45 hari per hari selesai pada hari kelima (6 / 1,45 = 4,14).
+	if hire.Duration != 6 || ot.Duration != 5 {
+		t.Errorf("orang kedua %d hari, lembur %d hari; mau 6 dan 5", hire.Duration, ot.Duration)
+	}
+	if math.Abs(ot.Usage[model.RoleBE][0]-1.45) > 1e-9 {
+		t.Errorf("pemakaian hari pertama %v, mau 1,45", ot.Usage[model.RoleBE][0])
+	}
+	b, err := level.LowerBound(acts, level.Options{Calendar: c, Capacity: caps, CapGrid: grid, Horizon: 20, RateCap: rc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Value != 5 {
+		t.Errorf("batas bawah dengan lembur %d, mau 5", b.Value)
+	}
+	mixed := model.Activity{ID: "M", Duration: 2, Team: []model.TeamSlot{{Role: model.RoleBE, Alloc: 1}, {Role: model.RoleFE, Alloc: 0.5}}}
+	if v := level.RateLimit(mixed, 0, rc); v != 1 {
+		t.Errorf("tim campuran dibatasi peran tanpa lembur: %v, mau 1", v)
+	}
+	if v := level.RateLimit(acts[0], 0, rc); v != 1.45 {
+		t.Errorf("laju BE saat lembur %v, mau 1,45", v)
+	}
+	if v := level.RateLimit(acts[0], 99, rc); v != 1 || level.RateLimit(acts[0], 0, nil) != 1 {
+		t.Error("di luar grid atau tanpa RateCap lajunya 1")
+	}
+}
+
+// TestExcessCountsSpeedBeyondAllocation: pekerjaan berkapasitas setengah orang
+// yang dipercepat lembur memakai jam di atas alokasinya walau pemakaian peran
+// masih di bawah kapasitas normal - dan jam itu harus tercatat.
+func TestExcessCountsSpeedBeyondAllocation(t *testing.T) {
+	c := cal(t)
+	caps := map[model.Role]float64{model.RoleBE: 1}
+	acts := []model.Activity{{ID: "H", Duration: 4, Team: be(0.5)}}
+	grid := level.CapacityGrid(c, caps, false, 20)
+	rc := map[model.Role][]float64{model.RoleBE: make([]float64, 20)}
+	for d := range grid[model.RoleBE] {
+		grid[model.RoleBE][d] = 1.45
+		rc[model.RoleBE][d] = 1.45
+	}
+	r, err := level.Run(acts, level.Options{Calendar: c, Capacity: caps, CapGrid: grid, RateCap: rc, Horizon: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Duration != 3 || math.Abs(r.Usage[model.RoleBE][0]-0.725) > 1e-9 || math.Abs(r.Excess[model.RoleBE][0]-0.225) > 1e-9 {
+		t.Errorf("durasi %d, pemakaian %v, kelebihan %v; mau 3, 0,725, 0,225", r.Duration, r.Usage[model.RoleBE][0], r.Excess[model.RoleBE][0])
+	}
+	plain, _ := level.Run(acts, level.Options{Calendar: c, Capacity: caps, Horizon: 20})
+	for _, v := range plain.Excess[model.RoleBE] {
+		if v != 0 {
+			t.Fatal("tanpa RateCap tidak boleh ada kelebihan di atas alokasi")
+		}
+	}
+}

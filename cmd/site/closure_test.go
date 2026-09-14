@@ -71,7 +71,7 @@ func TestClosureFindingsArePresent(t *testing.T) {
 	for _, f := range a.Findings {
 		keys[f.Key] = true
 	}
-	for _, k := range []string{"levelling-terbukti-optimal", "crashing-hampir-impas", "risiko-bergerombol", "rework-berulang", "prakiraan-berjalan", "ujian-terkalibrasi", "lembur-jadwal-nyata"} {
+	for _, k := range []string{"levelling-terbukti-optimal", "crashing-hampir-impas", "risiko-bergerombol", "rework-berulang", "prakiraan-berjalan", "ujian-terkalibrasi", "percepatan-tanggal-data"} {
 		if !keys[k] {
 			t.Errorf("temuan %q tidak diturunkan", k)
 		}
@@ -199,9 +199,10 @@ func TestOvertimeReachesThePages(t *testing.T) {
 			}
 		}
 	}
+	cheap, ok := a.Decision.CheapestOption()
 	for _, f := range a.Findings {
-		if f.Key == "jadwal-tak-terjalankan" && !strings.Contains(f.Action.ID, fmtRpForTest(minp.Cost)) {
-			t.Errorf("rekomendasi jadwal tak terjalankan tidak memakai upah lembur: %q", f.Action.ID)
+		if f.Key == "jadwal-tak-terjalankan" && (!ok || !strings.Contains(f.Action.ID, fmtRpForTest(cheap.PricePerDay))) {
+			t.Errorf("rekomendasi jadwal tak terjalankan tidak memakai harga percepatan dari tanggal data: %q", f.Action.ID)
 		}
 	}
 	var doc map[string]any

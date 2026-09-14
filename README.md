@@ -20,9 +20,9 @@ Satu basis kode yang sama merender situs statis di server *dan* berjalan di pera
 
 1. [Masalah yang dipecahkan](#1-masalah-yang-dipecahkan)
 2. [Temuan utama](#2-temuan-utama)
-3. [Peta situs: 15 halaman × 2 bahasa](#3-peta-situs-15-halaman--2-bahasa)
+3. [Peta situs: 16 halaman × 2 bahasa](#3-peta-situs-16-halaman--2-bahasa)
 4. [Mesin hitung](#4-mesin-hitung)
-5. [Referensi 38 rumus](#5-referensi-38-rumus)
+5. [Referensi 40 rumus](#5-referensi-40-rumus)
 6. [Bedah kasus Coretax](#6-bedah-kasus-coretax)
 7. [Interaktivitas lewat WebAssembly](#7-interaktivitas-lewat-webassembly)
 8. [Data terbuka](#8-data-terbuka)
@@ -67,7 +67,7 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
 | 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
 | 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
-| 10 | tinggi | Lembur sah hanya memotong 5 hari dari jadwal yang bisa dijalankan | Lembur 3,6 jam/hari untuk semua peran penuh waktu di luar ujian: 113 → **108 hari kerja** (batas bawah 108, terbukti); rencana termurah BE 32 jam + BA 3,6 jam, upah **Rp 450.937**, bersih Rp 331.976 — crashing CPM menyebut 5 hari seharga Rp 191.563 |
+| 10 | tinggi | Dari tanggal data, percepatan termurah memajukan 8 hari seharga Rp 141.607 per hari | Rencana lembur dari hari pertama tidak bisa dibeli lagi (23 hari-peran lemburnya sebelum 19 Des 2025). Dari tanggal data pada titik JCL 70%: lembur sah BE, DBA, FE, SA, TL **121 → 113 hari** (+Rp 1.132.859); tambah satu BE 117 hari (+Rp 2.235.840, Rp 558.960/hari); keduanya 111 hari (+Rp 2.806.461) |
 | 11 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,69 |
 | 12 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
 | 13 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
@@ -82,9 +82,9 @@ Temuan yang tidak terlihat dari SPI: rasio durasi aktual terhadap rerata PERT pa
 
 ---
 
-## 3. Peta situs: 15 halaman × 2 bahasa
+## 3. Peta situs: 16 halaman × 2 bahasa
 
-Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (`/en/…`), dengan tautan `hreflang` yang saling menunjuk. Total 30 halaman.
+Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (`/en/…`), dengan tautan `hreflang` yang saling menunjuk. Total 32 halaman.
 
 ### 3.1 Ruang Kendali — `/`
 
@@ -122,18 +122,17 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - **Biaya crash per hari, bukan rata-rata**: hari kedua yang dipotong dari aktivitas yang sama lebih mahal karena jam lembur di atas jam pertama dibayar 2×. Contoh A17 (M = 6): hari pertama Rp 37.813 (1,6 jam/hari), hari kedua Rp 58.438 (naik ke 4 jam/hari). Potongan juga berhenti di hari terakhir yang masih sah, tidak langsung ditolak seluruhnya.
 - **Crashing serakah vs eksak**: kurva 85 → 68 hari. Dengan biaya lembur per hari, serakah ternyata **sama dengan LP di setiap durasi** — kelebihan Rp 4.063 versi sebelumnya lahir dari slope rata-rata yang membuat hari kedua A17 tampak murah. Hanya LP yang membuktikannya; kelemahan serakah (satu potongan bersama yang mahal dipilih walau pasangan cabang paralel lebih murah) tetap dibuktikan pada jaringan uji.
 - **Time-cost trade-off**: LP biaya total (premi lembur + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 191.563 tetapi biaya bersihnya hanya Rp 38.851; dengan premi sesuai aturan, tidak ada durasi yang lebih murah dari 85 hari. Grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
-- **Lembur pada jadwal yang bisa dijalankan** *(baru)*: kurva crashing memotong jaringan CPM yang tidak menghormati kapasitas orang. Pada jadwal levelling, lembur menambah hari-orang yang tersedia — paling banyak 3,6 jam/hari (agar tetap ≤ 18 jam/minggu), hanya peran penuh waktu, tidak saat ujian.
+- **Lembur pada jadwal yang bisa dijalankan**: kurva crashing memotong jaringan CPM yang tidak menghormati kapasitas orang. Pada jadwal levelling, lembur menambah jam kerja — untuk pekerjaan lain yang menunggu, dan untuk mempercepat pekerjaan orang itu sendiri sampai 1,45 hari kerja per hari — paling banyak 3,6 jam/hari (agar ≤ 18 jam/minggu), hanya peran penuh waktu, tidak saat ujian. Jam di atas alokasi rencana dibayar sebagai lembur walau pemakaian peran masih di bawah kapasitas normal.
 
-  | Durasi | Selesai | Lembur | Upah lembur | Sewa dihemat | Bersih |
-  | --- | --- | --- | --- | --- | --- |
-  | 113 | 10 Apr 2026 | — | Rp 0 | — | Rp 0 |
-  | 112 | 9 Apr 2026 | BE 10,8 jam | Rp 138.187 | Rp 29.740 | Rp 108.447 |
-  | 111 | 8 Apr 2026 | BE 18 jam | Rp 230.312 | Rp 59.481 | Rp 170.832 |
-  | 110 | 7 Apr 2026 | BE 25,2 jam | Rp 322.437 | Rp 89.221 | Rp 233.217 |
-  | 109 | 6 Apr 2026 | BE 28,8 jam, BA 3,6 jam | Rp 410.375 | Rp 89.221 | Rp 321.154 |
-  | **108** | 2 Apr 2026 | BE 32 jam, BA 3,6 jam | **Rp 450.937** | Rp 118.961 | **Rp 331.976** |
+  | Durasi | Selesai | Lembur | Upah lembur | Bersih |
+  | --- | --- | --- | --- | --- |
+  | 113 | 10 Apr 2026 | — | Rp 0 | Rp 0 |
+  | 111 | 8 Apr 2026 | BA 8 jam | Rp 91.250 | Rp 91.250 |
+  | 108 | 2 Apr 2026 | BA 16, PM 2,4, UX 16 jam | Rp 374.350 | Rp 365.779 |
+  | 104 | 27 Mar 2026 | + BE 32 jam | Rp 783.412 | Rp 655.880 |
+  | **101** | 17 Mar 2026 | BA, BE, FE, PM, SA, TL, UX | **Rp 1.380.475** | Rp 1.189.176 |
 
-  **108 hari terbukti minimum**: batas bawah energetik pada kapasitas lembur maksimum juga 108, dan setiap rencana lembur sah memakai kapasitas yang tidak lebih besar. Upah per durasi adalah rencana termurah yang ditemukan dengan memangkas lembur yang tidak diperlukan — batas atas, bukan minimum terbukti. Lima hari yang sama di kurva crashing CPM: Rp 191.563.
+  **101 hari terbukti minimum** (batas bawah 101). Durasi yang terlewati (112, 109, …) berarti rencana termurahnya selesai sehari lebih awal. **Rencana ini dihitung dari hari pertama proyek dan tidak bisa dibeli lagi** — 23 hari-peran lemburnya jatuh sebelum tanggal data; opsi yang masih tersedia ada di Keputusan Sponsor.
 - **Fast-tracking**: 23 kandidat diuji dengan tumpang tindih 50%; kandidat orang-sama **ditolak**; 11 kandidat layak; penerapan serentak memberi 66 hari.
 
 ### 3.5 PERT & Monte Carlo — `/pert/`
@@ -188,21 +187,38 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (121 hari & Rp 21.819.542).
 - **Panel WebAssembly**: pilih tanggal data lain dan prakirakan ulang — kalibrasi dihitung dari bukti yang tersedia saat itu.
 
-### 3.9 Manajemen Risiko — `/risiko/`
+### 3.9 Keputusan Sponsor — `/keputusan/` *(baru)*
+
+- **Satu komitmen, bukan enam**: CPM 85, P80 PERT 98, levelling 113, JCL 70% perencanaan 147, IEAC(t) 91 — masing-masing dengan alasan tidak berlaku — dan **JCL 70% berjalan 121 hari kerja (22 April 2026) & Rp 21.819.542** sebagai satu-satunya yang berlaku.
+- **Opsi percepatan dari tanggal data** (10.000 iterasi per opsi, levelling dibuktikan per iterasi; satu iterasi opsi masa adaptasi belum terbukti dan dilaporkan halaman):
+
+  | Opsi | Lantai (terbukti) | P80 | JCL 70% | Anggaran | Lebih cepat | Harga/hari |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Tanpa percepatan | 101 | 125 | 121 (22 Apr) | Rp 21.819.542 | — | — |
+  | **Lembur sah BE, DBA, FE, SA, TL** | 95 | 116 | 113 (10 Apr) | Rp 22.952.401 | 8 | **Rp 141.607** |
+  | Tambah satu BE | 97 | 120 | 117 (16 Apr) | Rp 24.055.382 | 4 | Rp 558.960 |
+  | Tambah satu BE, masa adaptasi 10 hari (asumsi) | 97 | 120 | 117 | Rp 24.055.382 | 4 | Rp 558.960 |
+  | Tambah satu BE + lembur sah | 93 | 114 | **111** (8 Apr) | Rp 24.626.003 | 10 | Rp 280.646 |
+
+  Peran lembur diturunkan dari rencana termurah durasi minimum (lantai 95 terbukti, upah Rp 773.813); orang baru dibayar dari tanggal data sampai pekerjaan terakhir perannya selesai; masa adaptasi tidak mengubah hasil karena pekerjaan BE yang menunggu baru menumpuk setelahnya.
+- **Satu permintaan anggaran**: Rp 5.819.542 di atas pagu, dari JCL 70% berjalan — bukan dari EAC (Rp 157.314, buta risiko) dan tidak ditambah kenaikan cadangan (risiko yang sama sudah di dalamnya).
+- **Tindakan lain dari temuan** dan **yang tidak bisa diputuskan dengan kode**: nilai satu hari lebih cepat bagi sponsor, tarif dan ketersediaan BE nyata, realisasi baru lewat `realisasi.csv`.
+
+### 3.10 Manajemen Risiko — `/risiko/`
 
 - KPI EMV inheren, EMV residual, cadangan tersedia, kekurangan cadangan dan paparan jadwal.
 - **Dua peta panas 5×5** — sebelum dan sesudah mitigasi.
 - **Risk register 12 entri**, masing-masing dengan kategori, pemilik, WBS terpapar, sebab, akibat, peluang/dampak/EMV/skor inheren dan residual, persentase penurunan EMV, strategi respons, mitigasi, dan pemicu.
 - Paparan per kategori dan rekomendasi soal kecukupan cadangan.
 
-### 3.10 Organisasi & Sumber Daya — `/organisasi/`
+### 3.11 Organisasi & Sumber Daya — `/organisasi/`
 
 - **Bagan organisasi** lima tingkat (sponsor → PM → core lead → tim pelaksana) dan kartu tanggung jawab tiap peran.
 - **Matriks RACI** per fase WBS yang divalidasi uji (tepat satu A per baris).
 - **Histogram pembebanan** 10 peran sepanjang 85 hari kerja dengan batang over-alokasi merah, tabel utilisasi, dan daftar bentrokan terberat.
 - **Grid kuasa-kepentingan** 10 pemangku kepentingan dan **rencana komunikasi** enam jalur.
 
-### 3.11 Manajemen Mutu — `/kualitas/`
+### 3.12 Manajemen Mutu — `/kualitas/`
 
 - **Tujuh metrik mutu** terukur terhadap target standar Project Charter.
 - **Peta kendali X-bar** waktu respons: CL, UCL, LCL (metode A2·R̄), batas spesifikasi, σ proses, Cpk, dan penanda pelanggaran **empat aturan Nelson**.
@@ -210,22 +226,22 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - **Dua diagram fishbone** (6M) dengan akar penyebab.
 - **Biaya kualitas** empat kategori, rincian pos (terjadi vs proyeksi), dan rasio kesesuaian/ketidaksesuaian.
 
-### 3.12 Bedah Kasus: Coretax — `/coretax/`
+### 3.13 Bedah Kasus: Coretax — `/coretax/`
 
 Lihat [bagian 6](#6-bedah-kasus-coretax).
 
-### 3.13 Referensi Rumus — `/rumus/`
+### 3.14 Referensi Rumus — `/rumus/`
 
 38 rumus dalam sembilan kelompok. Setiap rumus memuat notasi (dwibahasa), arti tiap simbol, makna, cara membaca, **jebakan umum**, rujukan materi, dan **contoh hitung yang disuntik dari angka hidup** — jadi halaman rumus tidak pernah bisa berbeda dari halaman analisisnya. Lihat [bagian 5](#5-referensi-38-rumus).
 
-### 3.14 Materi & Area Pengetahuan — `/materi/`
+### 3.15 Materi & Area Pengetahuan — `/materi/`
 
 - **Sembilan area pengetahuan** (Modul 2) dengan tautan ke artefak yang membuktikan area itu benar-benar dikerjakan, plus catatan area kesepuluh PMBOK 5.
 - **Empat tahap siklus hidup** (Tugas 3) dipetakan ke fase WBS.
 - **Peta materi kuliah → paket kode** yang mengimplementasikannya, termasuk GERT ("loop tes yang harus diulang") dan pengawasan jadwal dari Modul 4.
 - Daftar dokumen sumber di folder mata kuliah, termasuk satu berkas yang tidak terkait (dokumen Oracle OLVM).
 
-### 3.15 Metode & Sumber — `/metode/`
+### 3.16 Metode & Sumber — `/metode/`
 
 Arsitektur paket, keputusan teknis, **tabel asumsi** (alasan dan akibatnya bila keliru), **celah yang sudah ditutup** beserta buktinya, **batas yang tersisa**, dan tautan data terbuka.
 
@@ -247,9 +263,9 @@ Pemetaan dua arah indeks hari kerja ↔ tanggal, seluruh libur nasional dan cuti
 
 ### `level` — penjadwalan berbatas sumber daya
 - **Serial Schedule Generation Scheme** dengan enam aturan prioritas atau daftar aktivitas, tanggal rilis, dan laju mulai minimum 20% (satu hari kerja per minggu).
-- **Model isi pekerjaan**: laju harian = min(1, sisa kapasitas / alokasi) atas semua peran; hari-orang dilestarikan, kalender yang memanjang.
+- **Model isi pekerjaan**: laju harian = min(batas laju, sisa kapasitas / alokasi) atas semua peran; hari-orang dilestarikan, kalender yang memanjang. Batas laju 1, kecuali `RateCap` (lembur: 1 + h/8); jam di atas alokasi tercatat di `Result.Excess`.
 - **`Optimize`**: aturan prioritas + sampel acak berbias (*regret-based biased random sampling*) + **justifikasi maju-mundur** di atas jaringan dan kalender terbalik.
-- **`LowerBound`**: batas solo (kapasitas nyata tanpa berbagi), penalaran **energetik** leluhur/keturunan/global yang dirambatkan sampai titik tetap, lalu **pembuktian destruktif** yang menguji tenggat bertanggal. Celah optimalitas = jadwal terbaik − batas bawah.
+- **`LowerBound`**: batas solo (kapasitas nyata tanpa berbagi; penalaran tak bertanggal memakai kapasitas dan laju harian **tertinggi**, sehingga tetap sah pada grid lembur atau orang baru; CPM tidak dipakai bila laju bisa melebihi 1), penalaran **energetik** leluhur/keturunan/global yang dirambatkan sampai titik tetap, lalu **pembuktian destruktif** yang menguji tenggat bertanggal. Celah optimalitas = jadwal terbaik − batas bawah.
 - Kapasitas per peran per hari dari `model.AvailabilityWindows`, dengan faktor ujian yang bisa diganti hasil kalibrasi.
 - Pemecahan keterlambatan per aktivitas: **terbawa**, **menunggu**, **memanjang**, beserta penyebab.
 - `Explain`: dekomposisi bertahap CPM → kapasitas → jendela, setiap tahap memakai `Optimize`.
@@ -258,7 +274,7 @@ Pemetaan dua arah indeks hari kerja ↔ tanggal, seluruh libur nasional dan cuti
 ### `compress` — kompresi jadwal
 - **Crashing serakah** per hari dengan pencarian pasangan dan tiga aktivitas untuk jalur kritis paralel.
 - **Crashing eksak** (`Exact`): LP per tenggat dengan satu kolom per hari yang boleh dipotong (biaya marjinal cembung terwakili persis); kolom duplikat mempertahankan unimodularitas total sehingga solusi simpleks berupa hari bulat, diverifikasi ulang dengan CPM; perbandingan titik demi titik dengan serakah.
-- **`LevelledOvertime`**: grid kapasitas + lembur sah pada hari non-ujian untuk peran penuh waktu, `level.Optimize` + batas bawah pada grid maksimum untuk durasi minimum terbukti, lalu pemangkasan lembur per peran dan per hari untuk setiap durasi; upah dihitung dari pemakaian kapasitas di atas normal.
+- **`LevelledOvertime`**: grid kapasitas + `RateCap` lembur sah pada hari non-ujian untuk peran penuh waktu mulai hari `from` (0 untuk perencanaan, tanggal data untuk keputusan), `level.Optimize` + batas bawah pada grid maksimum untuk durasi minimum terbukti, lalu pemangkasan per peran, per hari dua arah, dan pencarian lokal tukar hari; upah = max(jam di atas kapasitas normal, jam di atas alokasi).
 - **Time-cost trade-off**: LP biaya total dengan sewa `cost.Rental`, tanggal mulai proyek dikunci, titik biaya terendah, dan nilai impas per hari.
 - **Fast-tracking** dengan rework harapan dan penolakan kandidat orang-sama.
 - Biaya marjinal setiap hari yang dipotong dari `model.OvertimePremium` (PP 35/2021 Pasal 26, 31, 32), lewat `CrashPlan.Marginal` dan `CostToCut`.
@@ -281,7 +297,8 @@ PV/EV/AC dengan kemajuan linear dalam aktivitas; SV, CV, SPI, CPI; **Earned Sche
 - **Kopula Gauss** per peran dominan: u = Φ(ρ·z_peran + √(1−ρ²)·ε); faktor laten peran bisa dibaca untuk kopula risiko.
 - Simulasi PERT: histogram, kuantil, peluang, sensitivitas Spearman, porsi kritis.
 - **Simulasi terpadu** lima lapisan: biaya per iterasi termasuk sewa bergantung waktu, **kopula faktor risiko** dengan phi terealisasi, **putaran rework GERT**, levelling per iterasi yang **dibuktikan optimal** (SGS cepat → batas bawah → `level.Search`, anggaran dinaikkan 10× bila perlu) dan dijalankan paralel tanpa mengubah hasil, Joint Confidence Level, frontier iso-JCL, histogram 2D.
-- **Prakiraan berjalan** (`PrepareInFlight`): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann empiris** (estimator momen; derau dari varians beta-PERT, estimator sandwich, dan metode delta) untuk durasi, biaya, dan kapasitas ujian.
+- **Opsi percepatan** (`Acceleration`): lembur sah (kapasitas + `RateCap`), orang baru (kapasitas, masa adaptasi), grid per opsi, dan upah per iterasi (`Pay`) yang masuk ke biaya dan JCL.
+- **Prakiraan berjalan** (`PrepareInFlight`, `Deterministic` untuk jaringan sisa pada durasi paling mungkin): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann empiris** (estimator momen; derau dari varians beta-PERT, estimator sandwich, dan metode delta) untuk durasi, biaya, dan kapasitas ujian.
 
 ### `risk` — risiko kuantitatif
 Tingkat peluang dan dampak (relatif terhadap BAC), skor dan keparahan, matriks inheren dan residual, EMV, penurunan EMV per risiko, agregasi kategori, cakupan dan kekurangan cadangan, paparan jadwal harapan.
@@ -299,11 +316,11 @@ Metrik turunan dari fakta bersumber, empat skenario transisi dengan EMV, titik i
 Pembangun kanvas SVG dan 25 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, dan sebaran jumlah risiko), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks.
 
 ### `site`, `model`, `i18n`
-Perakit analisis dan penurun temuan; sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa.
+Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari tanggal data, lantai terbukti, harga per hari, satu komitmen, satu permintaan anggaran); sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa. `cmd/site` juga mengekspor dan mengimpor `realisasi.csv`.
 
 ---
 
-## 5. Referensi 39 rumus
+## 5. Referensi 40 rumus
 
 | Kelompok | Rumus |
 | --- | --- |
@@ -315,7 +332,7 @@ Perakit analisis dan penurun temuan; sumber tunggal kebenaran seluruh data proye
 | **Sumber Daya** | Pembebanan & utilisasi · Kehalusan kurva tim |
 | **Levelling & Kompresi Jadwal** | Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan · **Batas bawah energetik & celah optimalitas · Crashing eksak & trade-off biaya total (LP) · Lembur sah pada jadwal berbatas sumber daya** |
 | **Simulasi Terpadu & JCL** | Korelasi lewat kopula Gauss · Kejadian risiko dalam simulasi · Joint Confidence Level · **Biaya sewa yang bergantung waktu · Risiko bergerombol lewat kopula faktor · GERT: putaran rework dengan aturan Mason** |
-| **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat** |
+| **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat · Harga per hari percepatan dari tanggal data** |
 
 Rumus bercetak tebal ditambahkan pada upgrade terakhir. Setiap rumus punya contoh hitung dari data hidup — uji `TestEveryFormulaHasAWorkedExample` gagal bila ada yang tidak. Rumus lama yang maknanya bergeser (SGS, crashing, kejadian risiko) ikut diperbarui notasi dan jebakannya.
 
@@ -354,10 +371,11 @@ Bila WebAssembly gagal dimuat, panel tetap tersembunyi dan halaman menampilkan a
 
 | Berkas | Isi |
 | --- | --- |
-| [`data/metrik.json`](https://xyb3rpunq.github.io/mppl-control-tower/data/metrik.json) | Earned Value (termasuk IEAC(t)), anggaran berlapis, simulasi PERT, risiko, mutu, **levelling beserta batas bawah dan audit, kurva crashing eksak & biaya total, simulasi terpadu lima lapisan, putaran GERT, dan prakiraan berjalan** |
+| [`data/metrik.json`](https://xyb3rpunq.github.io/mppl-control-tower/data/metrik.json) | Earned Value (termasuk IEAC(t)), anggaran berlapis, simulasi PERT, risiko, mutu, **levelling beserta batas bawah dan audit, kurva crashing eksak & biaya total, simulasi terpadu lima lapisan, putaran GERT, prakiraan berjalan, lembur jadwal nyata, dan keputusan sponsor** |
 | [`data/aktivitas.csv`](https://xyb3rpunq.github.io/mppl-control-tower/data/aktivitas.csv) | 40 simpul: WBS, durasi, ES, EF, LS, LF, float, kritis, **mulai/selesai/geser levelling**, anggaran, PV, EV, AC |
 | [`data/risiko.csv`](https://xyb3rpunq.github.io/mppl-control-tower/data/risiko.csv) | 12 risiko: peluang, dampak, EMV inheren dan residual, skor, keparahan, respons, pemilik, status |
-| [`sitemap.xml`](https://xyb3rpunq.github.io/mppl-control-tower/sitemap.xml) | 30 URL dengan pasangan `hreflang` |
+| [`data/realisasi.csv`](https://xyb3rpunq.github.io/mppl-control-tower/data/realisasi.csv) | **Realisasi 40 simpul** (`id,dimulai,mulai,durasi_aktual,biaya_aktual`) — isi, lalu bangun ulang dengan `-realisasi` |
+| [`sitemap.xml`](https://xyb3rpunq.github.io/mppl-control-tower/sitemap.xml) | 32 URL dengan pasangan `hreflang` |
 
 ---
 
@@ -392,7 +410,7 @@ flowchart LR
     mesin --> SITE[internal/site<br/>analisis + temuan + contoh rumus]
     SITE --> RENDER[internal/render<br/>SVG]
     RENDER --> GEN[cmd/site<br/>html/template]
-    GEN --> DIST[(dist/<br/>30 halaman + CSV + JSON + sitemap)]
+    GEN --> DIST[(dist/<br/>32 halaman + CSV + JSON + sitemap)]
     mesin --> WASM[cmd/wasm<br/>WebAssembly]
     WASM --> BROWSER[Peramban: 4 panel interaktif]
     DIST --> PAGES[GitHub Pages]
@@ -441,12 +459,13 @@ Buka http://127.0.0.1:8231. Bendera generator:
 | `-out` | `dist` | Direktori keluaran |
 | `-base` | kosong | URL dasar untuk tautan kanonis, `hreflang`, sitemap |
 | `-status` | `2025-12-19` | Tanggal data pelaporan Earned Value |
+| `-realisasi` | kosong | `realisasi.csv` yang menggantikan realisasi di model; berkas harus memuat setiap aktivitas tepat sekali, baris tidak sah menghentikan build |
 
 ---
 
 ## 11. Pengujian
 
-**226 fungsi uji di 18 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**238 fungsi uji di 18 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -467,6 +486,10 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Biaya crash cembung**: biaya marjinal tidak pernah menurun, jumlahnya sama dengan potongan penuh, A17 cocok dengan hitung tangan (Rp 37.812,5 lalu Rp 58.437,5); potongan berhenti di hari terakhir yang sah bila potongan penuh melanggar batas mingguan; LP diuji brute force dengan biaya per hari.
 - **Serakah bisa gagal** diuji pada jaringan dengan satu aktivitas bersama yang mahal dan dua cabang murah; laporan optimalitas serakah harus konsisten dengan titik-titiknya, bukan dikunci ke satu hasil.
 - **Lembur pada jadwal nyata diuji brute force**: pada jaringan kecil setiap himpunan hari lembur × setiap urutan aktivitas dicoba; durasi minimum dan biaya harus sama. Pada proyek: 113 → 108 terbukti, upah naik saat durasi turun, jam per hari ≤ 3,6 dan per minggu ≤ 18, tidak ada lembur pada hari ujian atau peran paruh waktu, upah dihitung ulang dari pemakaian, sewa dan bersih konsisten.
+- **Batas bawah sah pada kapasitas di atas dasar**: brute force pada grid yang dinaikkan, dengan dan tanpa `RateCap`; uji ini **gagal pada kode lama** (batas 9 melampaui jadwal 8) sebelum perbaikan. `RateCap` mempercepat satu pekerjaan (6 hari → 5), orang kedua tidak; `Excess` mencatat jam di atas alokasi.
+- **Opsi percepatan**: aturan PP 35/2021 ditolak bila dilanggar, tidak ada lembur pada hari ujian atau untuk peran paruh waktu, upah dihitung tangan, opsi kosong identik dengan prakiraan, orang baru tidak pernah memperlambat.
+- **Keputusan sponsor**: opsi tanpa percepatan sama persis dengan prakiraan berjalan; setiap titik JCL 70% benar-benar mencapai 70%; harga per hari, opsi termurah, dan opsi tercepat konsisten dengan angkanya; peran lembur sama dengan rencana termurah durasi minimum; tidak ada temuan yang lagi menyuruh memegang komitmen lain, mengajukan kenaikan cadangan terpisah, atau menjanjikan hari dari crashing CPM.
+- **Realisasi**: ekspor → impor mengembalikan realisasi persis; mengubah satu durasi mengubah kalibrasi prakiraan; sepuluh jenis berkas rusak ditolak tanpa mengubah apa pun.
 - `Search` mencapai batas bawah pada jaringan kecil dengan urutan buruk, berbenih deterministik, jujur melaporkan target yang mustahil, dan menolak jaringan bersiklus.
 
 **Simulasi**
@@ -491,7 +514,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - Titik di luar UCL harus terdeteksi aturan 1 (batas yang digambar = batas yang diuji).
 
 **Render dan konten**
-- Seluruh 30 halaman dirender tanpa galat, tanpa sisa sintaks templat, tanpa kunci terjemahan hilang.
+- Seluruh 32 halaman dirender tanpa galat, tanpa sisa sintaks templat, tanpa kunci terjemahan hilang.
 - **Halaman Inggris tidak boleh memuat kata fungsi Indonesia** — uji ini merender HTML sungguhan lalu memindainya, dan menemukan bocoran nyata (label status, notasi rumus, nilai fakta, metrik temuan) yang lolos dari pemeriksaan kelengkapan kamus.
 - Tidak ada singkatan bulan Indonesia di dalam kalimat Inggris.
 - Angka kunci — termasuk angka halaman Optimasi, Simulasi Terpadu, dan Prakiraan Berjalan — harus benar-benar sampai ke HTML dalam kedua bahasa, diformat dari struct analisis, bukan diketik.
@@ -509,7 +532,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 Dua alur kerja GitHub Actions:
 
-**`uji`** — setiap push dan pull request: `gofmt`, `go vet`, `go test -race`, laporan cakupan, kompilasi WebAssembly, build situs, dan pemeriksaan keluaran (30 halaman termasuk halaman prakiraan dua bahasa, sitemap, service worker, metrik).
+**`uji`** — setiap push dan pull request: `gofmt`, `go vet`, `go test -race`, laporan cakupan, kompilasi WebAssembly, build situs, dan pemeriksaan keluaran (32 halaman termasuk halaman prakiraan dan keputusan dua bahasa, `realisasi.csv`, sitemap, service worker, metrik).
 
 **`terbitkan`** — setiap push ke `main`: uji ulang, kompilasi WebAssembly, `configure-pages` (dijalankan **sebelum** build agar URL dasar benar), build situs, lalu penerbitan ke GitHub Pages.
 
@@ -531,7 +554,8 @@ Dua alur kerja GitHub Actions:
 | Kredibilitas dengan estimator momen satu kelompok | Satu selisih besar yang kebetulan bisa terbaca sistematis; prakiraan tanpa belajar ditampilkan sebagai pembanding |
 | Sewa & langganan sebanding dengan rentang pemakaian | Vendor bulanan membuat biaya naik bertahap, bukan halus |
 | Crashing = lembur PP 35/2021 tanpa kehilangan efisiensi koordinasi; peluang rework fast-tracking 30% | Premi aturan adalah batas bawah — biaya crash sesungguhnya hanya bisa lebih tinggi |
-| Lembur jadwal nyata: tidak pada periode ujian, tidak untuk peran paruh waktu (DevOps), paling banyak 3,6 jam/hari | Lembur saat ujian atau untuk DevOps bisa memotong lebih banyak; durasi minimum 108 terbukti hanya di dalam aturan ini |
+| Lembur jadwal nyata: tidak pada periode ujian, tidak untuk peran paruh waktu (DevOps), paling banyak 3,6 jam/hari | Lembur saat ujian atau untuk DevOps bisa memotong lebih banyak; lantai yang terbukti hanya berlaku di dalam aturan ini |
+| Alokasi rencana tetap (jam di atas alokasi = lembur); orang baru dibayar dari tanggal data sampai pekerjaan terakhir perannya; masa adaptasi 10 hari pada 50% | Bila orangnya sebenarnya menganggur, lembur lebih murah; tarif kontraktor nyata di atas kartu proyek membuat opsi orang baru lebih mahal |
 | Peluang gagal cutover Coretax 35% (skenario) | Titik impasnya 0,279% — kesimpulan bertahan |
 
 **Celah yang sudah ditutup** (lima celah versi sebelumnya):
@@ -551,8 +575,16 @@ Dua alur kerja GitHub Actions:
 **Celah putaran ketiga**:
 
 9. **Slope crash rata-rata** → **biaya lembur per hari** yang cembung, di model, serakah, dan LP. Akibatnya klaim lama "serakah tidak optimal" ternyata artefak slope rata-rata; kini semua teks mengikuti hasil perbandingan, bukan ditulis tetap.
-10. **Saran membeli hari dari kurva crashing CPM** untuk jadwal yang tidak bisa dijalankan → **lembur sah pada jadwal levelling**: hanya 5 hari (113 → 108, terbukti) seharga Rp 450.937, bukan Rp 191.563.
+10. **Saran membeli hari dari kurva crashing CPM** untuk jadwal yang tidak bisa dijalankan → **lembur sah pada jadwal levelling** (angkanya dikoreksi lagi pada putaran keempat).
 11. **12 dari 15 halaman bergeser horizontal di layar HP** → tabel menjadi wadah geser di layar sempit; 30 halaman tanpa geser pada 400 px, dikunci uji struktur.
+
+**Celah putaran keempat** (eksekusi rekomendasi):
+
+12. **Rekomendasi "pakai 108 hari sebagai lantai" tidak bisa dijalankan** — rencananya butuh lembur mulai 20 Okt 2025, sebelum tanggal data → seluruh opsi percepatan dihitung ulang **dari tanggal data** pada jaringan sisa, dengan lantai terbukti dan harga per hari pada titik JCL 70%.
+13. **Batas bawah tidak sah pada kapasitas di atas dasar** (ditemukan saat opsi lembur memberi batas 98 untuk jadwal 97) → penalaran tak bertanggal memakai kapasitas dan laju tertinggi; uji brute force yang gagal pada kode lama.
+14. **Lembur tidak bisa mempercepat satu pekerjaan** di model levelling → `RateCap` 1 + h/8; lantai perencanaan dengan lembur turun dari 108 ke **101**; jam di atas alokasi rencana kini dibayar (`Excess`), sehingga kurva lembur dan opsi lembur konsisten (95 = 95).
+15. **Enam komitmen di enam halaman** → halaman **Keputusan Sponsor**: satu komitmen, satu permintaan anggaran; temuan P80, JCL perencanaan, EAC, cadangan, dan crashing CPM kini merujuk ke sana.
+16. **"Kumpulkan realisasi" tanpa jalur masuk** → `realisasi.csv` diekspor dan diimpor lewat `-realisasi` dengan validasi ketat.
 
 Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; keempat periode ujian diambil dari lampiran kalender akademik resmi, dan UAS ganjil ternyata 19–31 Januari 2026 — seminggu lebih lambat dari asumsi lama 12–23 Januari.
 
@@ -563,7 +595,9 @@ Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optima
 3. **Premi lembur adalah batas bawah, biaya lembur jadwal nyata adalah batas atas** — aturan tidak memuat kehilangan efisiensi koordinasi; biaya lembur per durasi pada jadwal levelling adalah rencana termurah yang ditemukan, bukan minimum terbukti.
 4. **Batas lembur crashing CPM diperiksa per aktivitas, bukan per orang** — pada jaringan CPM satu orang sudah terjadwal di dua pekerjaan sekaligus, jadi pemeriksaan per orang baru bermakna di jadwal levelling (dan di sana sudah dilakukan).
 5. **Estimator kredibilitas memakai satu kelompok data** — satu selisih besar yang kebetulan bisa terbaca sebagai penyimpangan sistematis; data lintas proyek akan menstabilkannya.
-6. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
+6. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya; `realisasi.csv` adalah jalur untuk data nyata.
+7. **Nilai satu hari lebih cepat tidak ada di data** — harga per hari setiap opsi hanya berarti bila dibandingkan dengan denda keterlambatan atau tenggat eksternal yang tidak tercatat.
+8. **Opsi orang baru memakai tarif kartu proyek dan ketersediaan pada tanggal data** — tarif dan tanggal mulai kontraktor nyata belum ada.
 
 ---
 

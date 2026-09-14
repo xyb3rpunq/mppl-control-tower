@@ -85,6 +85,25 @@ func closureExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 		}
 	}
 
+	if d := a.Decision; d != nil {
+		if c, ok := d.CheapestOption(); ok {
+			base := d.Options[0]
+			ex["hargaperhari"] = WorkedExample{
+				Substitution: fmt.Sprintf("(%s - %s) / (%s - %s)", rp(c.JCL70.Budget), rp(base.JCL70.Budget), n(base.JCL70.Duration, 0), n(c.JCL70.Duration, 0)),
+				Result:       fmt.Sprintf("%s / %s = %s;  %s = %s", rp(c.ExtraBudget), n(c.DaysEarlier, 0), rp(c.PricePerDay), tr2(lang, "permintaan anggaran", "budget request"), rp(d.BudgetRequest)),
+				Comment: model.Text{
+					ID: fmt.Sprintf("%s adalah opsi termurah per hari. Tanpa percepatan, komitmennya %s hari kerja dengan %s.", c.Name.ID, n(base.JCL70.Duration, 0), rp(base.JCL70.Budget)),
+					EN: fmt.Sprintf("%s is the cheapest option per day. Without acceleration, the commitment is %s working days with %s.", c.Name.EN, n(base.JCL70.Duration, 0), rp(base.JCL70.Budget)),
+				},
+			}
+		} else {
+			ex["hargaperhari"] = WorkedExample{
+				Substitution: tr2(lang, "tidak ada opsi yang memajukan JCL 70%", "no option advances the 70% JCL"),
+				Result:       fmt.Sprintf("%s = %s", tr2(lang, "permintaan anggaran", "budget request"), rp(d.BudgetRequest)),
+			}
+		}
+	}
+
 	if len(a.Rentals) > 0 {
 		r := a.Rentals[0]
 		for _, x := range a.Rentals {

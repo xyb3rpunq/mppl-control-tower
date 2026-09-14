@@ -69,7 +69,15 @@ func main() {
 	out := flag.String("out", "dist", "direktori keluaran")
 	baseURL := flag.String("base", "", "URL dasar situs, mis. https://xyb3rpunq.github.io/mppl-control-tower")
 	statusDate := flag.String("status", model.DefaultStatusDate, "tanggal data untuk pelaporan Earned Value")
+	actuals := flag.String("realisasi", "", "berkas realisasi.csv yang menggantikan realisasi di model")
 	flag.Parse()
+
+	if *actuals != "" {
+		if err := loadActuals(*actuals); err != nil {
+			log.Fatalf("gagal membaca realisasi: %v", err)
+		}
+		log.Printf("realisasi dibaca dari %s", *actuals)
+	}
 
 	start := time.Now()
 	analysis, err := site.Build(*statusDate)
@@ -654,6 +662,9 @@ func writeExtras(out, baseURL string, a *site.Analysis) error {
 	if err := os.WriteFile(filepath.Join(dataDir, "risiko.csv"), []byte(risksCSV(a)), 0o644); err != nil {
 		return err
 	}
+	if err := os.WriteFile(filepath.Join(dataDir, "realisasi.csv"), []byte(actualsCSV(model.Activities, a.Calendar)), 0o644); err != nil {
+		return err
+	}
 	return os.WriteFile(filepath.Join(dataDir, "metrik.json"), []byte(metricsJSON(a)), 0o644)
 }
 
@@ -807,6 +818,7 @@ func metricsJSON(a *site.Analysis) string {
 			"kandidat_fast_track_layak": len(a.FastViable), "durasi_semua_fast_track": a.FastAllDur,
 		}},
 		{"lembur_jadwal_nyata", overtimeJSON(a)},
+		{"keputusan_sponsor", decisionJSON(a)},
 		{"simulasi_terpadu", map[string]interface{}{
 			"rho": simulate.DefaultRho, "lambda_risiko": model.RiskLoading, "iterasi": fin.Config.Iterations,
 			"lapisan": ladder, "jcl70_tenggat": a.JCL70.Duration, "jcl70_anggaran": a.JCL70.Budget,
@@ -921,5 +933,41 @@ func overtimeJSON(a *site.Analysis) map[string]interface{} {
 		"durasi_tanpa_lembur": ot.Levelled, "durasi_minimum": ot.MinDuration, "batas_bawah": ot.Bound.Value,
 		"terbukti_minimum": ot.MinProven, "jam_lembur_per_hari": ot.HoursPerDay, "peran_paruh_waktu_dikecualikan": excluded,
 		"biaya_adalah_batas_atas": true, "titik": points,
+	}
+}
+
+// decisionJSON melaporkan paket keputusan sponsor dari tanggal data.
+func decisionJSON(a *site.Analysis) map[string]interface{} {
+	d := a.Decision
+	if d == nil {
+		return nil
+	}
+	var opts []map[string]interface{}
+	for _, o := range d.Options {
+		opts = append(opts, map[string]interface{}{
+			"kunci": o.Key, "nama": o.Name.ID, "asumsi": o.Assumption.ID,
+			"lantai": o.Floor, "batas_bawah_lantai": o.FloorBound, "lantai_terbukti": o.FloorProven,
+			"p80_durasi": o.Sim.DurP80, "jcl70_durasi": o.JCL70.Duration, "jcl70_tanggal": a.FinishISO(int(o.JCL70.Duration)),
+			"jcl70_anggaran": o.JCL70.Budget, "rerata_upah_lembur": o.Sim.AccelOvertime, "rerata_upah_orang_baru": o.Sim.AccelHire,
+			"hari_lebih_cepat": o.DaysEarlier, "tambahan_anggaran": o.ExtraBudget, "harga_per_hari": o.PricePerDay,
+			"porsi_iterasi_terbukti": o.Sim.Proof.ProvenShare(),
+		})
+	}
+	key := func(i int) interface{} {
+		if i < 0 {
+			return nil
+		}
+		return d.Options[i].Key
+	}
+	return map[string]interface{}{
+		"tanggal_keputusan": a.Calendar.ISOAt(d.From),
+		"komitmen_berlaku": map[string]interface{}{
+			"durasi": a.ForecastJCL70.Duration, "tanggal": a.FinishISO(int(a.ForecastJCL70.Duration)), "anggaran": a.ForecastJCL70.Budget,
+		},
+		"permintaan_anggaran": d.BudgetRequest, "opsi": opts, "opsi_termurah_per_hari": key(d.Cheapest), "opsi_tercepat": key(d.Fastest),
+		"rencana_lembur_perencanaan_hari_peran_lewat": d.PlanMissed,
+		"lembur_dari_tanggal_data": map[string]interface{}{
+			"durasi_tanpa_lembur": d.Overtime.Levelled, "durasi_minimum": d.Overtime.MinDuration, "terbukti_minimum": d.Overtime.MinProven,
+		},
 	}
 }

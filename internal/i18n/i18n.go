@@ -40,6 +40,7 @@ var dict = Dict{
 	"nav.integrated": {"Simulasi Terpadu & JCL", "Integrated Simulation & JCL"},
 	"nav.cost":       {"Biaya & Earned Value", "Cost & Earned Value"},
 	"nav.forecast":   {"Prakiraan Berjalan", "In-flight Forecast"},
+	"nav.decision":   {"Keputusan Sponsor", "Sponsor Decisions"},
 	"nav.risk":       {"Manajemen Risiko", "Risk Management"},
 	"nav.org":        {"Organisasi & Sumber Daya", "Organisation & Resources"},
 	"nav.quality":    {"Manajemen Mutu", "Quality Management"},

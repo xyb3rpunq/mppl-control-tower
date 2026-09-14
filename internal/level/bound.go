@@ -108,16 +108,49 @@ func LowerBound(acts []model.Activity, opts Options) (Bound, error) {
 		return sort.SearchFloat64s(p[h:], target) + h
 	}
 
+	// peak adalah kapasitas harian tertinggi setiap peran di horizon. Penalaran
+	// yang tidak bertanggal wajib memakainya, bukan kapasitas dasar: jendela
+	// ujian hanya menurunkan kapasitas, tetapi lembur dan orang baru
+	// menaikkannya, dan batas yang memakai kapasitas dasar pada grid seperti
+	// itu melampaui jadwal yang benar-benar bisa dibuat.
+	peak := make(map[model.Role]float64, len(grid))
+	for role, row := range grid {
+		for k := 0; k < H && k < len(row); k++ {
+			if row[k] > peak[role] {
+				peak[role] = row[k]
+			}
+		}
+	}
+	// peakRate adalah RateCap tertinggi setiap peran, untuk alasan yang sama.
+	peakRate := make(map[model.Role]float64, len(opts.RateCap))
+	for role, row := range opts.RateCap {
+		for k := 0; k < H && k < len(row); k++ {
+			if row[k] > peakRate[role] {
+				peakRate[role] = row[k]
+			}
+		}
+	}
+
 	// Durasi solo tanpa jendela: batas bawah waktu yang tidak bergantung
 	// tanggal, dipakai untuk ekor (tail) dan jarak antar-aktivitas.
 	soloDur := make([]int, n)
 	for i, a := range act {
-		rate := 1.0
+		// Laju tertinggi yang mungkin: RateCap tertinggi peran timnya yang
+		// paling rendah, lalu dibatasi kapasitas harian tertinggi.
+		rate, first := 1.0, true
 		for _, s := range a.Team {
 			if s.Alloc <= 0 {
 				continue
 			}
-			if r := opts.Capacity[s.Role] / s.Alloc; r < rate {
+			if v := math.Max(1, peakRate[s.Role]); first || v < rate {
+				rate, first = v, false
+			}
+		}
+		for _, s := range a.Team {
+			if s.Alloc <= 0 {
+				continue
+			}
+			if r := peak[s.Role] / s.Alloc; r < rate {
 				rate = r
 			}
 		}
@@ -188,7 +221,7 @@ func LowerBound(acts []model.Activity, opts Options) (Bound, error) {
 
 	// soloRate adalah laju tercepat aktivitas i pada hari k bila ia sendirian.
 	soloRate := func(i, k int) float64 {
-		rate := 1.0
+		rate := RateLimit(act[i], k, opts.RateCap)
 		for _, s := range act[i].Team {
 			if s.Alloc <= 0 {
 				continue
@@ -286,7 +319,7 @@ func LowerBound(acts []model.Activity, opts Options) (Bound, error) {
 				}
 				if energetic && fsOnly {
 					for _, role := range roles {
-						base := opts.Capacity[role]
+						base := peak[role]
 						if base <= 0 {
 							continue
 						}
@@ -348,7 +381,15 @@ func LowerBound(acts []model.Activity, opts Options) (Bound, error) {
 			}
 		}
 	}
+	// CPM memakai durasi pada laju 1. Bila lembur membuat laju bisa melebihi 1,
+	// durasi CPM bukan lagi batas bawah; batas solo menggantikannya.
 	b.Value = b.CPM
+	for _, r := range peakRate {
+		if r > 1+1e-9 {
+			b.Value = 0
+			break
+		}
+	}
 	if b.Solo > b.Value {
 		b.Value = b.Solo
 	}

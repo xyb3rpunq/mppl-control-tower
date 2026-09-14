@@ -59,9 +59,12 @@ jobs:
           test -f /tmp/dist/coretax/index.html
           test -f /tmp/dist/prakiraan/index.html
           test -f /tmp/dist/en/prakiraan/index.html
+          test -f /tmp/dist/keputusan/index.html
+          test -f /tmp/dist/en/keputusan/index.html
+          test -f /tmp/dist/data/realisasi.csv
           test -f /tmp/dist/sitemap.xml
           test -f /tmp/dist/sw.js
           test -f /tmp/dist/data/metrik.json
           halaman=$(find /tmp/dist -name index.html | wc -l)
           echo "halaman dihasilkan: $halaman"
-          test "$halaman" -eq 30
+          test "$halaman" -eq 32

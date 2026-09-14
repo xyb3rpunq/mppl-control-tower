@@ -14,9 +14,11 @@ import (
 //
 // Crashing CPM memotong durasi aktivitas pada jaringan tanpa batas sumber daya,
 // padahal jaringan itu tidak bisa dijalankan. Pada jadwal levelling berbasis isi
-// pekerjaan, lembur tidak memendekkan pekerjaan - lembur menambah kapasitas
-// peran: satu jam lembur seorang pekerja penuh waktu menambah 1/8 hari-orang
-// pada hari itu. Batas sahnya menurut PP 35/2021 Pasal 26:
+// pekerjaan, lembur tidak memendekkan isi pekerjaan - lembur menambah jam
+// kerja: satu jam lembur seorang pekerja penuh waktu menambah 1/8 hari-orang
+// pada hari itu, baik untuk pekerjaan lain yang menunggu maupun untuk
+// mempercepat pekerjaannya sendiri (laju 1 + h/8). Batas sahnya menurut
+// PP 35/2021 Pasal 26:
 //
 //	per hari   <= 4 jam
 //	per minggu <= 18 jam, jadi 3,6 jam per hari kerja bila lembur setiap hari
@@ -88,6 +90,9 @@ func (c OvertimeCurve) PointAt(d int) (OvertimePoint, bool) {
 	return OvertimePoint{}, false
 }
 
+// overtimeSwapWindow adalah jarak hari terjauh saat lembur dipindahkan.
+const overtimeSwapWindow = 5
+
 // SustainedOvertimeHours adalah jam lembur per hari kerja yang tetap sah bila
 // dilakukan setiap hari dalam lima hari kerja seminggu.
 func SustainedOvertimeHours() float64 {
@@ -95,8 +100,10 @@ func SustainedOvertimeHours() float64 {
 }
 
 // LevelledOvertime menghitung berapa hari jadwal levelling bisa dipotong dengan
-// lembur sah, dan berapa biayanya.
-func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[model.Role]float64) (OvertimeCurve, error) {
+// lembur sah mulai hari kerja from, dan berapa biayanya. from = 0 untuk
+// perencanaan; untuk keputusan pada tanggal data, from adalah hari itu dan
+// acts adalah jaringan sisa dengan tanggal rilis pada o.ReleaseOf.
+func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[model.Role]float64, from int) (OvertimeCurve, error) {
 	opts := o.Options
 	if opts.Calendar == nil || opts.Capacity == nil {
 		return OvertimeCurve{}, fmt.Errorf("compress: lembur butuh kalender dan kapasitas")
@@ -134,27 +141,33 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 	extra := map[model.Role][]float64{}
 	for _, r := range out.Eligible {
 		row := make([]float64, H)
-		for d := 0; d < H; d++ {
+		for d := from; d < H; d++ {
 			if math.Abs(baseGrid[r][d]-opts.Capacity[r]) < 1e-9 {
 				row[d] = out.HoursPerDay / model.RegularHoursPerDay * out.Persons[r]
 			}
 		}
 		extra[r] = row
 	}
-	gridWith := func(on map[model.Role][]bool) map[model.Role][]float64 {
+	// gridWith mengembalikan kapasitas dan laju maksimum untuk lembur yang aktif.
+	gridWith := func(on map[model.Role][]bool) (map[model.Role][]float64, map[model.Role][]float64) {
 		g := make(map[model.Role][]float64, len(baseGrid))
+		rc := make(map[model.Role][]float64, len(on))
 		for r, row := range baseGrid {
 			nr := append([]float64(nil), row...)
 			if flags, ok := on[r]; ok {
+				rate := make([]float64, len(nr))
 				for d := range nr {
+					rate[d] = 1
 					if flags[d] {
 						nr[d] += extra[r][d]
+						rate[d] = 1 + out.HoursPerDay/model.RegularHoursPerDay
 					}
 				}
+				rc[r] = rate
 			}
 			g[r] = nr
 		}
-		return g
+		return g, rc
 	}
 
 	rentals, _, err := cost.Rentals(acts)
@@ -169,14 +182,14 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 		return c
 	}
 
-	optimize := func(g map[model.Role][]float64, samples int) (level.Optimized, error) {
+	optimize := func(g, rc map[model.Role][]float64, samples int) (level.Optimized, error) {
 		q := o
 		q.Options = opts
-		q.CapGrid = g
+		q.CapGrid, q.RateCap = g, rc
 		q.Samples = samples
 		return level.Optimize(acts, q)
 	}
-	none, err := optimize(baseGrid, o.Samples)
+	none, err := optimize(baseGrid, nil, o.Samples)
 	if err != nil {
 		return OvertimeCurve{}, err
 	}
@@ -190,7 +203,8 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 		}
 		on[r] = flags
 	}
-	full, err := optimize(gridWith(on), o.Samples)
+	fg, frc := gridWith(on)
+	full, err := optimize(fg, frc, o.Samples)
 	if err != nil {
 		return OvertimeCurve{}, err
 	}
@@ -200,9 +214,9 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 	}
 
 	order := full.Best.Order
-	run := func(g map[model.Role][]float64) (level.Result, error) {
+	run := func(g, rc map[model.Role][]float64) (level.Result, error) {
 		q := opts
-		q.Lite, q.CapGrid, q.Order, q.Rule = true, g, order, ""
+		q.Lite, q.CapGrid, q.RateCap, q.Order, q.Rule = true, g, rc, order, ""
 		return level.Run(acts, q)
 	}
 	best := map[int]OvertimePoint{}
@@ -225,15 +239,15 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 			if !any {
 				continue
 			}
-			g := gridWith(on)
-			res, err := run(g)
+			g, rc := gridWith(on)
+			res, err := run(g, rc)
 			if err != nil {
 				return OvertimeCurve{}, err
 			}
 			if res.Duration <= T {
 				continue
 			}
-			alt, err := optimize(g, 60)
+			alt, err := optimize(g, rc, 60)
 			if err != nil {
 				return OvertimeCurve{}, err
 			}
@@ -243,24 +257,104 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 			}
 			on[r] = saved
 		}
-		// Tahap 2: lepas lembur hari demi hari dari belakang dengan urutan tetap.
-		for _, r := range out.Eligible {
-			for d := T - 1; d >= 0; d-- {
-				if !on[r][d] {
-					continue
-				}
-				on[r][d] = false
-				res, err := run(gridWith(on))
-				if err != nil {
-					return OvertimeCurve{}, err
-				}
-				if res.Duration > T {
-					on[r][d] = true
+		// costOf menjalankan urutan tetap pada lembur yang aktif dan melaporkan
+		// upahnya, atau ok = false bila tenggat T terlewati.
+		costOf := func(flags map[model.Role][]bool) (level.Result, float64, bool, error) {
+			sched, err := run(gridWith(flags))
+			if err != nil || sched.Duration > T {
+				return sched, 0, false, err
+			}
+			return sched, overtimePoint(sched, baseGrid, out, opts).Cost, true, nil
+		}
+		clone := func(src map[model.Role][]bool) map[model.Role][]bool {
+			dst := make(map[model.Role][]bool, len(src))
+			for r, row := range src {
+				dst[r] = append([]bool(nil), row...)
+			}
+			return dst
+		}
+		// Tahap 2: lepas lembur hari demi hari dengan urutan tetap, dari belakang
+		// dan dari depan. Arah memengaruhi hari mana yang tersisa; yang lebih
+		// murah dipakai.
+		var bestOn map[model.Role][]bool
+		bestCost := math.Inf(1)
+		for _, backward := range []bool{true, false} {
+			cand := clone(on)
+			for _, r := range out.Eligible {
+				for k := 0; k < T; k++ {
+					d := k
+					if backward {
+						d = T - 1 - k
+					}
+					if !cand[r][d] {
+						continue
+					}
+					cand[r][d] = false
+					_, _, ok, err := costOf(cand)
+					if err != nil {
+						return OvertimeCurve{}, err
+					}
+					if !ok {
+						cand[r][d] = true
+					}
 				}
 			}
+			_, c, ok, err := costOf(cand)
+			if err != nil {
+				return OvertimeCurve{}, err
+			}
+			if ok && c < bestCost {
+				bestOn, bestCost = cand, c
+			}
 		}
-		g := gridWith(on)
-		sched, err := run(g)
+		if bestOn == nil {
+			return OvertimeCurve{}, fmt.Errorf("compress: rencana lembur untuk %d hari tidak ditemukan", T)
+		}
+		// Tahap 3: pencarian lokal - lepas satu hari, atau pindahkan lembur satu
+		// hari ke hari lain di dekatnya, selama tenggat tetap tercapai dan
+		// upahnya turun. Hari terakhir yang hanya terpakai sebagian sering lebih
+		// murah daripada hari penuh di tengah.
+		for pass := 0; pass < 20; pass++ {
+			improved := false
+			for _, r := range out.Eligible {
+				for d := 0; d < T; d++ {
+					if !bestOn[r][d] {
+						continue
+					}
+					bestOn[r][d] = false
+					if _, c, ok, err := costOf(bestOn); err != nil {
+						return OvertimeCurve{}, err
+					} else if ok && c < bestCost-0.5 {
+						bestCost, improved = c, true
+						continue
+					}
+					moved := false
+					for e := d - overtimeSwapWindow; e <= d+overtimeSwapWindow && !moved; e++ {
+						if e < from || e >= T || e == d || bestOn[r][e] || extra[r][e] == 0 {
+							continue
+						}
+						bestOn[r][e] = true
+						_, c, ok, err := costOf(bestOn)
+						if err != nil {
+							return OvertimeCurve{}, err
+						}
+						if ok && c < bestCost-0.5 {
+							bestCost, improved, moved = c, true, true
+						} else {
+							bestOn[r][e] = false
+						}
+					}
+					if !moved {
+						bestOn[r][d] = true
+					}
+				}
+			}
+			if !improved {
+				break
+			}
+		}
+		on = bestOn
+		sched, err := run(gridWith(on))
 		if err != nil {
 			return OvertimeCurve{}, err
 		}
@@ -283,8 +377,9 @@ func LevelledOvertime(acts []model.Activity, o level.OptimizeOptions, rates map[
 }
 
 // overtimePoint menghitung jam dan upah lembur dari pemakaian kapasitas
-// jadwal di atas kapasitas normal. Lembur dibagi rata ke orang dalam peran
-// itu - pembagian termurah, karena jam pertama paling murah.
+// jadwal di atas kapasitas normal, atau dari kelebihan di atas alokasi rencana
+// (level.Result.Excess) bila lebih besar. Lembur dibagi rata ke orang dalam
+// peran itu - pembagian termurah, karena jam pertama paling murah.
 func overtimePoint(sched level.Result, baseGrid map[model.Role][]float64, c OvertimeCurve, opts level.Options) OvertimePoint {
 	pt := OvertimePoint{Duration: sched.Duration, Hours: map[model.Role]float64{}, Days: map[model.Role]int{}, Schedule: sched}
 	for _, r := range c.Eligible {
@@ -292,6 +387,9 @@ func overtimePoint(sched level.Result, baseGrid map[model.Role][]float64, c Over
 		week := map[string]float64{}
 		for d := 0; d < sched.Duration && d < len(sched.Usage[r]); d++ {
 			over := sched.Usage[r][d] - baseGrid[r][d]
+			if ex := sched.Excess[r]; d < len(ex) && ex[d] > over {
+				over = ex[d]
+			}
 			if over <= 1e-9 {
 				continue
 			}

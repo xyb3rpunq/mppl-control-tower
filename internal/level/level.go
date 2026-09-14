@@ -69,6 +69,13 @@ type Options struct {
 	ExamFactor float64
 	// ReleaseOf memberi hari paling awal aktivitas boleh dimulai.
 	ReleaseOf func(model.Activity) int
+	// RateCap adalah laju maksimum satu aktivitas per peran per hari, relatif
+	// terhadap alokasinya. Tanpa isi, lajunya paling tinggi 1: satu hari kerja
+	// per hari, karena menambah orang tidak mempercepat satu pekerjaan yang tak
+	// terbagi. Lembur h jam membuat orang yang sama bekerja 1 + h/8 hari per
+	// hari; hari itu RateCap perannya 1 + h/8. Laju aktivitas dibatasi peran
+	// timnya yang paling rendah.
+	RateCap map[model.Role][]float64
 	// Rule adalah aturan prioritas SGS; kosong berarti RuleLST.
 	Rule Rule
 	// Order, bila diisi, menggantikan Rule: SGS selalu memilih aktivitas layak
@@ -161,8 +168,14 @@ type Result struct {
 	Horizon     int
 	Usage       map[model.Role][]float64
 	Cap         map[model.Role][]float64
-	OnDay       map[model.Role][][]string // aktivitas yang memakai peran itu per hari
-	Roles       []model.Role
+	// Excess adalah hari-orang di atas alokasi rencana karena sebuah aktivitas
+	// berjalan lebih cepat dari satu hari kerja per hari (RateCap > 1): alokasi
+	// x (laju - 1). Alokasi dianggap tetap - sisa waktu orang itu terikat di
+	// tempat lain - jadi kelebihan ini adalah jam lembur, walaupun pemakaian
+	// peran hari itu masih di bawah kapasitas normal.
+	Excess map[model.Role][]float64
+	OnDay  map[model.Role][][]string // aktivitas yang memakai peran itu per hari
+	Roles  []model.Role
 }
 
 // Run menjalankan levelling atas sebuah jaringan.
@@ -219,6 +232,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 		Tasks:       make(map[string]Task, len(acts)),
 		CPMDuration: plan.Duration,
 		Horizon:     H,
+		Excess:      make(map[model.Role][]float64, len(roles)),
 		Usage:       make(map[model.Role][]float64, len(roles)),
 		Cap:         make(map[model.Role][]float64, len(roles)),
 		OnDay:       make(map[model.Role][][]string, len(roles)),
@@ -230,6 +244,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 	}
 	for _, r := range roles {
 		res.Usage[r] = make([]float64, H)
+		res.Excess[r] = make([]float64, H)
 		row := grid[r]
 		if len(row) < H {
 			return Result{}, fmt.Errorf("level: grid kapasitas peran %s lebih pendek dari horizon", r)
@@ -306,7 +321,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 			task.Finish = ready + d
 		default:
 			start := ready
-			for start < H && rateAt(res, a, start) < opts.MinStartRate-eps {
+			for start < H && rateAt(res, a, start, opts.RateCap) < opts.MinStartRate-eps {
 				start++
 			}
 			if start >= H {
@@ -318,7 +333,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 				if k >= H {
 					return Result{}, fmt.Errorf("level: %s tidak selesai sebelum horizon %d", pick, H)
 				}
-				rate := rateAt(res, a, k)
+				rate := rateAt(res, a, k, opts.RateCap)
 				step := math.Min(rate, float64(d)-progress)
 				if step > eps {
 					for _, s := range a.Team {
@@ -336,6 +351,9 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 							res.OnDay[s.Role][k] = append(res.OnDay[s.Role][k], pick)
 						}
 						res.Usage[s.Role][k] += s.Alloc * step
+						if step > 1 {
+							res.Excess[s.Role][k] += s.Alloc * (step - 1)
+						}
 					}
 					progress += step
 				}
@@ -459,8 +477,8 @@ func transitiveSuccessors(plan schedule.Result) map[string]int {
 // Peran yang paling sempit menentukan laju seluruh aktivitas - sama seperti
 // dalam kenyataan, pekerjaan integrasi tidak bisa jalan lebih cepat dari
 // orang tersibuk yang terlibat.
-func rateAt(res Result, a model.Activity, k int) float64 {
-	rate := 1.0
+func rateAt(res Result, a model.Activity, k int, rateCap map[model.Role][]float64) float64 {
+	rate := RateLimit(a, k, rateCap)
 	for _, s := range a.Team {
 		if s.Alloc <= 0 {
 			continue
@@ -474,6 +492,29 @@ func rateAt(res Result, a model.Activity, k int) float64 {
 		}
 	}
 	return rate
+}
+
+// RateLimit mengembalikan laju tertinggi aktivitas a pada hari k menurut
+// RateCap: nilai terendah di antara peran timnya, dan 1 bila tidak diisi.
+func RateLimit(a model.Activity, k int, rateCap map[model.Role][]float64) float64 {
+	limit := 1.0
+	if rateCap == nil {
+		return limit
+	}
+	first := true
+	for _, s := range a.Team {
+		if s.Alloc <= 0 {
+			continue
+		}
+		v := 1.0
+		if row := rateCap[s.Role]; k >= 0 && k < len(row) && row[k] > 1 {
+			v = row[k]
+		}
+		if first || v < limit {
+			limit, first = v, false
+		}
+	}
+	return limit
 }
 
 // Profile mengubah hasil levelling menjadi profil pembebanan agar histogram

@@ -83,6 +83,10 @@ type IntegratedConfig struct {
 	// SearchMoves adalah anggaran langkah pencarian lokal per iterasi yang belum
 	// terbukti optimal oleh SGS cepat.
 	SearchMoves int
+	// Accel, pada lapisan kapasitas, menerapkan opsi percepatan: kapasitas
+	// lembur dan orang baru masuk ke grid levelling, dan biayanya masuk ke
+	// biaya setiap iterasi.
+	Accel *Acceleration
 }
 
 // DefaultSearchMoves adalah anggaran langkah pencarian lokal per iterasi yang
@@ -164,6 +168,10 @@ type IntegratedResult struct {
 	RealisedSameRole float64
 
 	Proof LevelProof
+
+	// AccelOvertime, AccelHire, dan AccelHours adalah rerata upah lembur, upah
+	// orang baru, dan jam lembur per iterasi opsi percepatan.
+	AccelOvertime, AccelHire, AccelHours float64
 }
 
 // exposure memetakan risiko ke aktivitas yang menanggung hari tambahannya:
@@ -294,6 +302,14 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 			return IntegratedResult{}, fmt.Errorf("simulate: lapisan kapasitas butuh kalender dan kapasitas")
 		}
 		capGrid = level.CapacityGridWith(cfg.Calendar, cfg.Capacity, true, levelHorizon, cfg.ExamFactor)
+	}
+	var accel *AccelGrids
+	if cfg.Accel != nil && cfg.Layer >= LayerResources {
+		g, err := cfg.Accel.Grids(cfg.Calendar, cfg.Capacity, levelHorizon, cfg.ExamFactor)
+		if err != nil {
+			return IntegratedResult{}, err
+		}
+		accel, capGrid = &g, g.Max
 	}
 
 	if cfg.SearchMoves <= 0 {
@@ -435,12 +451,15 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 	}
 
 	if cfg.Layer >= LayerResources {
-		outs, err := levelAll(netActs, acts, cfg, capGrid, levelInputs, releaseOf, sampler, tcs)
+		outs, err := levelAll(netActs, acts, cfg, capGrid, accel, levelInputs, releaseOf, sampler, tcs)
 		if err != nil {
 			return IntegratedResult{}, err
 		}
 		for it, o := range outs {
-			total := preTotals[it]
+			total := preTotals[it] + o.accel.Total()
+			res.AccelOvertime += o.accel.Overtime
+			res.AccelHire += o.accel.Hire
+			res.AccelHours += o.accel.OvertimeHours
 			for ti, t := range tcs {
 				var c float64
 				if fl != nil && fl.State[t.Index].Kind != NotStarted {
@@ -481,6 +500,9 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 	res.ReworkDays /= n
 	res.ReworkCost /= n
 	res.TimeCost /= n
+	res.AccelOvertime /= n
+	res.AccelHire /= n
+	res.AccelHours /= n
 	if fl != nil {
 		res.TimeCost += fl.timeCostPaid
 	}
@@ -531,6 +553,7 @@ type levelOut struct {
 	anchorStart []int // mulai aktivitas pembeli setiap sewa, urutan tcs
 	proof       int
 	gap, saved  int
+	accel       AccelPay
 }
 
 // LevelWorkers menentukan jumlah pekerja levelling paralel. Nilai bawaan
@@ -545,7 +568,7 @@ var LevelWorkers = func() int { return runtime.GOMAXPROCS(0) }
 // wajib di WebAssembly: dengan goroutine pekerja di dalam callback js.FuncOf,
 // runtime sempat menerima panggilan JavaScript kedua sebelum callback pertama
 // selesai, dan runtime Go mati dengan "fatal error: unknown caller pc".
-func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64,
+func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64, accel *AccelGrids,
 	inputs [][]int, releaseOf func(model.Activity) int, sampler *Sampler, tcs []cost.Rental) ([]levelOut, error) {
 
 	outs := make([]levelOut, len(inputs))
@@ -555,7 +578,7 @@ func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[
 	}
 	if workers <= 1 {
 		for it := range inputs {
-			o, err := levelOne(netActs, acts, cfg, capGrid, inputs[it], releaseOf, sampler, tcs, it)
+			o, err := levelOne(netActs, acts, cfg, capGrid, accel, inputs[it], releaseOf, sampler, tcs, it)
 			if err != nil {
 				return nil, err
 			}
@@ -575,7 +598,7 @@ func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[
 				if it >= len(inputs) {
 					return
 				}
-				outs[it], errs[it] = levelOne(netActs, acts, cfg, capGrid, inputs[it], releaseOf, sampler, tcs, it)
+				outs[it], errs[it] = levelOne(netActs, acts, cfg, capGrid, accel, inputs[it], releaseOf, sampler, tcs, it)
 			}
 		}()
 	}
@@ -588,13 +611,16 @@ func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[
 	return outs, nil
 }
 
-func levelOne(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64,
+func levelOne(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64, accel *AccelGrids,
 	d []int, releaseOf func(model.Activity) int, sampler *Sampler, tcs []cost.Rental, it int) (levelOut, error) {
 
 	durOf := func(a model.Activity) int { return d[sampler.Index(a.ID)] }
 	base := level.Options{
 		Calendar: cfg.Calendar, Capacity: cfg.Capacity, UseWindows: true, ExamFactor: cfg.ExamFactor,
 		DurationOf: durOf, ReleaseOf: releaseOf, Horizon: levelHorizon, Lite: true, CapGrid: capGrid,
+	}
+	if accel != nil {
+		base.RateCap = accel.Rate
 	}
 	lv, err := level.Run(netActs, base)
 	if err != nil {
@@ -643,6 +669,9 @@ func levelOne(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[
 		}
 	}
 	out.dur = lv.Duration
+	if accel != nil {
+		out.accel = cfg.Accel.Pay(lv, netActs, *accel, model.RateCard)
+	}
 	out.anchorStart = make([]int, len(tcs))
 	for ti, t := range tcs {
 		out.anchorStart[ti] = lv.Tasks[acts[t.Index].ID].Start

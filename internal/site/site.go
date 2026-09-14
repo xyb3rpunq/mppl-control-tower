@@ -73,7 +73,9 @@ type Analysis struct {
 	// bergerombol, putaran GERT, dan prakiraan dari tanggal data.
 	Exact compress.TradeOff
 	// Overtime adalah lembur sah pada jadwal levelling yang bisa dijalankan.
-	Overtime  compress.OvertimeCurve
+	Overtime compress.OvertimeCurve
+	// Decision adalah paket keputusan sponsor dari tanggal data.
+	Decision  *Decision
 	Rentals   []cost.Rental
 	RiskSweep []RiskPoint
 	GERT      []GERTRow
@@ -254,8 +256,8 @@ func deriveFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "EAC = BAC / CPI", EN: "EAC = BAC / CPI"},
 			Action: model.Text{
-				ID: "Ajukan perubahan anggaran ke sponsor sekarang, atau pangkas lingkup senilai minimal " + fmtRp(gap) + " lewat proses change control.",
-				EN: "Raise a budget change with the sponsor now, or cut at least " + fmtRp(gap) + " of scope through change control.",
+				ID: "Ajukan perubahan anggaran dari JCL 70% berjalan, bukan dari EAC: EAC hanya memperpanjang CPI dan buta terhadap risiko, kapasitas, dan ujian. " + a.budgetRequestID(),
+				EN: "Request the budget change from the in-flight 70% JCL, not from the EAC: the EAC only extends the CPI and is blind to risk, capacity, and exams. " + a.budgetRequestEN(),
 			},
 		})
 	}
@@ -273,8 +275,8 @@ func deriveFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "EMV residual vs cadangan kontinjensi", EN: "residual EMV vs contingency reserve"},
 			Action: model.Text{
-				ID: "Naikkan cadangan menjadi sekitar " + fmtRp(a.Risk.TotalResidualEMV) + ", atau perkuat mitigasi pada risiko ber-EMV tertinggi sampai paparan turun ke tingkat yang tertutup.",
-				EN: "Raise the reserve to about " + fmtRp(a.Risk.TotalResidualEMV) + ", or strengthen mitigation on the highest-EMV risks until exposure drops to a covered level.",
+				ID: "Perkuat mitigasi pada risiko ber-EMV tertinggi. Jangan mengajukan kenaikan cadangan ke " + fmtRp(a.Risk.TotalResidualEMV) + " secara terpisah: risiko yang sama sudah ada di dalam anggaran JCL 70% berjalan, dan menjumlahkannya berarti meminta uang risiko dua kali.",
+				EN: "Strengthen mitigation on the highest-EMV risks. Do not request a separate reserve increase to " + fmtRp(a.Risk.TotalResidualEMV) + ": the same risks are already inside the in-flight 70% JCL budget, and adding both asks for risk money twice.",
 			},
 		})
 	}
@@ -292,8 +294,8 @@ func deriveFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "P(durasi <= rencana) dari simulasi Monte Carlo", EN: "P(duration <= plan) from the Monte Carlo simulation"},
 			Action: model.Text{
-				ID: "Sampaikan komitmen P80 (" + fmtInt(a.Sim.P80) + " hari kerja) kepada sponsor, bukan estimasi titik tunggal. Jadwal titik tunggal adalah janji berpeluang " + fmtPct(a.Sim.OnTimeProb) + ".",
-				EN: "Commit to the P80 figure (" + fmtInt(a.Sim.P80) + " working days) with the sponsor rather than a single-point estimate. A single-point schedule is a promise with " + fmtPct(a.Sim.OnTimeProb) + " odds.",
+				ID: "Jangan menjanjikan estimasi titik tunggal - itu janji berpeluang " + fmtPct(a.Sim.OnTimeProb) + ". P80 PERT " + fmtInt(a.Sim.P80) + " hari kerja pun hanya memuat ketidakpastian durasi. " + a.commitmentID(),
+				EN: "Do not promise a single-point estimate - that is a promise with " + fmtPct(a.Sim.OnTimeProb) + " odds. Even the PERT P80 of " + fmtInt(a.Sim.P80) + " working days carries only duration uncertainty. " + a.commitmentEN(),
 			},
 		})
 	}
