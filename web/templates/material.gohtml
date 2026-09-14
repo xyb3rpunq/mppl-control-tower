@@ -63,7 +63,7 @@
       <tr>
         <th>Modul 4 — {{if eq $l "id"}}Perencanaan Waktu Proyek{{else}}Project Time Planning{{end}}</th>
         <td>{{if eq $l "id"}}Definisi aktivitas, urutan, estimasi durasi, CPM, PERT, GERT, kompresi jadwal, resource levelling.{{else}}Activity definition, sequencing, duration estimation, CPM, PERT, GERT, schedule compression, resource levelling.{{end}}</td>
-        <td><code>internal/schedule</code>, <code>internal/simulate</code>, <code>internal/resource</code> — {{if eq $l "id"}}forward/backward pass empat relasi PDM, PERT, Monte Carlo, histogram sumber daya{{else}}four-relation PDM forward/backward pass, PERT, Monte Carlo, resource histogram{{end}}</td>
+        <td><code>internal/schedule</code>, <code>internal/simulate</code>, <code>internal/resource</code>, <code>internal/level</code>, <code>internal/compress</code> — {{if eq $l "id"}}forward/backward pass empat relasi PDM, PERT, Monte Carlo berkorelasi, histogram sumber daya, <a href="{{.BaseURL}}{{pathFor "/optimasi/" $l}}">levelling SGS, crashing, dan fast-tracking</a>{{else}}four-relation PDM forward/backward pass, PERT, correlated Monte Carlo, resource histogram, <a href="{{.BaseURL}}{{pathFor "/optimasi/" $l}}">SGS levelling, crashing, and fast-tracking</a>{{end}}</td>
       </tr>
       <tr>
         <th>{{if eq $l "id"}}Pertemuan 7 — MS Project{{else}}Session 7 — MS Project{{end}}</th>

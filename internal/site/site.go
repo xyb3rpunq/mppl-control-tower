@@ -8,8 +8,10 @@
 package site
 
 import (
+	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/coretax"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/evm"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/quality"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/resource"
@@ -45,8 +47,51 @@ type Analysis struct {
 	Baseline    float64
 	MgmtReserve float64
 
+	// Levelling sumber daya.
+	Level        level.Result
+	LevelWhy     level.Breakdown
+	LevelProfile resource.Profile
+	CriticalRole model.Role // peran yang paling banyak membuat pekerjaan menunggu
+	RoleWait     map[model.Role]int
+
+	// Kompresi jadwal.
+	Crash      compress.Curve
+	FastTracks []compress.FastTrack
+	FastViable []compress.FastTrack
+	FastAllDur int // durasi bila seluruh kandidat layak diterapkan
+
+	// Simulasi terpadu.
+	Ladder   []simulate.IntegratedResult
+	RhoSweep []RhoPoint
+	Frontier []simulate.FrontierPoint
+	Density  simulate.Grid
+	JCL70    simulate.FrontierPoint // titik frontier JCL 70% dengan tenggat terpendek
+
 	Findings []Finding
 }
+
+// RhoPoint adalah hasil simulasi lapisan korelasi untuk satu nilai rho.
+type RhoPoint struct {
+	Rho      float64
+	P80      float64
+	StdDev   float64
+	Realised float64
+	OnTime   float64
+}
+
+// Final mengembalikan lapisan simulasi terpadu paling realistis.
+func (a *Analysis) Final() simulate.IntegratedResult { return a.Ladder[len(a.Ladder)-1] }
+
+// LadderNames adalah label lapisan simulasi terpadu.
+var LadderNames = []model.Text{
+	{ID: "Independen", EN: "Independent"},
+	{ID: "+ Korelasi peran", EN: "+ Role correlation"},
+	{ID: "+ Kejadian risiko", EN: "+ Risk events"},
+	{ID: "+ Kapasitas & ujian", EN: "+ Capacity & exams"},
+}
+
+// FinishISO mengembalikan tanggal hari kerja terakhir untuk durasi tertentu.
+func (a *Analysis) FinishISO(days int) string { return a.Calendar.ISOAt(days - 1) }
 
 // Finding adalah satu temuan yang muncul dari angka, bukan dari opini.
 // Setiap temuan menyebutkan metrik pemicunya supaya bisa diperiksa ulang.
@@ -113,6 +158,10 @@ func Build(statusDate string) (*Analysis, error) {
 		ranges = append(ranges, s.Range)
 	}
 	a.Control = quality.BuildControlChart(means, ranges, 5, 3.0, true)
+
+	if err := buildUpgrade(a); err != nil {
+		return nil, err
+	}
 
 	a.Findings = deriveFindings(a)
 	return a, nil
@@ -306,5 +355,5 @@ func deriveFindings(a *Analysis) []Finding {
 		})
 	}
 
-	return out
+	return append(out, upgradeFindings(a)...)
 }

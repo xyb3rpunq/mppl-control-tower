@@ -1,0 +1,171 @@
+{{define "integrated"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$lad := .Analysis.Ladder}}{{$fin := .Analysis.Final}}{{$names := ladderNames}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Pertanyaan yang tidak bisa dijawab halaman PERT{{else}}The question the PERT page cannot answer{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Halaman PERT menjawab "berapa peluang selesai tepat waktu" dengan satu anggapan besar: setiap aktivitas meleset secara independen, tidak ada risiko yang terjadi, dan orang selalu tersedia. Sponsor tidak bertanya soal waktu saja; ia bertanya apakah proyek ini selesai tepat waktu <em>dan</em> tepat anggaran. Simulasi di halaman ini menambahkan ketidakpastian lapis demi lapis - setiap lapis adalah efek nyata yang terpisah - lalu menjawab pertanyaan sponsor lewat Joint Confidence Level.{{else}}The PERT page answers "what are the odds of finishing on time" under one big assumption: every activity misses independently, no risk ever fires, and people are always available. A sponsor does not ask about time alone; they ask whether the project lands on time <em>and</em> on budget. The simulation on this page adds uncertainty layer by layer - each layer a separate real effect - and answers the sponsor's question through a Joint Confidence Level.{{end}}
+  </p>
+  <div class="layer-grid">
+    {{range $i, $r := $lad}}
+    <article class="layer-card l{{$i}}">
+      <span class="layer-code">L{{$i}}</span>
+      <h3>{{tx (index $names $i) $l}}</h3>
+      <p>
+        {{if eq $i 0}}{{if eq $l "id"}}Durasi setiap aktivitas diambil acak dari sebaran beta-PERT-nya sendiri-sendiri. Identik dengan halaman PERT.{{else}}Each activity duration is drawn from its own beta-PERT distribution. Identical to the PERT page.{{end}}{{end}}
+        {{if eq $i 1}}{{if eq $l "id"}}Aktivitas yang dikerjakan peran yang sama bergerak bersama lewat faktor kinerja laten (rho {{num (defaultRho) 2 $l}}).{{else}}Activities done by the same role move together through a latent performance factor (rho {{num (defaultRho) 2 $l}}).{{end}}{{end}}
+        {{if eq $i 2}}{{if eq $l "id"}}Setiap risiko pada register terjadi dengan peluang residualnya, menambah biaya dan hari pada aktivitas yang terpapar.{{else}}Every register risk fires with its residual probability, adding cost and days to the exposed activity.{{end}}{{end}}
+        {{if eq $i 3}}{{if eq $l "id"}}Setiap iterasi dijadwalkan ulang dengan levelling: kapasitas peran, DevOps paruh waktu, dan periode ujian dihormati.{{else}}Every iteration is rescheduled with levelling: role capacity, half-time DevOps, and the exam period are respected.{{end}}{{end}}
+      </p>
+      <dl>
+        <dt>P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</dt><dd>{{num $r.DurP80 0 $l}}</dd>
+        <dt>P80 {{if eq $l "id"}}biaya{{else}}cost{{end}}</dt><dd>{{rpShort $r.CostP80 $l}}</dd>
+        <dt>{{if eq $l "id"}}Tepat waktu{{else}}On time{{end}}</dt><dd>{{pct $r.OnTime 1 $l}}</dd>
+        <dt>{{if eq $l "id"}}Tepat anggaran{{else}}On budget{{end}}</dt><dd>{{pct $r.OnBudget 1 $l}}</dd>
+        <dt>JCL</dt><dd>{{pct $r.JCL 2 $l}}</dd>
+      </dl>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Tangga realisme{{else}}The realism ladder{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Keempat lapisan dijalankan dengan benih acak yang sama, sehingga selisih antar-anak tangga murni akibat efek yang ditambahkan - bukan derau sampel. Batang merentang dari P50 sampai P90; garis tebal adalah P80.{{else}}All four layers run with the same random seed, so the difference between rungs comes purely from the added effect - not from sampling noise. Bars span P50 to P90; the heavy line is P80.{{end}}</p>
+  <div class="two-col">
+    <figure class="figure"><div class="figure-body scrollable">{{ladderChart "dur" $l}}</div></figure>
+    <figure class="figure"><div class="figure-body scrollable">{{ladderChart "cost" $l}}</div></figure>
+  </div>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Lapisan{{else}}Layer{{end}}</th><th class="num">{{if eq $l "id"}}Rerata durasi{{else}}Mean duration{{end}}</th><th class="num">P50</th><th class="num">P80</th><th class="num">P90</th><th class="num">{{if eq $l "id"}}Rerata biaya{{else}}Mean cost{{end}}</th><th class="num">{{if eq $l "id"}}P80 biaya{{else}}P80 cost{{end}}</th><th class="num">JCL</th><th class="num">{{if eq $l "id"}}Bersama di P80×P80{{else}}Joint at P80×P80{{end}}</th></tr></thead>
+    <tbody>
+      {{range $i, $r := $lad}}
+      <tr class="{{if eq $i 3}}highlight{{end}}">
+        <th>L{{$i}} {{tx (index $names $i) $l}}</th>
+        <td class="num">{{num $r.DurMean 1 $l}}</td>
+        <td class="num">{{num $r.DurP50 0 $l}}</td>
+        <td class="num"><strong>{{num $r.DurP80 0 $l}}</strong></td>
+        <td class="num">{{num $r.DurP90 0 $l}}</td>
+        <td class="num">{{rp $r.CostMean $l}}</td>
+        <td class="num"><strong>{{rp $r.CostP80 $l}}</strong></td>
+        <td class="num">{{pct $r.JCL 2 $l}}</td>
+        <td class="num">{{pct $r.JointAtP80 1 $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Mengapa biaya di lapisan independen pun sudah di atas BAC{{else}}Why cost already exceeds BAC even in the independent layer{{end}}</h4>
+    <p>{{if eq $l "id"}}BAC {{rp $a.BAC $l}} dihitung dari durasi paling mungkin (M). Tetapi estimasi tiga titik proyek ini condong ke kanan: rerata beta-PERT (O + 4M + P)/6 hampir selalu di atas M. Biaya tenaga kerja mengikuti durasi, jadi rerata biaya simulasi ({{rp (index $lad 0).CostMean $l}}) sudah di atas BAC sebelum satu risiko pun terjadi. Ini bukan kesalahan hitung - ini pengingat bahwa anggaran yang disusun dari angka "paling mungkin" secara sistematis terlalu rendah.{{else}}BAC of {{rp $a.BAC $l}} is built from most-likely durations (M). But this project's three-point estimates skew right: the beta-PERT mean (O + 4M + P)/6 almost always sits above M. Labour cost follows duration, so the simulated mean cost ({{rp (index $lad 0).CostMean $l}}) already exceeds BAC before a single risk fires. That is not an arithmetic error - it is a reminder that a budget built from "most likely" figures is systematically too low.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Joint Confidence Level{{else}}Joint Confidence Level{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}JCL adalah peluang selesai dalam tenggat <em>dan</em> dalam anggaran sekaligus - praktik yang diwajibkan NASA untuk proyek besarnya sejak 2009, dengan ambang keyakinan 70%. Setiap sel pada peta di bawah adalah kumpulan iterasi yang berakhir pada kombinasi durasi dan biaya itu. Garis hijau adalah frontier JCL 70%: untuk setiap tenggat, anggaran minimum agar keyakinan bersamanya mencapai 70%.{{else}}JCL is the probability of finishing within the deadline <em>and</em> within budget at once - a practice NASA has required on its major projects since 2009, at a 70% confidence threshold. Each cell on the map below is the set of iterations that ended at that duration-cost combination. The green line is the 70% JCL frontier: for each deadline, the minimum budget that brings joint confidence to 70%.{{end}}</p>
+  <div class="kpi-grid four">
+    <div class="kpi bad"><p class="kpi-label">JCL {{if eq $l "id"}}pada target piagam{{else}}at charter target{{end}}</p><p class="kpi-value">{{pct $fin.JCL 2 $l}}</p><p class="kpi-note">{{$a.Plan.Duration}} {{t $l "t.days"}} & {{rpShort (totalBudget) $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Peluang bersama di P80 × P80{{else}}Joint odds at P80 × P80{{end}}</p><p class="kpi-value">{{pct $fin.JointAtP80 1 $l}}</p><p class="kpi-note">{{if eq $l "id"}}bukan 80% - dua P80 tidak boleh dilaporkan terpisah{{else}}not 80% - two P80s must not be reported separately{{end}}</p></div>
+    <div class="kpi good"><p class="kpi-label">{{if eq $l "id"}}Komitmen JCL 70%{{else}}JCL 70% commitment{{end}}</p><p class="kpi-value">{{if $a.JCL70.Feasible}}{{num $a.JCL70.Duration 0 $l}}{{else}}—{{end}}</p><p class="kpi-note">{{if $a.JCL70.Feasible}}{{t $l "t.days"}} & {{rpShort $a.JCL70.Budget $l}}{{else}}{{if eq $l "id"}}tidak tercapai dalam rentang simulasi{{else}}not reached in the simulated range{{end}}{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</p><p class="kpi-value">{{num (iterf $fin.Config.Iterations) 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}benih{{else}}seed{{end}} {{$fin.Config.Seed}}</p></div>
+  </div>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{jclHeatmap $l}}</div>
+  </figure>
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Frontier JCL 70%: tenggat terhadap anggaran minimum{{else}}JCL 70% frontier: deadline against minimum budget{{end}}</caption>
+      <thead><tr><th class="num">{{if eq $l "id"}}Tenggat{{else}}Deadline{{end}}</th><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran minimum{{else}}Minimum budget{{end}}</th><th class="num">{{if eq $l "id"}}Terhadap pagu{{else}}Against the cap{{end}}</th></tr></thead>
+      <tbody>
+        {{range frontierRows 2}}
+        <tr>
+          <td class="num">{{num .Duration 0 $l}}</td>
+          <td class="small">{{date ($a.FinishISO (int .Duration)) $l}}</td>
+          <td class="num">{{rp .Budget $l}}</td>
+          <td class="num neg">{{signed (subf .Budget (totalBudget)) $l}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <figure class="figure">
+      <figcaption><h3>{{if eq $l "id"}}Sebaran biaya akhir (L3){{else}}Final cost distribution (L3){{end}}</h3></figcaption>
+      <div class="figure-body scrollable">{{costHistogram $l}}</div>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Seberapa peka hasilnya terhadap asumsi korelasi{{else}}How sensitive the result is to the correlation assumption{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Nilai rho adalah asumsi, dan asumsi harus diuji, bukan dipercaya. Tabel di bawah menjalankan lapisan korelasi dengan empat nilai rho. Kolom "terealisasi" adalah rerata korelasi peringkat yang benar-benar muncul antar-aktivitas dengan peran sama - bukti bahwa model kopulanya bekerja seperti yang diklaim.{{else}}Rho is an assumption, and assumptions must be tested rather than trusted. The table below runs the correlation layer at four rho values. The "realised" column is the mean rank correlation that actually appears between same-role activities - evidence that the copula model works as claimed.{{end}}</p>
+  <table class="data">
+    <thead><tr><th class="num">rho</th><th class="num">P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</th><th class="num">{{if eq $l "id"}}Simpangan baku{{else}}Std. deviation{{end}}</th><th class="num">{{if eq $l "id"}}Tepat waktu{{else}}On time{{end}}</th><th class="num">{{if eq $l "id"}}Korelasi terealisasi{{else}}Realised correlation{{end}}</th></tr></thead>
+    <tbody>
+      {{range $a.RhoSweep}}
+      <tr class="{{if eq .Rho (defaultRho)}}highlight{{end}}">
+        <td class="num">{{num .Rho 2 $l}}</td>
+        <td class="num">{{num .P80 0 $l}}</td>
+        <td class="num">{{num .StdDev 2 $l}}</td>
+        <td class="num">{{pct .OnTime 2 $l}}</td>
+        <td class="num">{{num .Realised 3 $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <div class="note-box">
+    <p>{{if eq $l "id"}}Korelasi melebarkan sebaran ke dua arah sekaligus. Itulah sebabnya peluang tepat waktu justru naik sedikit saat rho dinaikkan: ekor kiri ikut memanjang. Yang berubah berarti bukan P80 - yang hanya bergeser satu hari - melainkan lebar sebarannya. Kesimpulan halaman ini tidak bergantung pada rho: bahkan dengan rho nol, lapisan risiko dan kapasitas saja sudah mendorong P80 jauh melewati 17 minggu.{{else}}Correlation widens the spread in both directions at once. That is why the on-time probability actually rises slightly as rho increases: the left tail lengthens too. What changes materially is not P80 - which moves just one day - but the width of the spread. This page's conclusion does not hinge on rho: even at rho zero, the risk and capacity layers alone push P80 far past 17 weeks.{{end}}</p>
+  </div>
+</section>
+
+<section class="band" data-wasm-panel hidden>
+  <h2>{{if eq $l "id"}}Jalankan simulasi terpadu di peramban{{else}}Run the integrated simulation in your browser{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Mesin Go yang sama, dikompilasi ke WebAssembly. Geser rho, pilih sampai lapisan mana simulasi dijalankan, lalu lihat JCL berubah. Lapisan kapasitas menjadwalkan ulang setiap iterasi, jadi jalankan dengan iterasi lebih sedikit di perangkat yang lambat.{{else}}The same Go engine, compiled to WebAssembly. Move rho, choose how many layers to run, and watch the JCL change. The capacity layer reschedules every iteration, so use fewer iterations on a slow device.{{end}}</p>
+  <form class="sim-form int-form" data-int-form>
+    <label><span>rho</span>
+      <span><input type="range" name="rho" min="0" max="0.9" step="0.05" value="{{defaultRho}}"> <output data-rho-out>{{num (defaultRho) 2 $l}}</output></span>
+    </label>
+    <label><span>{{if eq $l "id"}}Sampai lapisan{{else}}Up to layer{{end}}</span>
+      <select name="layer">
+        {{range $i, $n := $names}}<option value="{{$i}}"{{if eq $i 3}} selected{{end}}>L{{$i}} {{tx $n $l}}</option>{{end}}
+      </select>
+    </label>
+    <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
+      <select name="iterations">
+        <option value="1000">1.000</option>
+        <option value="3000" selected>3.000</option>
+        <option value="5000">5.000</option>
+      </select>
+    </label>
+    <button type="submit">{{if eq $l "id"}}Jalankan{{else}}Run{{end}}</button>
+  </form>
+  <div class="live-out sim-out">
+    <div><span>JCL</span><strong data-int="jcl">—</strong></div>
+    <div><span>{{if eq $l "id"}}Tepat waktu{{else}}On time{{end}}</span><strong data-int="onTime">—</strong></div>
+    <div><span>{{if eq $l "id"}}Tepat anggaran{{else}}On budget{{end}}</span><strong data-int="onBudget">—</strong></div>
+    <div><span>P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</span><strong data-int="durP80">—</strong></div>
+    <div><span>P80 {{if eq $l "id"}}biaya{{else}}cost{{end}}</span><strong data-int="costP80">—</strong></div>
+    <div><span>{{if eq $l "id"}}Korelasi terealisasi{{else}}Realised correlation{{end}}</span><strong data-int="realised">—</strong></div>
+    <div><span>{{if eq $l "id"}}Waktu hitung{{else}}Compute time{{end}}</span><strong data-int="elapsed">—</strong></div>
+  </div>
+  <div class="figure-body scrollable" data-int-chart></div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Bagaimana kejadian risiko dimasukkan{{else}}How risk events are fed in{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Setiap iterasi melempar "koin" untuk setiap risiko dengan peluang residualnya. Bila terjadi, dampak rupiahnya ditambahkan ke biaya, dan dampak jadwalnya ditambahkan ke aktivitas terpanjang pada paket kerja risiko itu - atau ke aktivitas terakhir bila risikonya lintas fase. Frekuensi terjadinya di bawah bisa dicocokkan dengan peluang residual pada halaman Risiko.{{else}}Each iteration flips a "coin" for every risk at its residual probability. If it fires, its monetary impact is added to cost and its schedule impact is added to the longest activity in that risk's work package - or to the final activity for cross-phase risks. The hit frequencies below can be checked against the residual probabilities on the Risk page.{{end}}</p>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th class="num">{{if eq $l "id"}}Peluang residual{{else}}Residual probability{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di simulasi{{else}}Simulated frequency{{end}}</th><th class="num">{{if eq $l "id"}}Dampak biaya{{else}}Cost impact{{end}}</th><th class="num">{{if eq $l "id"}}Dampak jadwal{{else}}Schedule impact{{end}}</th></tr></thead>
+    <tbody>
+      {{range risks}}
+      <tr>
+        <td><code>{{.ID}}</code></td>
+        <td>{{tx .Title $l}}</td>
+        <td class="num">{{pct .ResidualProb 0 $l}}</td>
+        <td class="num">{{pct (div (iterf (index $fin.RiskHits .ID)) (iterf $fin.Config.Iterations)) 1 $l}}</td>
+        <td class="num">{{rp .ResidualImpact $l}}</td>
+        <td class="num">{{if .ScheduleImpact}}+{{.ScheduleImpact}} {{if eq $l "id"}}hari{{else}}days{{end}}{{if eq .ID "R08"}} <span class="pill warn">{{if eq $l "id"}}di L3 via kalender{{else}}in L3 via calendar{{end}}</span>{{end}}{{else}}—{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

@@ -19,8 +19,8 @@ var Pages = []Page{
 	{
 		Route: "/", Template: "dashboard", NavKey: "nav.dashboard", Icon: "◉",
 		Summary: model.Text{
-			ID: "Lima angka yang menentukan nasib proyek, plus temuan yang lahir langsung dari angka itu.",
-			EN: "The five numbers that decide a project's fate, plus findings derived straight from them.",
+			ID: "Delapan angka yang menentukan nasib proyek, plus temuan yang lahir langsung dari angka itu.",
+			EN: "The eight numbers that decide a project's fate, plus findings derived straight from them.",
 		},
 	},
 	{
@@ -38,10 +38,24 @@ var Pages = []Page{
 		},
 	},
 	{
+		Route: "/optimasi/", Template: "optimize", NavKey: "nav.optimize", Icon: "⇄",
+		Summary: model.Text{
+			ID: "Jadwal yang benar-benar bisa dijalankan dengan kapasitas nyata, plus harga mempercepatnya: levelling sumber daya, crashing, dan fast-tracking.",
+			EN: "The schedule that can actually be delivered with real capacity, plus the price of speeding it up: resource levelling, crashing, and fast-tracking.",
+		},
+	},
+	{
 		Route: "/pert/", Template: "pert", NavKey: "nav.risksched", Icon: "∿",
 		Summary: model.Text{
 			ID: "Estimasi tiga titik, peluang selesai tepat waktu menurut PERT, dan sepuluh ribu iterasi Monte Carlo.",
 			EN: "Three-point estimates, PERT on-time probability, and ten thousand Monte Carlo iterations.",
+		},
+	},
+	{
+		Route: "/simulasi-terpadu/", Template: "integrated", NavKey: "nav.integrated", Icon: "⧉",
+		Summary: model.Text{
+			ID: "Monte Carlo yang menghitung korelasi peran, kejadian risiko, dan kapasitas sekaligus - lalu menjawab peluang tepat waktu DAN tepat anggaran lewat Joint Confidence Level.",
+			EN: "A Monte Carlo that counts role correlation, risk events, and capacity together - then answers the odds of on time AND on budget through a Joint Confidence Level.",
 		},
 	},
 	{

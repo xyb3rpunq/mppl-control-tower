@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,15 +32,44 @@ func init() {
 
 // renderAll merender seluruh halaman dalam kedua bahasa dan mengembalikan
 // petanya: "lang route" -> HTML.
+// Analisis penuh - termasuk simulasi terpadu sepuluh ribu iterasi - memakan
+// beberapa detik. Semua uji di berkas ini membaca hasil yang sama, jadi
+// analisis dan HTML-nya dibangun sekali lalu dipakai bersama.
+var (
+	buildOnce      sync.Once
+	sharedAnalysis *site.Analysis
+	sharedErr      error
+	renderOnce     sync.Once
+	sharedPages    map[string]string
+)
+
+func analysisFor(t *testing.T) *site.Analysis {
+	t.Helper()
+	buildOnce.Do(func() {
+		sharedAnalysis, sharedErr = site.Build(model.DefaultStatusDate)
+	})
+	if sharedErr != nil {
+		t.Fatalf("site.Build: %v", sharedErr)
+	}
+	return sharedAnalysis
+}
+
 func renderAll(t *testing.T) map[string]string {
 	t.Helper()
-	analysis, err := site.Build(model.DefaultStatusDate)
-	if err != nil {
-		t.Fatalf("site.Build: %v", err)
+	analysis := analysisFor(t)
+	renderOnce.Do(func() { sharedPages = renderPages(t, analysis) })
+	if sharedPages == nil {
+		t.Fatal("render halaman gagal pada pemanggilan sebelumnya")
 	}
+	return sharedPages
+}
+
+func renderPages(t *testing.T, analysis *site.Analysis) map[string]string {
+	t.Helper()
 	tmpl, err := loadTemplates(analysis)
 	if err != nil {
-		t.Fatalf("loadTemplates: %v", err)
+		t.Errorf("loadTemplates: %v", err)
+		return nil
 	}
 
 	out := map[string]string{}
@@ -58,12 +88,14 @@ func renderAll(t *testing.T) map[string]string {
 			}
 			var body bytes.Buffer
 			if err := tmpl.ExecuteTemplate(&body, p.Template, data); err != nil {
-				t.Fatalf("render isi %s (%s): %v", p.Route, lang, err)
+				t.Errorf("render isi %s (%s): %v", p.Route, lang, err)
+				return nil
 			}
 			data.Content = template.HTML(body.String())
 			var full bytes.Buffer
 			if err := tmpl.ExecuteTemplate(&full, "base", data); err != nil {
-				t.Fatalf("render kerangka %s (%s): %v", p.Route, lang, err)
+				t.Errorf("render kerangka %s (%s): %v", p.Route, lang, err)
+				return nil
 			}
 			out[lang+" "+p.Route] = full.String()
 		}
@@ -241,10 +273,7 @@ func TestNoUnrenderedTemplateSyntaxLeaks(t *testing.T) {
 
 func TestGeneratedFilesAreWritten(t *testing.T) {
 	dir := t.TempDir()
-	analysis, err := site.Build(model.DefaultStatusDate)
-	if err != nil {
-		t.Fatalf("site.Build: %v", err)
-	}
+	analysis := analysisFor(t)
 	if err := writeExtras(dir, "https://example.test", analysis); err != nil {
 		t.Fatalf("writeExtras: %v", err)
 	}
@@ -287,10 +316,7 @@ func TestGeneratedFilesAreWritten(t *testing.T) {
 }
 
 func TestFindingsReachTheDashboard(t *testing.T) {
-	analysis, err := site.Build(model.DefaultStatusDate)
-	if err != nil {
-		t.Fatalf("site.Build: %v", err)
-	}
+	analysis := analysisFor(t)
 	if len(analysis.Findings) == 0 {
 		t.Fatal("tidak ada temuan sama sekali")
 	}
@@ -308,10 +334,7 @@ func TestFindingsReachTheDashboard(t *testing.T) {
 // TestEveryFormulaHasAWorkedExample memastikan halaman rumus tidak memuat
 // rumus yang menggantung tanpa contoh hitung dari data hidup.
 func TestEveryFormulaHasAWorkedExample(t *testing.T) {
-	analysis, err := site.Build(model.DefaultStatusDate)
-	if err != nil {
-		t.Fatalf("site.Build: %v", err)
-	}
+	analysis := analysisFor(t)
 	for _, lang := range i18n.Langs {
 		ex := analysis.Examples(lang)
 		for _, f := range model.Formulas {

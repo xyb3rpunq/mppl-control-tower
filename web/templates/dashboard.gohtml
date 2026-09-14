@@ -2,7 +2,7 @@
 {{$l := .Lang}}{{$a := .Analysis}}{{$s := .Analysis.Snapshot}}
 
 <section class="band">
-  <h2>{{if eq $l "id"}}Lima angka yang menentukan nasib proyek{{else}}The five numbers that decide this project{{end}}</h2>
+  <h2>{{if eq $l "id"}}Delapan angka yang menentukan nasib proyek{{else}}The eight numbers that decide this project{{end}}</h2>
   <p class="section-intro">
     {{if eq $l "id"}}Setiap kartu di bawah dihitung ulang dari model data proyek setiap kali situs ini dibangun. Tidak ada yang diketik manual. Klik tautan pada tiap kartu untuk melihat rumus dan penurunannya.{{else}}Every card below is recomputed from the project data model on each build. None of it is typed by hand. Follow the link on each card for the formula and its derivation.{{end}}
   </p>
@@ -36,6 +36,18 @@
       <p class="kpi-value">{{pct $a.Risk.ReserveCoverage 0 $l}}</p>
       <p class="kpi-note">{{if eq $l "id"}}Cadangan {{rpShort (contingency) $l}} vs EMV residual {{rpShort $a.Risk.TotalResidualEMV $l}}{{else}}Reserve {{rpShort (contingency) $l}} vs residual EMV {{rpShort $a.Risk.TotalResidualEMV $l}}{{end}}</p>
       <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/risiko/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if gt (f $a.Level.Duration) (f $a.Plan.Duration)}}bad{{else}}good{{end}}">
+      <p class="kpi-label">{{if eq $l "id"}}Durasi yang bisa dijalankan{{else}}Deliverable duration{{end}}</p>
+      <p class="kpi-value">{{$a.Level.Duration}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}hari kerja setelah levelling, bukan {{$a.Plan.Duration}}; selesai {{date ($a.FinishISO $a.Level.Duration) $l}}{{else}}working days after levelling, not {{$a.Plan.Duration}}; finishes {{date ($a.FinishISO $a.Level.Duration) $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/optimasi/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    </div>
+    <div class="kpi {{if lt $a.Final.JCL 0.5}}bad{{else}}good{{end}}">
+      <p class="kpi-label">JCL · {{if eq $l "id"}}tepat waktu & anggaran{{else}}on time & on budget{{end}}</p>
+      <p class="kpi-value">{{pct $a.Final.JCL 1 $l}}</p>
+      <p class="kpi-note">{{if $a.JCL70.Feasible}}{{if eq $l "id"}}JCL 70% = {{num $a.JCL70.Duration 0 $l}} hari & {{rpShort $a.JCL70.Budget $l}}{{else}}70% JCL = {{num $a.JCL70.Duration 0 $l}} days & {{rpShort $a.JCL70.Budget $l}}{{end}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/simulasi-terpadu/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
     </div>
     <div class="kpi neutral">
       <p class="kpi-label">SV(t) · Earned Schedule</p>

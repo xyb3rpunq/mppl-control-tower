@@ -1,0 +1,198 @@
+{{define "optimize"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$lv := .Analysis.Level}}{{$why := .Analysis.LevelWhy}}{{$cr := .Analysis.Crash}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Jadwal di atas kertas versus jadwal yang bisa dijalankan{{else}}The schedule on paper versus the schedule that can be delivered{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}CPM menjawab "sepagi apa pekerjaan ini boleh mulai" dengan satu asumsi diam-diam: sumber daya tak terbatas. Kalau dua aktivitas boleh paralel, CPM menjadwalkannya paralel - tak peduli keduanya membutuhkan satu-satunya Backend Developer di tim. Halaman Organisasi sudah menunjukkan asumsi itu dilanggar pada {{len $a.Resources.Conflicts}} hari-peran. Halaman ini menjawab pertanyaan berikutnya: kalau kapasitas dihormati, kapan proyeknya selesai, dan berapa harga untuk mempercepatnya kembali?{{else}}CPM answers "how early may this work start" under one silent assumption: unlimited resources. If two activities may run in parallel, CPM schedules them in parallel - regardless of whether both need the team's only Backend Developer. The Organisation page already shows that assumption broken on {{len $a.Resources.Conflicts}} role-days. This page answers the next question: if capacity is respected, when does the project finish, and what does it cost to speed it back up?{{end}}
+  </p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">CPM</p><p class="kpi-value">{{$why.CPM}}</p><p class="kpi-note">{{if eq $l "id"}}hari kerja, kapasitas diabaikan{{else}}working days, capacity ignored{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}+ kapasitas nyata{{else}}+ real capacity{{end}}</p><p class="kpi-value">{{$why.CapacityOnly}}</p><p class="kpi-note">+{{sub $why.CapacityOnly $why.CPM}} {{if eq $l "id"}}hari dari bentrokan & peran paruh waktu{{else}}days from clashes & half-time roles{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}+ periode ujian{{else}}+ exam period{{end}}</p><p class="kpi-value">{{$why.WithWindows}}</p><p class="kpi-note">+{{sub $why.WithWindows $why.CapacityOnly}} {{if eq $l "id"}}hari; selesai{{else}}days; finishes{{end}} {{date ($a.FinishISO $lv.Duration) $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Peran kritis{{else}}Critical role{{end}}</p><p class="kpi-value">{{$a.CriticalRole}}</p><p class="kpi-note">{{if eq $l "id"}}paling banyak membuat pekerjaan menunggu{{else}}makes work wait the most{{end}}</p></div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Kalender ketersediaan tim{{else}}Team availability calendar{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Risiko R08 pada register menyebut anggota tim tidak tersedia saat ujian kampus. Di sini risiko itu berhenti menjadi kalimat dan menjadi kapasitas yang dihitung. Karena R08 sudah dimodelkan sebagai jendela ketersediaan, dampak jadwalnya tidak dihitung ulang di simulasi terpadu - supaya tidak terhitung dua kali.{{else}}Risk R08 in the register says team members are unavailable during campus exams. Here that risk stops being a sentence and becomes computed capacity. Because R08 is modelled as an availability window, its schedule impact is not counted again in the integrated simulation - so it is not counted twice.{{end}}</p>
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Periode{{else}}Period{{end}}</th><th>{{if eq $l "id"}}Keterangan{{else}}Description{{end}}</th><th class="num">{{if eq $l "id"}}Kapasitas tersisa{{else}}Remaining capacity{{end}}</th><th>{{if eq $l "id"}}Peran{{else}}Roles{{end}}</th><th>{{t $l "t.status"}}</th></tr></thead>
+    <tbody>
+      {{range availability}}
+      <tr>
+        <td class="small">{{date .From $l}} – {{date .To $l}}</td>
+        <td>{{tx .Label $l}} <span class="muted small">({{if eq $l "id"}}memodelkan{{else}}models{{end}} {{.RiskID}})</span></td>
+        <td class="num">{{pct .Factor 0 $l}}</td>
+        <td class="small">{{range $i, $r := .Roles}}{{if $i}}, {{end}}{{$r}}{{end}}</td>
+        <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}asumsi{{else}}assumed{{end}}</span>{{else}}<span class="pill ok">{{if eq $l "id"}}resmi{{else}}official{{end}}</span>{{end}}</td>
+      </tr>
+      {{end}}
+      <tr>
+        <td class="small">{{if eq $l "id"}}sepanjang proyek{{else}}whole project{{end}}</td>
+        <td>{{if eq $l "id"}}DevOps Engineer ditandai opsional pada Project Charter - dimodelkan paruh waktu{{else}}DevOps Engineer is marked optional in the Project Charter - modelled as half-time{{end}}</td>
+        <td class="num">50%</td><td class="small">OPS</td>
+        <td><span class="pill ok">{{if eq $l "id"}}dari piagam{{else}}from charter{{end}}</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Gantt: CPM dibanding levelling{{else}}Gantt: CPM versus levelled{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Batang tipis transparan adalah jadwal CPM. Batang padat adalah jadwal setelah levelling, diwarnai menurut penyebab pergeserannya. Arahkan kursor ke batang untuk melihat berapa hari terbawa dari pendahulu, berapa hari menunggu orang, dan berapa hari memanjang saat dikerjakan.{{else}}The thin translucent bar is the CPM schedule. The solid bar is the schedule after levelling, coloured by what moved it. Hover a bar to see how many days were carried from predecessors, how many were spent waiting for people, and how many the work stretched while in progress.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{ganttLevelled $l}}</div>
+    <figcaption class="below">
+      <p class="legend">
+        <span class="swatch ghost"></span> CPM
+        <span class="swatch cause-carried"></span> {{if eq $l "id"}}terbawa pendahulu{{else}}carried from predecessor{{end}}
+        <span class="swatch cause-shared"></span> {{if eq $l "id"}}menunggu / berbagi orang{{else}}waiting / sharing a person{{end}}
+        <span class="swatch cause-halftime"></span> {{if eq $l "id"}}peran paruh waktu{{else}}half-time role{{end}}
+        <span class="swatch cause-window"></span> {{if eq $l "id"}}melewati periode ujian{{else}}crosses the exam period{{end}}
+      </p>
+    </figcaption>
+  </figure>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Pembebanan setelah levelling{{else}}Loading after levelling{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Histogram yang sama dengan halaman Organisasi, kini untuk jadwal levelling. Tidak ada satu batang pun yang melewati garis kapasitas - itulah syarat jadwal yang bisa dijalankan. Perhatikan garis kapasitas yang turun pada periode ujian.{{else}}The same histogram as the Organisation page, now for the levelled schedule. Not a single bar crosses the capacity line - that is what makes a schedule deliverable. Note how the capacity line drops during the exam period.{{end}}</p>
+  <figure class="figure">
+    <div class="figure-body scrollable wide">{{levelHistogram $l}}</div>
+  </figure>
+  <div class="two-col">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Hari menunggu sumber daya, per peran dominan{{else}}Days waiting for resources, by dominant role{{end}}</caption>
+      <thead><tr><th>{{t $l "t.role"}}</th><th class="num">{{if eq $l "id"}}Hari menunggu{{else}}Days waiting{{end}}</th></tr></thead>
+      <tbody>
+        {{range $a.SortedRoleWait}}
+        <tr class="{{if eq .Role $a.CriticalRole}}highlight{{end}}"><th>{{.Role}}</th><td class="num">{{.Days}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+    <div class="note-box warn">
+      <h4>{{if eq $l "id"}}Satu orang menjadi leher botol{{else}}One person becomes the bottleneck{{end}}</h4>
+      <p>{{if eq $l "id"}}Backend Developer harus mengerjakan A16, A17, A18, dan A19 - total {{sumDur "A16" "A17" "A18" "A19"}} hari kerja - dan CPM mengira dua di antaranya bisa paralel. Karena prioritas levelling mendahulukan jalur kritis (A17→A18), A19 menunggu {{(levelTask "A19").WaitDays}} hari lalu tertabrak periode ujian. Kebetulan, peran ini diisi Daniel Hutajulu dalam dokumen tugas.{{else}}The Backend Developer must deliver A16, A17, A18, and A19 - {{sumDur "A16" "A17" "A18" "A19"}} working days in all - and CPM assumed two of them could overlap. Because levelling prioritises the critical path (A17→A18), A19 waits {{(levelTask "A19").WaitDays}} days and then runs into the exam period. As it happens, this is the role Daniel Hutajulu holds in the assignment documents.{{end}}</p>
+      <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Pindahkan A19 (API panel admin) ke Technical Lead atau tambah satu backend paruh waktu selama minggu ke-8 sampai ke-11. Ini satu-satunya perubahan penugasan yang menyerang sumber keterlambatan terbesar secara langsung.{{else}}Move A19 (admin panel API) to the Technical Lead, or add a part-time backend developer for weeks 8 to 11. It is the one assignment change that attacks the largest source of delay directly.{{end}}</p>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Aktivitas yang bergeser{{else}}Activities that moved{{end}}</h2>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">{{if eq $l "id"}}Selesai CPM{{else}}CPM finish{{end}}</th><th class="num">{{if eq $l "id"}}Selesai levelling{{else}}Levelled finish{{end}}</th><th class="num">{{if eq $l "id"}}Geser{{else}}Shift{{end}}</th><th class="num">{{if eq $l "id"}}Terbawa{{else}}Carried{{end}}</th><th class="num">{{if eq $l "id"}}Menunggu{{else}}Waiting{{end}}</th><th class="num">{{if eq $l "id"}}Memanjang{{else}}Stretch{{end}}</th><th>{{if eq $l "id"}}Penyebab{{else}}Cause{{end}}</th></tr></thead>
+      <tbody>
+        {{$acts := activityByID}}
+        {{range $a.MovedTasks}}
+        {{$act := index $acts .ID}}
+        <tr>
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx $act.Name $l}}</td>
+          <td class="small num">{{dateShort (dateAt (sub (add .ES .Duration) 1)) $l}}</td>
+          <td class="small num">{{dateShort (dateAt (sub .Finish 1)) $l}}</td>
+          <td class="num neg">+{{.Delay}}</td>
+          <td class="num">{{.CarriedDays}}</td>
+          <td class="num">{{.WaitDays}}</td>
+          <td class="num">{{.StretchDays}}</td>
+          <td class="small">
+            {{if .HalfTime}}<span class="pill bad">{{if eq $l "id"}}paruh waktu{{else}}half-time{{end}}</span>{{end}}
+            {{if .Window}}<span class="pill warn">{{if eq $l "id"}}ujian{{else}}exams{{end}}</span>{{end}}
+            {{if .Shared}}<span class="pill neutral">{{if eq $l "id"}}berbagi orang{{else}}shared person{{end}}</span>{{end}}
+            {{if and (gt (f .CarriedDays) 0.0) (not .HalfTime) (not .Window) (not .Shared) (eq .WaitDays 0)}}<span class="pill neutral">{{if eq $l "id"}}terbawa{{else}}carried{{end}}</span>{{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Crashing: membeli waktu dengan uang{{else}}Crashing: buying time with money{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Modul 4 menyebut kompresi jadwal sebagai cara mempersingkat proyek tanpa mengubah lingkup. Crashing menambah sumber daya - lembur, tambahan orang - pada aktivitas kritis yang paling murah dipercepat. Setiap langkah di bawah memotong proyek tepat satu hari dengan biaya termurah yang benar-benar memendekkan tanggal selesai.{{else}}Module 4 describes schedule compression as shortening a project without changing scope. Crashing adds resources - overtime, extra people - to the critical activities that are cheapest to accelerate. Each step below cuts the project by exactly one day at the lowest cost that genuinely moves the finish date.{{end}}</p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum{{else}}Minimum duration{{end}}</p><p class="kpi-value">{{$cr.MinDuration}}</p><p class="kpi-note">{{if eq $l "id"}}dari{{else}}from{{end}} {{$cr.NormalDuration}} {{t $l "t.days"}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}5 hari pertama{{else}}First 5 days{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps 4).TotalCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}rata-rata{{else}}average{{end}} {{rpShort (div (index $cr.Steps 4).TotalCost 5.0) $l}}/{{if eq $l "id"}}hari{{else}}day{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Kompresi penuh{{else}}Full compression{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps (sub (len $cr.Steps) 1)).TotalCost $l}}</p><p class="kpi-note">{{len $cr.Steps}} {{if eq $l "id"}}hari dipotong{{else}}days cut{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Premi crash{{else}}Crash premium{{end}}</p><p class="kpi-value">{{pct (crashPremium) 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}dari biaya tenaga kerja harian (asumsi){{else}}of daily labour cost (assumed){{end}}</p></div>
+  </div>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{crashCurve $l}}</div>
+    <figcaption class="below"><p class="small">{{if eq $l "id"}}Titik jingga menandai langkah yang harus memotong lebih dari satu aktivitas sekaligus karena ada jalur kritis paralel.{{else}}Orange points mark steps that must cut more than one activity at once because of parallel critical paths.{{end}}</p></figcaption>
+  </figure>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead><tr><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Dipotong{{else}}Cut{{end}}</th><th class="num">{{if eq $l "id"}}Biaya langkah{{else}}Step cost{{end}}</th><th class="num">{{if eq $l "id"}}Kumulatif{{else}}Cumulative{{end}}</th><th class="num">{{if eq $l "id"}}Simpul kritis{{else}}Critical nodes{{end}}</th></tr></thead>
+      <tbody>
+        {{range $cr.Steps}}
+        <tr class="{{if gt (f (len .Crashed)) 1.0}}highlight{{end}}">
+          <td class="num">{{.Duration}}</td>
+          <td>{{range $i, $c := .Crashed}}{{if $i}} + {{end}}<code>{{$c}}</code>{{end}}</td>
+          <td class="num">{{rp .StepCost $l}}</td>
+          <td class="num">{{rp .TotalCost $l}}</td>
+          <td class="num">{{.CriticalAt}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">{{tx $cr.Exhausted $l}}</p>
+
+  <h3>{{if eq $l "id"}}Batas crash per aktivitas{{else}}Crash limits per activity{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), slope = biaya tenaga kerja harian × premi. Empat aktivitas tidak bisa dipercepat dengan uang, dan alasannya dicatat.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), slope = daily labour cost × premium. Four activities cannot be accelerated with money, and the reasons are recorded.{{end}}</p>
+  <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Crash{{else}}Crash{{end}}</th><th class="num">{{if eq $l "id"}}Slope/hari{{else}}Slope/day{{end}}</th><th>{{if eq $l "id"}}Catatan{{else}}Note{{end}}</th></tr></thead>
+      <tbody>
+        {{range activities}}
+        {{if not .Milestone}}
+        {{$cp := crashPlanOf .}}
+        <tr class="{{if isCritical .ID}}is-critical{{end}}">
+          <td><code>{{.ID}}</code></td>
+          <td>{{tx .Name $l}}</td>
+          <td class="num">{{.Duration}}</td>
+          <td class="num">{{if $cp.Allowed}}{{$cp.CrashDur}}{{else}}—{{end}}</td>
+          <td class="num">{{if $cp.Allowed}}{{rp $cp.SlopePerDay $l}}{{else}}—{{end}}</td>
+          <td class="small">{{if not $cp.Allowed}}{{tx $cp.Reason $l}}{{end}}</td>
+        </tr>
+        {{end}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Fast-tracking: membeli waktu dengan risiko{{else}}Fast-tracking: buying time with risk{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Fast-tracking menjalankan pekerjaan yang semula berurutan secara tumpang tindih: penerus dimulai saat pendahulunya baru setengah jalan. Tidak ada uang yang keluar di muka, tetapi sebagian pekerjaan dikerjakan di atas masukan yang belum final dan harus diulang. Setiap relasi FS di jalur kritis diuji sebagai kandidat dengan tumpang tindih 50%, lalu CPM dihitung ulang.{{else}}Fast-tracking runs sequential work in overlap: the successor starts while its predecessor is only half done. No money is spent up front, but part of the work is built on inputs that are not yet final and must be redone. Every FS relation on the critical path is tested as a candidate with 50% overlap, then CPM is recomputed.{{end}}</p>
+  <div class="note-box warn">
+    <p>{{if eq $l "id"}}<strong>Kandidat yang dikerjakan orang yang sama ditolak.</strong> A16→A17 dan A17→A18 tampak menghemat 3 hari masing-masing di CPM, tetapi ketiganya dikerjakan satu Backend Developer. Satu orang tidak bisa mengerjakan dua pekerjaan tumpang tindih; penghematan itu hanya ilusi yang akan hilang begitu levelling dijalankan.{{else}}<strong>Candidates done by the same person are rejected.</strong> A16→A17 and A17→A18 appear to save 3 days each under CPM, but all three are done by one Backend Developer. One person cannot do two overlapping jobs; that saving is an illusion that vanishes the moment levelling runs.{{end}}</p>
+  </div>
+  <div class="table-wrap">
+    <table class="data sticky">
+      <thead><tr><th>{{if eq $l "id"}}Pendahulu → Penerus{{else}}Predecessor → Successor{{end}}</th><th class="num">{{if eq $l "id"}}Tumpang tindih{{else}}Overlap{{end}}</th><th class="num">{{if eq $l "id"}}Hemat{{else}}Saves{{end}}</th><th class="num">{{if eq $l "id"}}Rework harapan{{else}}Expected rework{{end}}</th><th class="num">{{if eq $l "id"}}Per hari hemat{{else}}Per day saved{{end}}</th><th>{{t $l "t.status"}}</th></tr></thead>
+      <tbody>
+        {{range $a.FastTracks}}
+        <tr class="{{if not .Viable}}muted{{end}}">
+          <td><code>{{.Pred}}</code> → <code>{{.Succ}}</code></td>
+          <td class="num">{{.OverlapDays}}</td>
+          <td class="num">{{.DaysSaved}}</td>
+          <td class="num">{{rp .ExpectedRework $l}}</td>
+          <td class="num">{{if gt (f .DaysSaved) 0.0}}{{rp .CostPerDay $l}}{{else}}—{{end}}</td>
+          <td>{{if .Viable}}<span class="pill ok">{{if eq $l "id"}}layak{{else}}viable{{end}}</span>{{else if .SameResource}}<span class="pill bad">{{if eq $l "id"}}orang yang sama{{else}}same person{{end}}</span>{{else}}<span class="pill neutral">{{if eq $l "id"}}tidak memendekkan{{else}}does not shorten{{end}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div class="note-box">
+    <h4>{{if eq $l "id"}}Penghematan tidak bisa dijumlahkan{{else}}Savings do not add up{{end}}</h4>
+    <p>{{if eq $l "id"}}Ada {{len $a.FastViable}} kandidat layak. Menjumlahkan penghematannya satu per satu memberi angka yang menggoda, tetapi menerapkan semuanya sekaligus hanya memendekkan proyek dari {{$a.Plan.Duration}} menjadi {{$a.FastAllDur}} hari kerja: memendekkan satu jalur membuat jalur lain menjadi kritis. Peluang rework yang diasumsikan {{pct (reworkProb) 0 $l}}.{{else}}There are {{len $a.FastViable}} viable candidates. Adding their savings one by one gives a tempting figure, but applying all of them at once only shortens the project from {{$a.Plan.Duration}} to {{$a.FastAllDur}} working days: shortening one path makes another critical. The assumed rework probability is {{pct (reworkProb) 0 $l}}.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Crashing lebih cocok untuk proyek ini daripada fast-tracking. Cadangan kontinjensinya sudah hanya menutup {{pct $a.Risk.ReserveCoverage 0 $l}} paparan risiko; menambah risiko rework di atasnya memperbesar lubang yang sama. Crashing lima hari pertama seharga {{rp (index $cr.Steps 4).TotalCost $l}} adalah biaya yang pasti dan bisa diajukan ke sponsor.{{else}}Crashing suits this project better than fast-tracking. Its contingency reserve already covers only {{pct $a.Risk.ReserveCoverage 0 $l}} of risk exposure; adding rework risk on top widens the same hole. Crashing the first five days for {{rp (index $cr.Steps 4).TotalCost $l}} is a known cost that can be put to the sponsor.{{end}}</p>
+  </div>
+</section>
+{{end}}

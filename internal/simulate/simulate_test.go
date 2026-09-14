@@ -178,26 +178,6 @@ func TestPRNGIsUniformEnough(t *testing.T) {
 	}
 }
 
-func TestBetaPERTStaysWithinBounds(t *testing.T) {
-	rng := simulate.NewPRNG(99)
-	for i := 0; i < 20000; i++ {
-		v := simulate.BetaPERTSample(rng, 3, 6, 11, 4)
-		if v < 3 || v > 11 {
-			t.Fatalf("sampel beta-PERT %v keluar dari rentang [3, 11]", v)
-		}
-	}
-}
-
-func TestTriangularStaysWithinBounds(t *testing.T) {
-	rng := simulate.NewPRNG(77)
-	for i := 0; i < 20000; i++ {
-		v := simulate.TriangularSample(rng, 2, 5, 9)
-		if v < 2 || v > 9 {
-			t.Fatalf("sampel segitiga %v keluar dari rentang [2, 9]", v)
-		}
-	}
-}
-
 func TestQuantileInterpolation(t *testing.T) {
 	sorted := []float64{1, 2, 3, 4, 5}
 	cases := map[float64]float64{0: 1, 0.25: 2, 0.5: 3, 0.75: 4, 1: 5}

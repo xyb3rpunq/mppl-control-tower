@@ -19,12 +19,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/coretax"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/i18n"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/risk"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/schedule"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/simulate"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/site"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/workcal"
 )
@@ -283,6 +285,77 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 			return render.ScenarioBars(labels, extra, expected, lang)
 		},
 
+		// --- grafik analisis lanjutan ----------------------------------------
+		"ganttLevelled": func(lang string) template.HTML {
+			return render.GanttLevelled(model.Activities, a.Plan, a.Level, a.Calendar, lang)
+		},
+		"levelHistogram": func(lang string) template.HTML {
+			return render.ResourceHistogram(a.LevelProfile, lang, a.Calendar)
+		},
+		"crashCurve": func(lang string) template.HTML { return render.CrashCurve(a.Crash, lang) },
+		"ladderChart": func(metric, lang string) template.HTML {
+			target := float64(a.Plan.Duration)
+			if metric == "cost" {
+				target = model.TotalAuthorised
+			}
+			return render.LadderChart(a.Ladder, site.LadderNames, metric, target, lang)
+		},
+		"jclHeatmap": func(lang string) template.HTML {
+			fin := a.Final()
+			return render.JCLHeatmap(a.Density, a.Frontier, float64(a.Plan.Duration), model.TotalAuthorised, fin.DurP80, fin.CostP80, lang)
+		},
+		"costHistogram": func(lang string) template.HTML {
+			fin := a.Final()
+			return render.ValueHistogram(fin.Costs, 32, []render.Marker{
+				{Value: model.TotalAuthorised, Label: map[bool]string{true: "pagu", false: "cap"}[lang == "id"], Class: "budget"},
+				{Value: fin.CostP50, Label: "P50", Class: "p50"},
+				{Value: fin.CostP80, Label: "P80", Class: "p80"},
+			}, true, lang)
+		},
+		"ladderNames":  func() []model.Text { return site.LadderNames },
+		"availability": func() []model.AvailabilityWindow { return model.AvailabilityWindows },
+		"crashPlanOf":  func(act model.Activity) model.CrashPlan { return act.Crash(model.RateCard) },
+		"crashPremium": func() float64 { return model.CrashPremium },
+		"reworkProb":   func() float64 { return compress.ReworkProbability },
+		"defaultRho":   func() float64 { return simulate.DefaultRho },
+		// frontierRows menipiskan tabel frontier, tetapi selalu dimulai dari
+		// titik layak PERTAMA - itulah komitmen JCL 70% dengan tenggat
+		// terpendek, dan tidak boleh sampai terlewat oleh penipisan.
+		"frontierRows": func(step int) []simulate.FrontierPoint {
+			var out []simulate.FrontierPoint
+			k := 0
+			for _, p := range a.Frontier {
+				if !p.Feasible {
+					continue
+				}
+				if k%step == 0 {
+					out = append(out, p)
+				}
+				k++
+			}
+			return out
+		},
+		"riskByID": func(id string) model.Risk {
+			for _, r := range model.Risks {
+				if r.ID == id {
+					return r
+				}
+			}
+			return model.Risk{}
+		},
+		"iterf": func(n int) float64 { return float64(n) },
+		"int":   func(v float64) int { return int(v) },
+		"sumDur": func(ids ...string) int {
+			byID := model.ActivityByID()
+			total := 0
+			for _, id := range ids {
+				total += byID[id].Duration
+			}
+			return total
+		},
+		"levelTask": func(id string) interface{} { return a.Level.Tasks[id] },
+		"sdOf":      simulate.StdDev,
+
 		// --- turunan analisis ---------------------------------------------
 		"taskOf":        func(id string) interface{} { return a.Plan.Task(id) },
 		"criticalPath":  func() []string { return a.Plan.CriticalPath },
@@ -421,7 +494,7 @@ func writeExtras(out, baseURL string, a *site.Analysis) error {
 
 func activitiesCSV(a *site.Analysis) string {
 	var sb strings.Builder
-	sb.WriteString("id,wbs,nama,durasi,es,ef,ls,lf,total_float,free_float,kritis,anggaran,pv,ev,ac\n")
+	sb.WriteString("id,wbs,nama,durasi,es,ef,ls,lf,total_float,free_float,kritis,mulai_levelling,selesai_levelling,geser_levelling,anggaran,pv,ev,ac\n")
 	rows := map[string]interface{}{}
 	_ = rows
 	byRow := map[string]int{}
@@ -431,9 +504,11 @@ func activitiesCSV(a *site.Analysis) string {
 	for _, act := range model.Activities {
 		t := a.Plan.Task(act.ID)
 		r := a.Rows[byRow[act.ID]]
-		sb.WriteString(fmt.Sprintf("%s,%s,%q,%d,%d,%d,%d,%d,%d,%d,%t,%.0f,%.0f,%.0f,%.0f\n",
+		lt := a.Level.Tasks[act.ID]
+		sb.WriteString(fmt.Sprintf("%s,%s,%q,%d,%d,%d,%d,%d,%d,%d,%t,%d,%d,%d,%.0f,%.0f,%.0f,%.0f\n",
 			act.ID, act.WBS, act.Name.ID, t.Duration, t.ES, t.EF, t.LS, t.LF,
-			t.TotalFloat, t.FreeFloat, t.Critical, r.Budget, r.PV, r.EV, r.AC))
+			t.TotalFloat, t.FreeFloat, t.Critical, lt.Start, lt.Finish-1, lt.Delay(),
+			r.Budget, r.PV, r.EV, r.AC))
 	}
 	return sb.String()
 }
@@ -481,6 +556,21 @@ func metricsJSON(a *site.Analysis) string {
   "mutu": {
     "terkendali": %t, "pelanggaran_aturan": %d, "cpk": %.4f,
     "coq_kesesuaian": %.0f, "coq_ketidaksesuaian": %.0f, "coq_rasio": %.4f
+  },
+  "levelling": {
+    "durasi_cpm": %d, "durasi_kapasitas_saja": %d, "durasi_dengan_ujian": %d,
+    "tanggal_selesai": %q, "peran_kritis": %q
+  },
+  "kompresi": {
+    "durasi_minimum_crash": %d, "biaya_crash_5_hari": %.0f, "biaya_crash_penuh": %.0f,
+    "kandidat_fast_track_layak": %d, "durasi_semua_fast_track": %d
+  },
+  "simulasi_terpadu": {
+    "rho": %.2f, "iterasi": %d,
+    "p80_durasi_per_lapisan": [%.0f, %.0f, %.0f, %.0f],
+    "p80_biaya_per_lapisan": [%.0f, %.0f, %.0f, %.0f],
+    "jcl_target_piagam": %.6f, "peluang_bersama_di_p80": %.6f,
+    "jcl70_tenggat": %.0f, "jcl70_anggaran": %.0f
   }
 }
 `,
@@ -492,5 +582,18 @@ func metricsJSON(a *site.Analysis) string {
 		a.Sim.Iterations, a.Sim.Mean, a.Sim.StdDev, a.Sim.P50, a.Sim.P80, a.Sim.P90, a.Sim.OnTimeProb,
 		a.Risk.TotalEMV, a.Risk.TotalResidualEMV, a.Risk.ReserveCoverage, a.Risk.ReserveGap, a.Risk.ScheduleExposure,
 		a.Control.InControl, len(a.Control.Violations), a.Control.Cpk,
-		a.COQ.Conformance, a.COQ.Nonconformance, a.COQ.Ratio)
+		a.COQ.Conformance, a.COQ.Nonconformance, a.COQ.Ratio,
+		a.LevelWhy.CPM, a.LevelWhy.CapacityOnly, a.LevelWhy.WithWindows,
+		a.FinishISO(a.Level.Duration), string(a.CriticalRole),
+		a.Crash.MinDuration, crashCost(a, 5), crashCost(a, len(a.Crash.Steps)),
+		len(a.FastViable), a.FastAllDur,
+		simulate.DefaultRho, a.Final().Config.Iterations,
+		a.Ladder[0].DurP80, a.Ladder[1].DurP80, a.Ladder[2].DurP80, a.Ladder[3].DurP80,
+		a.Ladder[0].CostP80, a.Ladder[1].CostP80, a.Ladder[2].CostP80, a.Ladder[3].CostP80,
+		a.Final().JCL, a.Final().JointAtP80, a.JCL70.Duration, a.JCL70.Budget)
+}
+
+func crashCost(a *site.Analysis, days int) float64 {
+	v, _ := a.Crash.CostToSave(days)
+	return v
 }

@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/evm"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
@@ -441,8 +442,24 @@ func ResourceHistogram(p resource.Profile, lang string, cal *workcal.Calendar) t
 		maxLoad := math.Max(rl.PeakLoad, rl.Capacity)
 		cv.Text(cv.Pad.Left-10, top+lane/2+4, string(rl.Role), "row-label", "end")
 		cv.Rect(cv.Pad.Left, top, cv.plotW(), lane, "lane-bg")
-		capY := top + lane - (rl.Capacity/maxLoad)*lane
-		cv.Line(cv.Pad.Left, capY, cv.Pad.Left+cv.plotW(), capY, "capacity-line")
+		// Kapasitas digambar per hari sebagai garis bertangga, bukan satu garis
+		// datar: pada jadwal levelling kapasitas turun selama periode ujian,
+		// dan garis datar akan menyembunyikan justru hal yang ingin ditunjukkan.
+		var capPath strings.Builder
+		for i, d := range rl.Days {
+			x1 := cv.Pad.Left + float64(d.Day)*dayW
+			x2 := x1 + dayW
+			y := top + lane - (d.Capacity/maxLoad)*lane
+			if i == 0 {
+				capPath.WriteString(fmt.Sprintf("M%s %s ", f(x1), f(y)))
+			} else {
+				capPath.WriteString(fmt.Sprintf("L%s %s ", f(x1), f(y)))
+			}
+			capPath.WriteString(fmt.Sprintf("L%s %s ", f(x2), f(y)))
+		}
+		if capPath.Len() > 0 {
+			cv.Path(strings.TrimSpace(capPath.String()), "capacity-line")
+		}
 		for _, d := range rl.Days {
 			if d.Load <= 0 {
 				continue

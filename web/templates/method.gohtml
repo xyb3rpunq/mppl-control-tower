@@ -13,10 +13,12 @@
         <li><code>workcal</code> — {{if eq $l "id"}}kalender hari kerja, hari libur, pemetaan indeks ke tanggal{{else}}working calendar, holidays, index-to-date mapping{{end}}</li>
         <li><code>schedule</code> — {{if eq $l "id"}}CPM empat relasi PDM, float, jalur kritis, PERT{{else}}CPM with four PDM relations, float, critical path, PERT{{end}}</li>
         <li><code>evm</code> — {{if eq $l "id"}}PV, EV, AC, indeks, tiga EAC, TCPI, Earned Schedule{{else}}PV, EV, AC, indices, three EACs, TCPI, Earned Schedule{{end}}</li>
-        <li><code>simulate</code> — {{if eq $l "id"}}Monte Carlo, PRNG berbenih, beta-PERT, Spearman{{else}}Monte Carlo, seeded PRNG, beta-PERT, Spearman{{end}}</li>
+        <li><code>simulate</code> — {{if eq $l "id"}}Monte Carlo, PRNG berbenih, beta-PERT lewat invers CDF, kopula Gauss, simulasi terpadu & JCL{{else}}Monte Carlo, seeded PRNG, beta-PERT via inverse CDF, Gaussian copula, integrated simulation & JCL{{end}}</li>
         <li><code>risk</code> — {{if eq $l "id"}}EMV, matriks 5×5, kecukupan cadangan{{else}}EMV, 5×5 matrix, reserve adequacy{{end}}</li>
         <li><code>resource</code> — {{if eq $l "id"}}histogram beban, deteksi over-alokasi{{else}}load histogram, over-allocation detection{{end}}</li>
         <li><code>quality</code> — {{if eq $l "id"}}peta kendali, aturan Nelson, Pareto, Cpk, biaya kualitas{{else}}control chart, Nelson rules, Pareto, Cpk, cost of quality{{end}}</li>
+        <li><code>level</code> — {{if eq $l "id"}}penjadwalan berbatas sumber daya (SGS), kalender ketersediaan per peran{{else}}resource-constrained scheduling (SGS), per-role availability calendar{{end}}</li>
+        <li><code>compress</code> — {{if eq $l "id"}}crashing dengan pencarian pasangan jalur paralel, fast-tracking dengan penolakan orang-sama{{else}}crashing with parallel-path pair search, fast-tracking with same-person rejection{{end}}</li>
         <li><code>coretax</code> — {{if eq $l "id"}}metrik turunan studi kasus, skenario transisi{{else}}case study derived metrics, transition scenarios{{end}}</li>
         <li><code>render</code> — {{if eq $l "id"}}pembangun SVG dan seluruh jenis grafik{{else}}SVG builder and every chart type{{end}}</li>
         <li><code>model</code> — {{if eq $l "id"}}sumber tunggal kebenaran seluruh data proyek{{else}}single source of truth for all project data{{end}}</li>
@@ -50,14 +52,29 @@
         <td>{{if eq $l "id"}}Aturan lain (0/100, 50/50) memberi EV berbeda. Yang penting: aturannya disepakati di awal, bukan dipilih belakangan.{{else}}Other rules (0/100, 50/50) give different EV. What matters: agree the rule up front, not after the fact.{{end}}</td>
       </tr>
       <tr>
-        <th>{{if eq $l "id"}}Durasi antar-aktivitas saling bebas{{else}}Activity durations are independent{{end}}</th>
-        <td>{{if eq $l "id"}}Syarat agar varians PERT boleh dijumlahkan dan sampel Monte Carlo boleh diambil terpisah.{{else}}Required for PERT variances to add and for Monte Carlo samples to be drawn separately.{{end}}</td>
-        <td>{{if eq $l "id"}}Satu pengembang mengerjakan A16, A17, dan A18 berurutan - kalau ia melambat, ketiganya melambat. Ketidakpastian sesungguhnya lebih besar daripada yang dilaporkan simulasi.{{else}}One developer runs A16, A17, and A18 in sequence - if they slow, all three slow. Real uncertainty is larger than the simulation reports.{{end}}</td>
+        <th>{{if eq $l "id"}}Durasi antar-aktivitas saling bebas - hanya di halaman PERT{{else}}Activity durations are independent - PERT page only{{end}}</th>
+        <td>{{if eq $l "id"}}Syarat agar varians PERT boleh dijumlahkan. Halaman PERT sengaja mempertahankannya supaya rumus buku teks bisa dibandingkan langsung.{{else}}Required for PERT variances to add. The PERT page keeps it deliberately so textbook formulas can be compared directly.{{end}}</td>
+        <td>{{if eq $l "id"}}Satu pengembang mengerjakan A16, A17, dan A18 berurutan - kalau ia melambat, ketiganya melambat. Halaman Simulasi Terpadu mencabut asumsi ini lewat kopula Gauss, dan simpangan baku durasinya melebar {{pct (subf (div (sdOf (index $a.Ladder 1).Durations) (sdOf (index $a.Ladder 0).Durations)) 1.0) 0 $l}}.{{else}}One developer runs A16, A17, and A18 in sequence - if they slow, all three slow. The Integrated Simulation page lifts this assumption with a Gaussian copula, and the duration standard deviation widens by {{pct (subf (div (sdOf (index $a.Ladder 1).Durations) (sdOf (index $a.Ladder 0).Durations)) 1.0) 0 $l}}.{{end}}</td>
       </tr>
       <tr>
         <th>{{if eq $l "id"}}CPI stabil untuk proyeksi EAC{{else}}CPI is stable for the EAC forecast{{end}}</th>
         <td>{{if eq $l "id"}}Asumsi standar pada EAC = BAC ÷ CPI.{{else}}The standard assumption behind EAC = BAC ÷ CPI.{{end}}</td>
         <td>{{if eq $l "id"}}Proyek ini sudah {{pct $a.Snapshot.PercentComplete 0 $l}} selesai - di atas ambang dua puluh persen ketika CPI mulai stabil, jadi asumsinya cukup aman di sini.{{else}}This project is {{pct $a.Snapshot.PercentComplete 0 $l}} complete - above the twenty percent threshold where CPI stabilises, so the assumption holds reasonably here.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Korelasi antar-aktivitas peran sama, rho {{num (defaultRho) 2 $l}}{{else}}Same-role activity correlation, rho {{num (defaultRho) 2 $l}}{{end}}</th>
+        <td>{{if eq $l "id"}}Literatur analisis risiko jadwal lazim memakai 0,3 sampai 0,6 untuk pekerjaan oleh tim yang sama.{{else}}Schedule risk literature commonly uses 0.3 to 0.6 for work done by the same team.{{end}}</td>
+        <td>{{if eq $l "id"}}Halaman Simulasi Terpadu menjalankan empat nilai rho. Yang berubah berarti adalah lebar sebaran, bukan P80.{{else}}The Integrated Simulation page runs four rho values. What changes materially is the spread, not P80.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Periode ujian 12-23 Januari 2026, kapasitas 40%{{else}}Exam period 12-23 January 2026, 40% capacity{{end}}</th>
+        <td>{{if eq $l "id"}}Tidak diambil dari kalender akademik resmi; dipilih karena UAS semester ganjil lazim jatuh pada pertengahan Januari.{{else}}Not taken from the official academic calendar; chosen because odd-semester finals commonly fall in mid-January.{{end}}</td>
+        <td>{{if eq $l "id"}}Levelling tanpa jendela ini masih {{$a.LevelWhy.CapacityOnly}} hari kerja - kesimpulan bahwa jadwal {{$a.Plan.Duration}} hari tidak bisa dijalankan tidak bergantung padanya.{{else}}Levelling without this window still gives {{$a.LevelWhy.CapacityOnly}} working days - the conclusion that {{$a.Plan.Duration}} days is undeliverable does not hinge on it.{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Premi crash {{pct (crashPremium) 0 $l}} dan peluang rework {{pct (reworkProb) 0 $l}}{{else}}Crash premium {{pct (crashPremium) 0 $l}} and rework probability {{pct (reworkProb) 0 $l}}{{end}}</th>
+        <td>{{if eq $l "id"}}Premi lembur 50% ditambah 25% kehilangan efisiensi koordinasi; rework 30% untuk pekerjaan yang dibangun di atas masukan belum final.{{else}}50% overtime premium plus 25% coordination loss; 30% rework for work built on unfinished inputs.{{end}}</td>
+        <td>{{if eq $l "id"}}Biaya kurva crashing berubah sebanding, tetapi urutan aktivitas yang dipotong tidak - semuanya dikalikan premi yang sama.{{else}}Crash curve costs scale proportionally, but the order of cuts does not - every activity is multiplied by the same premium.{{end}}</td>
       </tr>
       <tr>
         <th>{{if eq $l "id"}}Kalender hari libur{{else}}The holiday calendar{{end}}</th>
@@ -80,11 +97,13 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Yang belum tertutup{{else}}What is not covered{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Versi sebelumnya situs ini mencantumkan empat celah: korelasi durasi, penjadwalan berbatas sumber daya, simulasi biaya, dan kalender per peran. Keempatnya kini dikerjakan di halaman Levelling &amp; Kompresi dan Simulasi Terpadu. Celah yang tersisa:{{else}}The previous version of this site listed four gaps: duration correlation, resource-constrained scheduling, cost simulation, and per-role calendars. All four are now handled on the Levelling &amp; Compression and Integrated Simulation pages. What remains:{{end}}</p>
   <ul class="dash gap-list">
-    <li>{{if eq $l "id"}}<strong>Korelasi antar durasi aktivitas.</strong> Simulasi Monte Carlo mengambil sampel setiap aktivitas secara bebas. Menambahkan korelasi akan melebarkan sebaran dan menggeser P80 lebih jauh - artinya angka jadwal di situs ini masih terlalu optimistis, bukan terlalu pesimistis.{{else}}<strong>Correlation between activity durations.</strong> The Monte Carlo samples each activity independently. Adding correlation would widen the distribution and push P80 further out - meaning the schedule figures here are still too optimistic, not too pessimistic.{{end}}</li>
-    <li>{{if eq $l "id"}}<strong>Resource-constrained scheduling.</strong> Over-alokasi dideteksi dan ditampilkan, tetapi jadwalnya tidak dihitung ulang dengan batasan kapasitas. Jadwal yang benar-benar terbatas sumber daya akan lebih panjang daripada 85 hari kerja.{{else}}<strong>Resource-constrained scheduling.</strong> Over-allocation is detected and displayed but the schedule is not recomputed under capacity limits. A genuinely resource-constrained schedule would run longer than 85 working days.{{end}}</li>
-    <li>{{if eq $l "id"}}<strong>Simulasi biaya Monte Carlo.</strong> Ketidakpastian disimulasikan pada durasi saja; biaya masih dihitung deterministik dari CPI. Sebaran EAC akan lebih informatif daripada tiga titik EAC.{{else}}<strong>Monte Carlo cost simulation.</strong> Uncertainty is simulated on duration only; cost is still derived deterministically from CPI. An EAC distribution would be more informative than three EAC points.{{end}}</li>
-    <li>{{if eq $l "id"}}<strong>Kalender per sumber daya.</strong> Semua peran memakai kalender kerja yang sama. Periode ujian kampus - risiko R08 pada register - belum tercermin sebagai ketidaktersediaan di kalender.{{else}}<strong>Per-resource calendars.</strong> All roles share one working calendar. The campus exam period - risk R08 in the register - is not yet reflected as unavailability in the calendar.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Levelling adalah heuristik.</strong> SGS dengan aturan prioritas latest start memberi jadwal yang bisa dijalankan, bukan jadwal terpendek yang mungkin. Penjadwalan berbatas sumber daya adalah masalah NP-hard; pemecahan eksak untuk jaringan dengan kapasitas harian bervariasi tidak dicoba.{{else}}<strong>Levelling is a heuristic.</strong> SGS with a latest-start priority rule gives a deliverable schedule, not the shortest possible one. Resource-constrained scheduling is NP-hard; an exact solution for a network with day-varying capacity is not attempted.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Kejadian risiko saling bebas.</strong> Setiap risiko terjadi dengan peluangnya sendiri, tidak berkorelasi dengan risiko lain maupun dengan durasi aktivitas. Dalam kenyataan risiko cenderung datang bersamaan, sehingga ekor kanan simulasi masih terlalu tipis.{{else}}<strong>Risk events are independent.</strong> Each fires on its own probability, uncorrelated with other risks or with activity durations. In reality risks tend to arrive together, so the simulation's right tail is still too thin.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Biaya tidak punya komponen yang bergantung waktu.</strong> Proyek yang molor tiga bulan tidak dikenai biaya hosting atau koordinasi tambahan di model ini; biaya hanya mengikuti isi pekerjaan dan dampak risiko.{{else}}<strong>Cost has no time-dependent component.</strong> A project slipping three months incurs no extra hosting or coordination cost in this model; cost follows only work content and risk impact.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Simulasi berpandangan perencanaan.</strong> Simulasi terpadu dijalankan dari hari pertama proyek, belum memakai realisasi sampai tanggal data sebagai titik awal. Prakiraan dari tanggal data saat ini hanya tersedia lewat Earned Value.{{else}}<strong>The simulation takes a planning view.</strong> The integrated simulation runs from day one, not yet from actuals at the data date. A forecast from the current data date is only available through Earned Value.{{end}}</li>
+    <li>{{if eq $l "id"}}<strong>Tidak ada pengulangan kerja (GERT).</strong> Modul 4 menyebut GERT untuk jaringan dengan pengulangan, misalnya uji yang harus diulang. Jaringan di sini tetap asiklis; rework hanya muncul sebagai biaya dan hari tambahan, bukan sebagai putaran di jaringan.{{else}}<strong>No rework loops (GERT).</strong> Module 4 mentions GERT for networks with repetition, such as tests that must be rerun. The network here stays acyclic; rework appears only as extra cost and days, not as a loop in the network.{{end}}</li>
   </ul>
 </section>
 
@@ -93,7 +112,7 @@
   <p class="section-intro">{{if eq $l "id"}}Seluruh angka di situs ini tersedia dalam bentuk mesin. Silakan dipakai, diperiksa, atau dibantah.{{else}}Every figure on this site is available in machine-readable form. Use it, check it, or dispute it.{{end}}</p>
   <div class="download-grid">
     <a class="dl" href="{{.BaseURL}}/data/metrik.json"><strong>metrik.json</strong><span>{{if eq $l "id"}}seluruh metrik Earned Value, simulasi, risiko, dan mutu{{else}}all Earned Value, simulation, risk, and quality metrics{{end}}</span></a>
-    <a class="dl" href="{{.BaseURL}}/data/aktivitas.csv"><strong>aktivitas.csv</strong><span>{{if eq $l "id"}}41 simpul dengan ES, EF, LS, LF, float, dan Earned Value{{else}}41 nodes with ES, EF, LS, LF, float, and Earned Value{{end}}</span></a>
+    <a class="dl" href="{{.BaseURL}}/data/aktivitas.csv"><strong>aktivitas.csv</strong><span>{{if eq $l "id"}}{{len (activities)}} simpul dengan ES, EF, LS, LF, float, dan Earned Value{{else}}{{len (activities)}} nodes with ES, EF, LS, LF, float, and Earned Value{{end}}</span></a>
     <a class="dl" href="{{.BaseURL}}/data/risiko.csv"><strong>risiko.csv</strong><span>{{if eq $l "id"}}12 risiko dengan EMV inheren dan residual{{else}}12 risks with inherent and residual EMV{{end}}</span></a>
     <a class="dl" href="{{.BaseURL}}/sitemap.xml"><strong>sitemap.xml</strong><span>{{if eq $l "id"}}seluruh rute dalam dua bahasa{{else}}every route in both languages{{end}}</span></a>
   </div>

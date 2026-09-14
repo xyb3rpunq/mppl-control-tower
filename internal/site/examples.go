@@ -275,6 +275,7 @@ func (a *Analysis) Examples(lang string) map[string]WorkedExample {
 			EN: fmt.Sprintf("A total of %s person-days spread over %d working days. The low smoothness value means the overall curve is fairly even; the problem is not the aggregate curve but the per-role clashes.", n(a.Resources.TotalPersonDays, 1), a.Resources.Horizon),
 		},
 	}
+	upgradeExamples(a, lang, ex)
 	return ex
 }
 

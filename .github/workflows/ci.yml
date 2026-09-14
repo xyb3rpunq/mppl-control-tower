@@ -62,4 +62,4 @@ jobs:
           test -f /tmp/dist/data/metrik.json
           halaman=$(find /tmp/dist -name index.html | wc -l)
           echo "halaman dihasilkan: $halaman"
-          test "$halaman" -eq 24
+          test "$halaman" -eq 28

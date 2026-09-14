@@ -1,6 +1,9 @@
 package site
 
-import "github.com/xyb3rpunq/mppl-control-tower/internal/render"
+import (
+	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/workcal"
+)
 
 // Pembantu format untuk teks temuan. Temuan disusun sekali dan dipakai di
 // kedua bahasa, jadi angkanya diformat dengan kaidah Indonesia - format angka
@@ -11,3 +14,6 @@ func fmtIdx(v float64) string { return render.Num(v, 3, "id") }
 func fmtPct(v float64) string { return render.Pct(v, 1, "id") }
 func fmtInt(v float64) string { return render.Num(v, 0, "id") }
 func fmtNum(v float64) string { return render.Num(v, 2, "id") }
+
+func fmtDate(iso string) string   { return workcal.FormatDate(iso, "id") }
+func fmtDateEN(iso string) string { return workcal.FormatDate(iso, "en") }

@@ -91,30 +91,17 @@ func Run(activities []model.Activity, plan schedule.Result, cfg Config) (Result,
 	criticalCount := make(map[string]int, len(tracked))
 
 	durations := make([]float64, 0, cfg.Iterations)
+	sampler := NewSampler(activities)
+	drawn := make([]int, len(activities))
 	sample := make(map[string]int, len(activities))
 
 	for i := 0; i < cfg.Iterations; i++ {
-		for _, a := range activities {
-			if a.Milestone {
-				sample[a.ID] = 0
-				continue
-			}
-			o, m, p := float64(a.Optimistic), float64(a.Duration), float64(a.Pessimistic)
-			if p <= o {
-				sample[a.ID] = a.Duration
-				continue
-			}
-			var v float64
-			if cfg.Distribution == "triangular" {
-				v = TriangularSample(rng, o, m, p)
-			} else {
-				v = BetaPERTSample(rng, o, m, p, 4)
-			}
-			d := int(math.Round(v))
-			if d < 1 {
-				d = 1
-			}
-			sample[a.ID] = d
+		// Rho nol: halaman PERT menampilkan sampel independen. Sampler yang
+		// sama dipakai simulasi terpadu, sehingga lapisan "independen" di sana
+		// menghasilkan angka yang identik dengan halaman ini.
+		sampler.Draw(rng, 0, cfg.Distribution, drawn)
+		for j, a := range activities {
+			sample[a.ID] = drawn[j]
 		}
 
 		res, err := schedule.Compute(activities, schedule.Options{

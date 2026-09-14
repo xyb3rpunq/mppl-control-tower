@@ -124,6 +124,21 @@ func (a Activity) Budget(rates map[Role]float64) float64 {
 	return a.LabourCost(rates) + a.ExtraCost()
 }
 
+// DominantRole mengembalikan peran dengan alokasi terbesar pada aktivitas ini,
+// atau string kosong bila aktivitas tidak punya tim. Bila ada yang sama besar,
+// peran yang tercantum lebih dulu yang dipilih.
+func (a Activity) DominantRole() Role {
+	var best Role
+	bestAlloc := -1.0
+	for _, s := range a.Team {
+		if s.Alloc > bestAlloc {
+			bestAlloc = s.Alloc
+			best = s.Role
+		}
+	}
+	return best
+}
+
 // PersonDays mengembalikan total hari-orang rencana untuk aktivitas ini.
 func (a Activity) PersonDays() float64 {
 	var total float64

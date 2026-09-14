@@ -1,7 +1,7 @@
 /* Service worker: cache-first untuk aset, network-first untuk halaman.
    Tujuannya sederhana - situs ini harus bisa dibuka di ruang kuliah tanpa
    jaringan. Versi cache dinaikkan setiap kali aset berubah. */
-var CACHE = 'ct-mppl-v1';
+var CACHE = 'ct-mppl-v2';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();

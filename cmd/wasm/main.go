@@ -37,6 +37,7 @@ func main() {
 	js.Global().Set("mpplRecompute", js.FuncOf(recompute))
 	js.Global().Set("mpplSimulate", js.FuncOf(runSimulation))
 	js.Global().Set("mpplBounds", js.FuncOf(bounds))
+	js.Global().Set("mpplIntegrated", js.FuncOf(runIntegrated))
 
 	// Beri tahu halaman bahwa mesinnya siap; tanpa ini kendali interaktif
 	// tetap tersembunyi dan halaman berperilaku seperti halaman statis biasa.
@@ -163,6 +164,99 @@ func runSimulation(_ js.Value, args []js.Value) any {
 		"p90Date":       cal.ISOAt(int(res.P90) - 1),
 		"histogram":     bins,
 		"sensitivity":   sens,
+	})
+}
+
+// runIntegrated menjalankan simulasi terpadu sampai lapisan tertentu.
+// Argumen: iterasi, benih, rho, lapisan (0-3).
+func runIntegrated(_ js.Value, args []js.Value) any {
+	cfg := simulate.IntegratedConfig{
+		Iterations: 3000,
+		Seed:       simulate.Defaults().Seed,
+		Rho:        simulate.DefaultRho,
+		Layer:      simulate.LayerResources,
+		Calendar:   cal,
+		Capacity:   model.Capacity,
+		Budget:     model.TotalAuthorised,
+		Deadline:   float64(plan.Duration),
+	}
+	if len(args) > 0 && args[0].Type() == js.TypeNumber {
+		cfg.Iterations = args[0].Int()
+	}
+	if len(args) > 1 && args[1].Type() == js.TypeNumber {
+		cfg.Seed = uint32(args[1].Int())
+	}
+	if len(args) > 2 && args[2].Type() == js.TypeNumber {
+		cfg.Rho = args[2].Float()
+	}
+	if len(args) > 3 && args[3].Type() == js.TypeNumber {
+		l := args[3].Int()
+		if l < 0 {
+			l = 0
+		}
+		if l > int(simulate.LayerResources) {
+			l = int(simulate.LayerResources)
+		}
+		cfg.Layer = simulate.Layer(l)
+	}
+	if cfg.Iterations < 100 {
+		cfg.Iterations = 100
+	}
+	if cfg.Iterations > 50_000 {
+		cfg.Iterations = 50_000
+	}
+
+	res, err := simulate.RunIntegrated(model.Activities, cfg)
+	if err != nil {
+		return errPayload(err.Error())
+	}
+
+	// Histogram durasi disusun dengan bentuk yang sama seperti simulasi PERT,
+	// supaya halaman bisa memakai satu fungsi penggambar untuk keduanya.
+	const bins = 28
+	lo, hi := res.Durations[0], res.Durations[len(res.Durations)-1]
+	if hi == lo {
+		hi = lo + 1
+	}
+	width := (hi - lo) / bins
+	counts := make([]int, bins)
+	for _, d := range res.Durations {
+		i := int((d - lo) / width)
+		if i >= bins {
+			i = bins - 1
+		}
+		counts[i]++
+	}
+	hist := make([]map[string]any, 0, bins)
+	running := 0
+	for i, c := range counts {
+		running += c
+		hist = append(hist, map[string]any{
+			"from": lo + float64(i)*width, "to": lo + float64(i+1)*width,
+			"count": c, "cum": float64(running) / float64(len(res.Durations)),
+		})
+	}
+
+	return toJS(map[string]any{
+		"ok":            true,
+		"iterations":    res.Config.Iterations,
+		"layer":         int(res.Config.Layer),
+		"rho":           res.Config.Rho,
+		"jcl":           res.JCL,
+		"onTime":        res.OnTime,
+		"onBudget":      res.OnBudget,
+		"durP50":        res.DurP50,
+		"durP80":        res.DurP80,
+		"durP90":        res.DurP90,
+		"costP50":       res.CostP50,
+		"costP80":       res.CostP80,
+		"jointAtP80":    res.JointAtP80,
+		"realised":      res.RealisedSameRole,
+		"deterministic": plan.Duration,
+		"p50":           res.DurP50,
+		"p80":           res.DurP80,
+		"p90":           res.DurP90,
+		"histogram":     hist,
 	})
 }
 

@@ -94,6 +94,7 @@
     });
     wireDataDate();
     wireSimulation();
+    wireIntegrated();
   };
 
   // -------------------------------------------------- kendali tanggal data
@@ -162,10 +163,11 @@
       btn.disabled = true;
       btn.textContent = '…';
 
-      // Beri peramban satu frame untuk menggambar keadaan sibuk sebelum
-      // WebAssembly memblokir thread utama selama simulasi berjalan.
-      requestAnimationFrame(function () {
-        setTimeout(function () {
+      // Beri peramban kesempatan menggambar keadaan sibuk sebelum
+      // WebAssembly memblokir thread utama. Sengaja memakai setTimeout, bukan
+      // requestAnimationFrame: rAF tidak pernah dipanggil pada tab latar
+      // belakang, sehingga tombol akan tampak mati.
+      setTimeout(function () {
           var t0 = performance.now();
           var res = window.mpplSimulate(iterations, seed, dist);
           var ms = performance.now() - t0;
@@ -182,17 +184,16 @@
           setText('[data-sim="range"]', fmt(res.min, 0) + '–' + fmt(res.max, 0));
           setText('[data-sim="iterations"]', fmt(res.iterations, 0));
           setText('[data-sim="elapsed"]', fmt(ms, 0) + ' ms');
-          drawHistogram(res);
-        }, 0);
-      });
+          drawHistogram(res, '[data-sim-chart]');
+      }, 30);
     });
   }
 
   // Menggambar ulang histogram hasil simulasi baru. Sengaja memakai SVG
   // sederhana: yang digambar ulang hanyalah batangnya, bukan seluruh grafik
   // yang sudah dirender server.
-  function drawHistogram(res) {
-    var host = document.querySelector('[data-sim-chart]');
+  function drawHistogram(res, selector) {
+    var host = document.querySelector(selector);
     if (!host || !res.histogram || !res.histogram.length) return;
 
     var W = 880, H = 260, padL = 50, padR = 20, padT = 16, padB = 34;
@@ -239,6 +240,46 @@
     }
     parts.push('</svg>');
     host.innerHTML = parts.join('');
+  }
+
+  // ------------------------------------------------ simulasi terpadu (JCL)
+  function wireIntegrated() {
+    var form = document.querySelector('[data-int-form]');
+    if (!form || typeof window.mpplIntegrated !== 'function') return;
+
+    var rho = form.querySelector('[name="rho"]');
+    var out = form.querySelector('[data-rho-out]');
+    if (rho && out) {
+      rho.addEventListener('input', function () { out.textContent = fmt(parseFloat(rho.value), 2); });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var iterations = parseInt(form.querySelector('[name="iterations"]').value, 10) || 3000;
+      var layer = parseInt(form.querySelector('[name="layer"]').value, 10);
+      var r = parseFloat(rho.value);
+      var btn = form.querySelector('button[type="submit"]');
+      var original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      setTimeout(function () {
+          var t0 = performance.now();
+          var res = window.mpplIntegrated(iterations, 20210801, r, isNaN(layer) ? 3 : layer);
+          var ms = performance.now() - t0;
+          btn.disabled = false;
+          btn.textContent = original;
+          if (!res || !res.ok) return;
+          setText('[data-int="jcl"]', pct(res.jcl, 2));
+          setText('[data-int="onTime"]', pct(res.onTime, 1));
+          setText('[data-int="onBudget"]', pct(res.onBudget, 1));
+          setText('[data-int="durP80"]', fmt(res.durP80, 0));
+          setText('[data-int="costP80"]', rp(res.costP80));
+          setText('[data-int="realised"]', fmt(res.realised, 3));
+          setText('[data-int="elapsed"]', fmt(ms, 0) + ' ms');
+          drawHistogram(res, '[data-int-chart]');
+      }, 30);
+    });
   }
 
   // ------------------------------------------------------------- utilitas
