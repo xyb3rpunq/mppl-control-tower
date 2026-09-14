@@ -21,7 +21,7 @@ func applyClosureFormulas() {
 			Formulas[i].Symbols = append(Formulas[i].Symbols, Symbol{"0,2", Text{ID: "laju mulai minimum: setara satu hari kerja per minggu", EN: "minimum start rate: one working day per week"}})
 			Formulas[i].Pitfall = Text{ID: "Satu kali SGS adalah heuristik: aturan LST sendirian memberi jadwal satu hari lebih panjang dari optimum pada proyek ini. Jangan menyebut hasil SGS 'jadwal terpendek' tanpa batas bawah yang menyamainya - lihat rumus batas bawah.", EN: "A single SGS run is a heuristic: the LST rule alone gives a schedule one day longer than optimal on this project. Do not call an SGS result 'the shortest schedule' without a lower bound that matches it - see the lower-bound formula."}
 		case "crash":
-			Formulas[i].Pitfall = Text{ID: "Kurva serakah - potong satu hari termurah, jangan pernah batalkan potongan lama - tidak dijamin optimum. Pada proyek ini kurva serakah lebih mahal dari optimum eksak pada beberapa titik; pemecahan eksaknya adalah pemrograman linear.", EN: "The greedy curve - cut the cheapest single day, never undo an earlier cut - is not guaranteed optimal. On this project the greedy curve costs more than the exact optimum at some points; the exact solution is linear programming."}
+			Formulas[i].Pitfall = Text{ID: "Kurva serakah - potong satu hari termurah, jangan pernah batalkan potongan lama - tidak dijamin optimum: satu potongan bersama yang mahal bisa dipilih walau pasangan cabang paralel lebih murah. Pemecahan eksaknya pemrograman linear. Crashing juga hanya berlaku pada jaringan CPM; pada jadwal yang dibatasi orang, lembur menambah kapasitas, bukan memotong durasi.", EN: "The greedy curve - cut the cheapest single day, never undo an earlier cut - is not guaranteed optimal: an expensive shared cut can be chosen even when a pair of parallel branches is cheaper. The exact solution is linear programming. Crashing also only applies to the CPM network; on a people-constrained schedule, overtime adds capacity rather than cutting durations."}
 		case "kejadianrisiko":
 			Formulas[i].Notation = Text{ID: "untuk setiap risiko r: bila Phi(Y_r) > 1 - p_residual(r) maka biaya += dampak(r) dan d_terpapar(r) += hari(r)     E[biaya risiko] = jumlah EMV residual", EN: "for every risk r: if Phi(Y_r) > 1 - p_residual(r) then cost += impact(r) and d_exposed(r) += days(r)     E[risk cost] = sum of residual EMV"}
 			Formulas[i].Symbols = []Symbol{
@@ -35,6 +35,20 @@ func applyClosureFormulas() {
 }
 
 var closureFormulas = []Formula{
+	{
+		Key: "lemburlevelling", Group: "kompresi", Route: "/optimasi/",
+		Name:     Text{ID: "Lembur sah pada jadwal berbatas sumber daya", EN: "Legal overtime on a resource-constrained schedule"},
+		Notation: Text{ID: "kapasitas_r(t) = normal_r(t) + n_r x h / 8  bila t bukan hari ujian     h = min(4, 18 / 5) = 3,6 jam     upah_r(t) = n_r x (1,5 min(j,1) + 2 max(j-1,0)) x tarif_r / 8,  j = (pakai_r(t) - normal_r(t)) x 8 / n_r", EN: "capacity_r(t) = normal_r(t) + n_r x h / 8  when t is not an exam day     h = min(4, 18 / 5) = 3.6 hours     pay_r(t) = n_r x (1.5 min(j,1) + 2 max(j-1,0)) x rate_r / 8,  j = (use_r(t) - normal_r(t)) x 8 / n_r"},
+		Symbols: []Symbol{
+			{"n_r", Text{ID: "jumlah orang penuh waktu pada peran r; peran paruh waktu tidak diberi lembur", EN: "full-time people in role r; part-time roles get no overtime"}},
+			{"h", Text{ID: "jam lembur per hari yang tetap di bawah 18 jam seminggu bila dilakukan setiap hari kerja", EN: "overtime hours per day that stay under 18 hours a week when worked every working day"}},
+			{"j", Text{ID: "jam lembur per orang yang benar-benar terpakai pada hari t", EN: "overtime hours per person actually used on day t"}},
+		},
+		Meaning: Text{ID: "Pada jadwal yang dibatasi orang, lembur tidak memendekkan pekerjaan: lembur menambah hari-orang yang tersedia. Durasi terpendek dengan lembur maksimum dibuktikan dengan batas bawah energetik pada kapasitas itu.", EN: "On a people-constrained schedule, overtime does not shorten the work: it adds available person-days. The shortest duration with maximum overtime is proven with the energetic lower bound at that capacity."},
+		Reading: Text{ID: "Setiap rencana lembur sah memakai kapasitas yang tidak lebih besar dari kapasitas maksimum, jadi batas bawah itu berlaku untuk semuanya. Biaya per durasi berasal dari memangkas lembur yang tidak diperlukan.", EN: "Every legal overtime plan uses no more capacity than the maximum, so that lower bound holds for all of them. The cost per duration comes from trimming overtime that is not needed."},
+		Pitfall: Text{ID: "Biayanya adalah rencana termurah yang ditemukan, bukan minimum yang terbukti. Dan kurva crashing CPM tidak bisa dipakai untuk menjanjikan percepatan jadwal nyata: ia memotong jaringan yang tidak menghormati kapasitas orang.", EN: "The cost is the cheapest plan found, not a proven minimum. And the CPM crashing curve cannot be used to promise acceleration of the real schedule: it cuts a network that ignores people's capacity."},
+		Source:  Text{ID: "PP 35/2021 Pasal 26, 31, 32; Kolisch & Hartmann (1999) - RCPSP", EN: "Government Regulation 35/2021 Art. 26, 31, 32; Kolisch & Hartmann (1999) - RCPSP"},
+	},
 	{
 		Key: "batasbawah", Group: "kompresi", Route: "/optimasi/",
 		Name:     Text{ID: "Batas bawah energetik dan celah optimalitas", EN: "Energetic lower bound and optimality gap"},
@@ -52,10 +66,10 @@ var closureFormulas = []Formula{
 	{
 		Key: "lpcrash", Group: "kompresi", Route: "/optimasi/",
 		Name:     Text{ID: "Crashing eksak dan trade-off biaya total (LP)", EN: "Exact crashing and total-cost trade-off (LP)"},
-		Notation: Text{ID: "min jumlah c_i x_i + jumlah tarif_k (E - t_pembeli_k)   dengan  t_j >= t_i + d_i - x_i,  t_i + d_i - x_i <= E = T,  0 <= x_i <= d_i - crash_i", EN: "min sum c_i x_i + sum rate_k (E - t_buyer_k)   s.t.  t_j >= t_i + d_i - x_i,  t_i + d_i - x_i <= E = T,  0 <= x_i <= d_i - crash_i"},
+		Notation: Text{ID: "min jumlah c_ik x_ik + jumlah tarif_k (E - t_pembeli_k)   dengan  x_i = jumlah_k x_ik,  t_j >= t_i + d_i - x_i,  t_i + d_i - x_i <= E = T,  0 <= x_ik <= 1", EN: "min sum c_ik x_ik + sum rate_k (E - t_buyer_k)   s.t.  x_i = sum_k x_ik,  t_j >= t_i + d_i - x_i,  t_i + d_i - x_i <= E = T,  0 <= x_ik <= 1"},
 		Symbols: []Symbol{
-			{"x_i", Text{ID: "hari yang dipotong dari aktivitas i", EN: "days cut from activity i"}},
-			{"c_i", Text{ID: "slope crashing aktivitas i", EN: "crash slope of activity i"}},
+			{"x_ik", Text{ID: "hari ke-k yang dipotong dari aktivitas i; x_i adalah jumlahnya", EN: "the k-th day cut from activity i; x_i is their sum"}},
+			{"c_ik", Text{ID: "biaya marjinal hari ke-k: tidak menurun, sehingga LP mengisi hari murah lebih dulu", EN: "marginal cost of day k: non-decreasing, so the LP fills cheap days first"}},
 			{"tarif_k", Text{ID: "biaya sewa atau langganan k per hari", EN: "rental or subscription k per day"}},
 			{"E, T", Text{ID: "hari selesai proyek dan tenggat yang diuji", EN: "project finish and the deadline being tested"}},
 		},

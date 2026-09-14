@@ -53,9 +53,9 @@ func upgradeExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 				act.ID, act.Duration, act.Optimistic, plan.CrashDur,
 				tr2(lang, "lembur", "overtime"), n(plan.OvertimeHrs, 2), tr2(lang, "jam", "h"), tr2(lang, "hari", "day"),
 				rp(act.LabourCost(model.RateCard)), act.Duration, n(plan.Premium, 4), rp(plan.SlopePerDay)),
-			Result: fmt.Sprintf("%s = %s, %s %d → %d = %s",
+			Result: fmt.Sprintf("%s = %s, %s %d → %d = %s%s",
 				tr2(lang, "5 hari pertama", "first 5 days"), rp(five.TotalCost),
-				tr2(lang, "penuh", "full"), a.Crash.NormalDuration, a.Crash.MinDuration, rp(last.TotalCost)),
+				tr2(lang, "penuh", "full"), a.Crash.NormalDuration, a.Crash.MinDuration, rp(last.TotalCost), convexNote(lang)),
 			Comment: model.Text{
 				ID: fmt.Sprintf("Langkah pertama memotong %s karena slope-nya termurah di jalur kritis. Langkah terakhir harus memotong %s sekaligus - jalur kritis paralel membuat satu potongan saja tidak memendekkan proyek.", strings.Join(first.Crashed, " + "), strings.Join(last.Crashed, " + ")),
 				EN: fmt.Sprintf("The first step cuts %s because its slope is the cheapest on the critical path. The last step must cut %s together - parallel critical paths mean a single cut would not shorten the project.", strings.Join(first.Crashed, " + "), strings.Join(last.Crashed, " + ")),
@@ -132,4 +132,21 @@ func upgradeExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 		}
 	}
 	closureExamples(a, lang, ex)
+}
+
+// convexNote menunjukkan biaya marjinal yang naik pada aktivitas pertama yang
+// boleh dipotong lebih dari satu hari.
+func convexNote(lang string) string {
+	for _, act := range model.Activities {
+		p := act.Crash(model.RateCard)
+		if len(p.Marginal) < 2 {
+			continue
+		}
+		parts := make([]string, len(p.Marginal))
+		for i, m := range p.Marginal {
+			parts[i] = render.Rp(m, lang)
+		}
+		return fmt.Sprintf(";  %s: %s", act.ID, strings.Join(parts, " → "))
+	}
+	return ""
 }

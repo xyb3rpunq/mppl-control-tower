@@ -183,20 +183,38 @@ var crashForbidden = map[string]Text{
 // CrashPlan adalah batas percepatan satu aktivitas.
 type CrashPlan struct {
 	Allowed      bool
-	CrashDur     int     // durasi terpendek yang masih masuk akal
-	SlopePerDay  float64 // tambahan biaya per hari yang dipotong
+	CrashDur     int     // durasi terpendek yang masih masuk akal dan sah
+	SlopePerDay  float64 // rerata tambahan biaya per hari bila dipotong penuh
 	MaxDaysSaved int
-	Premium      float64 // premi lembur per hari dipotong, porsi upah harian
-	OvertimeHrs  float64 // jam lembur per hari saat dipotong penuh
-	Reason       Text    // diisi bila Allowed == false
+	// Marginal[k-1] adalah tambahan biaya hari ke-k yang dipotong. Nilainya
+	// tidak pernah menurun: setiap hari tambahan menaikkan jam lembur harian,
+	// dan jam di atas jam pertama dibayar 2x, bukan 1,5x.
+	Marginal        []float64
+	MarginalPremium []float64 // Marginal dibagi upah harian
+	Premium         float64   // premi rerata per hari dipotong saat dipotong penuh
+	OvertimeHrs     float64   // jam lembur per hari saat dipotong penuh
+	Reason          Text      // diisi bila Allowed == false
+}
+
+// CostToCut mengembalikan tambahan biaya memotong k hari: jumlah biaya
+// marjinal k hari pertama. k di luar rentang dipotong ke batasnya.
+func (p CrashPlan) CostToCut(k int) float64 {
+	var c float64
+	for i := 0; i < k && i < len(p.Marginal); i++ {
+		c += p.Marginal[i]
+	}
+	return c
 }
 
 // Crash menurunkan batas percepatan sebuah aktivitas dengan aturan yang sama
 // untuk semuanya, supaya tidak ada angka yang dipilih-pilih:
 //
-//	durasi crash = max(O, M - max(1, M/3))
-//	slope        = biaya tenaga kerja harian x OvertimePremium(M - crash, crash)
+//	durasi crash    = max(O, M - max(1, M/3))
+//	biaya(k)        = upah harian x k x OvertimePremium(k, M - k)
+//	marjinal hari k = biaya(k) - biaya(k-1)
 //
+// Potongan berhenti pada k terbesar yang masih sah menurut batas lembur; bila
+// satu hari pun tidak sah, aktivitas itu tidak bisa dipercepat dengan lembur.
 // Estimasi optimistis O dipakai sebagai lantai: kalau tim sendiri menilai
 // pekerjaan itu tidak mungkin selesai lebih cepat dari O dalam kondisi terbaik,
 // uang tidak akan mengubahnya.
@@ -221,21 +239,28 @@ func (a Activity) Crash(rates map[Role]float64) CrashPlan {
 	if crash >= a.Duration {
 		return CrashPlan{Reason: Text{ID: "Estimasi optimistis sudah sama dengan durasi rencana", EN: "The optimistic estimate already equals the planned duration"}}
 	}
-	cutDays := a.Duration - crash
-	premium, hrs, ok := OvertimePremium(cutDays, crash)
-	if !ok {
-		return CrashPlan{OvertimeHrs: hrs, Reason: Text{
-			ID: fmt.Sprintf("Memotong %d hari menjadi %d butuh %s jam lembur per hari - melampaui batas 4 jam sehari (PP 35/2021 Pasal 26)", a.Duration, crash, strings.ReplaceAll(fmt.Sprintf("%.1f", hrs), ".", ",")),
-			EN: fmt.Sprintf("Cutting %d days to %d needs %.1f overtime hours a day - beyond the 4-hour daily limit (Government Regulation 35/2021, Art. 26)", a.Duration, crash, hrs),
-		}}
-	}
 	daily := a.LabourCost(rates) / float64(a.Duration)
-	return CrashPlan{
-		Allowed:      true,
-		CrashDur:     crash,
-		SlopePerDay:  daily * premium,
-		MaxDaysSaved: cutDays,
-		Premium:      premium,
-		OvertimeHrs:  hrs,
+	plan := CrashPlan{}
+	var prev float64
+	for k := 1; k <= a.Duration-crash; k++ {
+		premium, hrs, ok := OvertimePremium(k, a.Duration-k)
+		if !ok {
+			if k == 1 {
+				return CrashPlan{OvertimeHrs: hrs, Reason: Text{
+					ID: fmt.Sprintf("Memotong %d hari menjadi %d butuh %s jam lembur per hari - melampaui batas 4 jam sehari (PP 35/2021 Pasal 26)", a.Duration, a.Duration-1, strings.ReplaceAll(fmt.Sprintf("%.1f", hrs), ".", ",")),
+					EN: fmt.Sprintf("Cutting %d days to %d needs %.1f overtime hours a day - beyond the 4-hour daily limit (Government Regulation 35/2021, Art. 26)", a.Duration, a.Duration-1, hrs),
+				}}
+			}
+			break
+		}
+		total := daily * premium * float64(k)
+		plan.Marginal = append(plan.Marginal, total-prev)
+		plan.MarginalPremium = append(plan.MarginalPremium, (total-prev)/daily)
+		prev = total
+		plan.Premium, plan.OvertimeHrs, plan.MaxDaysSaved = premium, hrs, k
 	}
+	plan.Allowed = true
+	plan.CrashDur = a.Duration - plan.MaxDaysSaved
+	plan.SlopePerDay = prev / float64(plan.MaxDaysSaved)
+	return plan
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/gert"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/simulate"
 )
 
@@ -323,8 +324,8 @@ func closureFindings(a *Analysis) []Finding {
 				EN: "The first five days of acceleration nearly pay for themselves in saved rentals",
 			},
 			Detail: model.Text{
-				ID: "Crashing lima hari menelan premi " + fmtRp(crash5) + ", tetapi setiap hari proyek lebih pendek juga menghemat sewa server dan langganan sampai " + fmtRp(a.RentalDaily()) + ". Menurut pemrograman linear biaya total, biaya bersihnya hanya " + fmtRp(net5) + ". Kurva crashing serakah sebelumnya melebihi optimum eksak sampai " + fmtRp(a.Exact.MaxGreedyExcess) + " pada satu titik.",
-				EN: "Crashing five days costs " + fmtRp(crash5) + " in premiums, but every day shorter also saves up to " + fmtRp(a.RentalDaily()) + " in server rental and subscriptions. Per the total-cost linear program, the net cost is only " + fmtRp(net5) + ". The earlier greedy crashing curve exceeded the exact optimum by up to " + fmtRp(a.Exact.MaxGreedyExcess) + " at one point.",
+				ID: "Pada jaringan CPM, crashing lima hari menelan premi " + fmtRp(crash5) + ", tetapi setiap hari proyek lebih pendek juga menghemat sewa server dan langganan sampai " + fmtRp(a.RentalDaily()) + ". Menurut pemrograman linear biaya total, biaya bersihnya hanya " + fmtRp(net5) + ". " + greedyNoteID(a),
+				EN: "On the CPM network, crashing five days costs " + fmtRp(crash5) + " in premiums, but every day shorter also saves up to " + fmtRp(a.RentalDaily()) + " in server rental and subscriptions. Per the total-cost linear program, the net cost is only " + fmtRp(net5) + ". " + greedyNoteEN(a),
 			},
 			Metric: model.Text{ID: "LP biaya total = premi lembur PP 35/2021 + tarif sewa x rentang sewa", EN: "total-cost LP = overtime premium under Government Regulation 35/2021 + rental rate x rental span"},
 			Action: model.Text{
@@ -386,6 +387,39 @@ func closureFindings(a *Analysis) []Finding {
 		})
 	}
 
+	if ot := a.Overtime; ot.MinDuration < ot.Levelled {
+		if p, ok := ot.PointAt(ot.MinDuration); ok {
+			days := ot.Levelled - ot.MinDuration
+			cpm, _ := a.Exact.PointAt(a.Exact.Normal - days)
+			proof := model.Text{
+				ID: " Batas bawah pada kapasitas lembur maksimum juga " + fmtInt(float64(ot.Bound.Value)) + " hari, jadi tidak ada rencana lembur sah yang lebih pendek.",
+				EN: " The lower bound at maximum overtime capacity is also " + fmtInt(float64(ot.Bound.Value)) + " days, so no legal overtime plan is shorter.",
+			}
+			if !ot.MinProven {
+				proof = model.Text{
+					ID: " Batas bawah pada kapasitas lembur maksimum " + fmtInt(float64(ot.Bound.Value)) + " hari; celahnya belum tertutup.",
+					EN: " The lower bound at maximum overtime capacity is " + fmtInt(float64(ot.Bound.Value)) + " days; the gap is not closed.",
+				}
+			}
+			out = append(out, Finding{
+				Key: "lembur-jadwal-nyata", Severity: "tinggi", Route: "/optimasi/",
+				Title: model.Text{
+					ID: "Lembur sah hanya memotong " + fmtInt(float64(days)) + " hari dari jadwal yang bisa dijalankan",
+					EN: "Legal overtime cuts only " + fmtInt(float64(days)) + " days from the executable schedule",
+				},
+				Detail: model.Text{
+					ID: "Kurva crashing memotong jaringan CPM " + fmtInt(float64(a.Plan.Duration)) + " hari yang tidak bisa dijalankan, dan menyebut " + fmtInt(float64(days)) + " hari seharga " + fmtRp(cpm.CrashCost) + ". Pada jadwal levelling " + fmtInt(float64(ot.Levelled)) + " hari, lembur " + render.Num(ot.HoursPerDay, 1, "id") + " jam sehari untuk semua peran penuh waktu di luar periode ujian hanya mencapai " + fmtInt(float64(ot.MinDuration)) + " hari kerja." + proof.ID + " Rencana termurah yang ditemukan: " + a.OvertimeRoleText(p, "id") + ", upah lembur " + fmtRp(p.Cost) + " - bersih " + fmtRp(p.Net) + " setelah sewa yang dihemat.",
+					EN: "The crashing curve cuts the " + fmtInt(float64(a.Plan.Duration)) + "-day CPM network, which cannot be executed, and prices " + fmtInt(float64(days)) + " days at " + fmtRp(cpm.CrashCost) + ". On the " + fmtInt(float64(ot.Levelled)) + "-day levelled schedule, " + render.Num(ot.HoursPerDay, 1, "en") + " overtime hours a day for every full-time role outside the exam periods reach only " + fmtInt(float64(ot.MinDuration)) + " working days." + proof.EN + " The cheapest plan found: " + a.OvertimeRoleText(p, "en") + ", " + fmtRp(p.Cost) + " in overtime pay - net " + fmtRp(p.Net) + " after the rentals saved.",
+				},
+				Metric: model.Text{ID: "levelling dengan kapasitas + lembur sah (PP 35/2021) vs batas bawah energetik", EN: "levelling with capacity + legal overtime (Government Regulation 35/2021) vs energetic lower bound"},
+				Action: model.Text{
+					ID: "Jangan menjanjikan percepatan dari kurva crashing CPM. Untuk selesai sebelum " + fmtInt(float64(ot.MinDuration)) + " hari kerja, lembur tidak cukup: tambah orang pada peran " + string(a.CriticalRole) + " atau kurangi lingkup.",
+					EN: "Do not promise acceleration from the CPM crashing curve. To finish before " + fmtInt(float64(ot.MinDuration)) + " working days, overtime is not enough: add people to the " + string(a.CriticalRole) + " role or reduce scope.",
+				},
+			})
+		}
+	}
+
 	if fl := a.InFlight; fl != nil && len(a.Forecast.Durations) > 0 {
 		fc := a.Forecast
 		act := model.Text{
@@ -433,4 +467,20 @@ func closureFindings(a *Analysis) []Finding {
 		}
 	}
 	return out
+}
+
+// greedyNoteID dan greedyNoteEN menjelaskan hasil perbandingan serakah dengan
+// LP sesuai angkanya: dengan biaya lembur per hari, serakah bisa saja optimal.
+func greedyNoteID(a *Analysis) string {
+	if a.Exact.GreedyOptimal {
+		return "Dengan biaya lembur per hari, kurva serakah sama dengan optimum eksak di setiap durasi - hanya LP yang bisa membuktikannya."
+	}
+	return "Kurva crashing serakah melebihi optimum eksak sampai " + fmtRp(a.Exact.MaxGreedyExcess) + " pada satu titik."
+}
+
+func greedyNoteEN(a *Analysis) string {
+	if a.Exact.GreedyOptimal {
+		return "With per-day overtime costs, the greedy curve equals the exact optimum at every duration - only the LP can prove it."
+	}
+	return "The greedy crashing curve exceeds the exact optimum by up to " + fmtRp(a.Exact.MaxGreedyExcess) + " at one point."
 }

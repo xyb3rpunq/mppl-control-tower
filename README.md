@@ -67,13 +67,14 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
 | 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
 | 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
-| 10 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,69 |
-| 11 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
-| 12 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
-| 13 | sedang | Pemeriksaan bisa gagal berulang (GERT) | Tambahan harapan 1,52 hari kerja dan Rp 121.690; P(regresi butuh ≥ 2 putaran tambahan) = 9% |
-| 14 | sedang | Realisasi selama UTS membantah asumsi kapasitas ujian 40% | Laju saat UTS 103,5% dari normal; kredibilitas empiris 98,1%, faktor ujian diperbarui menjadi 98,8% |
-| 15 | baik | Jadwal levelling terbukti tidak bisa diperpendek dengan mengubah urutan | Jadwal terbaik 113 = batas bawah 113; aturan LST lama memberi 114 |
-| 16 | baik | Lima hari percepatan pertama hampir dibayar sendiri | Premi lembur PP 35/2021 Rp 195.000, biaya bersih setelah sewa hanya **Rp 44.789** (sewa menutup 77%) |
+| 10 | tinggi | Lembur sah hanya memotong 5 hari dari jadwal yang bisa dijalankan | Lembur 3,6 jam/hari untuk semua peran penuh waktu di luar ujian: 113 → **108 hari kerja** (batas bawah 108, terbukti); rencana termurah BE 32 jam + BA 3,6 jam, upah **Rp 450.937**, bersih Rp 331.976 — crashing CPM menyebut 5 hari seharga Rp 191.563 |
+| 11 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,69 |
+| 12 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
+| 13 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
+| 14 | sedang | Pemeriksaan bisa gagal berulang (GERT) | Tambahan harapan 1,52 hari kerja dan Rp 121.690; P(regresi butuh ≥ 2 putaran tambahan) = 9% |
+| 15 | sedang | Realisasi selama UTS membantah asumsi kapasitas ujian 40% | Laju saat UTS 103,5% dari normal; kredibilitas empiris 98,1%, faktor ujian diperbarui menjadi 98,8% |
+| 16 | baik | Jadwal levelling terbukti tidak bisa diperpendek dengan mengubah urutan | Jadwal terbaik 113 = batas bawah 113; aturan LST lama memberi 114 |
+| 17 | baik | Pada jaringan CPM, lima hari percepatan pertama hampir dibayar sendiri | Premi lembur PP 35/2021 Rp 191.563, biaya bersih setelah sewa hanya **Rp 38.851** (sewa menutup 80%) |
 
 Temuan tambahan dari halaman Piagam dan pencocokan kalender resmi: **tanggal selesai di Project Charter salah enam hari kerja.** Tujuh belas minggu kalender polos berakhir 13 Februari 2026; 85 hari kerja sesungguhnya berakhir **23 Februari 2026** setelah akhir pekan, empat libur nasional, dan dua cuti bersama dikeluarkan. Pencocokan dengan SKB 3 Menteri menemukan cuti bersama Imlek 16 Februari 2026 yang sebelumnya tidak ada di model.
 
@@ -118,8 +119,21 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - **Histogram pembebanan setelah levelling** dengan garis kapasitas bertangga per hari — nol over-alokasi.
 - Hari menunggu per peran dan **peran kritis** (Backend Developer).
 - **Premi lembur dari PP 35/2021**, bukan asumsi: pekerjaan hari yang dipotong dibagi rata sebagai lembur ke hari tersisa; jam pertama 1,5×, jam berikutnya 2× upah sejam (1/173 upah sebulan), paling lama 4 jam sehari dan 18 jam seminggu. Premi per aktivitas 75%–87,5%; **lima aktivitas dua hari (A27, A29, A31, A34, A36) tidak boleh dipotong** karena butuh 8 jam lembur dalam sehari.
-- **Crashing serakah vs eksak**: kurva 85 → 68 hari; LP simpleks membuktikan serakah **tidak optimal** (kelebihan sampai Rp 4.063).
-- **Time-cost trade-off**: LP biaya total (premi lembur + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 195.000 tetapi biaya bersihnya hanya Rp 44.789; dengan premi sesuai aturan, tidak ada durasi yang lebih murah dari 85 hari. Grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
+- **Biaya crash per hari, bukan rata-rata**: hari kedua yang dipotong dari aktivitas yang sama lebih mahal karena jam lembur di atas jam pertama dibayar 2×. Contoh A17 (M = 6): hari pertama Rp 37.813 (1,6 jam/hari), hari kedua Rp 58.438 (naik ke 4 jam/hari). Potongan juga berhenti di hari terakhir yang masih sah, tidak langsung ditolak seluruhnya.
+- **Crashing serakah vs eksak**: kurva 85 → 68 hari. Dengan biaya lembur per hari, serakah ternyata **sama dengan LP di setiap durasi** — kelebihan Rp 4.063 versi sebelumnya lahir dari slope rata-rata yang membuat hari kedua A17 tampak murah. Hanya LP yang membuktikannya; kelemahan serakah (satu potongan bersama yang mahal dipilih walau pasangan cabang paralel lebih murah) tetap dibuktikan pada jaringan uji.
+- **Time-cost trade-off**: LP biaya total (premi lembur + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 191.563 tetapi biaya bersihnya hanya Rp 38.851; dengan premi sesuai aturan, tidak ada durasi yang lebih murah dari 85 hari. Grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
+- **Lembur pada jadwal yang bisa dijalankan** *(baru)*: kurva crashing memotong jaringan CPM yang tidak menghormati kapasitas orang. Pada jadwal levelling, lembur menambah hari-orang yang tersedia — paling banyak 3,6 jam/hari (agar tetap ≤ 18 jam/minggu), hanya peran penuh waktu, tidak saat ujian.
+
+  | Durasi | Selesai | Lembur | Upah lembur | Sewa dihemat | Bersih |
+  | --- | --- | --- | --- | --- | --- |
+  | 113 | 10 Apr 2026 | — | Rp 0 | — | Rp 0 |
+  | 112 | 9 Apr 2026 | BE 10,8 jam | Rp 138.187 | Rp 29.740 | Rp 108.447 |
+  | 111 | 8 Apr 2026 | BE 18 jam | Rp 230.312 | Rp 59.481 | Rp 170.832 |
+  | 110 | 7 Apr 2026 | BE 25,2 jam | Rp 322.437 | Rp 89.221 | Rp 233.217 |
+  | 109 | 6 Apr 2026 | BE 28,8 jam, BA 3,6 jam | Rp 410.375 | Rp 89.221 | Rp 321.154 |
+  | **108** | 2 Apr 2026 | BE 32 jam, BA 3,6 jam | **Rp 450.937** | Rp 118.961 | **Rp 331.976** |
+
+  **108 hari terbukti minimum**: batas bawah energetik pada kapasitas lembur maksimum juga 108, dan setiap rencana lembur sah memakai kapasitas yang tidak lebih besar. Upah per durasi adalah rencana termurah yang ditemukan dengan memangkas lembur yang tidak diperlukan — batas atas, bukan minimum terbukti. Lima hari yang sama di kurva crashing CPM: Rp 191.563.
 - **Fast-tracking**: 23 kandidat diuji dengan tumpang tindih 50%; kandidat orang-sama **ditolak**; 11 kandidat layak; penerapan serentak memberi 66 hari.
 
 ### 3.5 PERT & Monte Carlo — `/pert/`
@@ -243,10 +257,11 @@ Pemetaan dua arah indeks hari kerja ↔ tanggal, seluruh libur nasional dan cuti
 
 ### `compress` — kompresi jadwal
 - **Crashing serakah** per hari dengan pencarian pasangan dan tiga aktivitas untuk jalur kritis paralel.
-- **Crashing eksak** (`Exact`): LP per tenggat; matriks jaringan unimodular total sehingga solusi simpleks berupa hari bulat, diverifikasi ulang dengan CPM; perbandingan titik demi titik dengan serakah.
+- **Crashing eksak** (`Exact`): LP per tenggat dengan satu kolom per hari yang boleh dipotong (biaya marjinal cembung terwakili persis); kolom duplikat mempertahankan unimodularitas total sehingga solusi simpleks berupa hari bulat, diverifikasi ulang dengan CPM; perbandingan titik demi titik dengan serakah.
+- **`LevelledOvertime`**: grid kapasitas + lembur sah pada hari non-ujian untuk peran penuh waktu, `level.Optimize` + batas bawah pada grid maksimum untuk durasi minimum terbukti, lalu pemangkasan lembur per peran dan per hari untuk setiap durasi; upah dihitung dari pemakaian kapasitas di atas normal.
 - **Time-cost trade-off**: LP biaya total dengan sewa `cost.Rental`, tanggal mulai proyek dikunci, titik biaya terendah, dan nilai impas per hari.
 - **Fast-tracking** dengan rework harapan dan penolakan kandidat orang-sama.
-- Slope setiap aktivitas dari `model.OvertimePremium` (PP 35/2021 Pasal 26, 31, 32).
+- Biaya marjinal setiap hari yang dipotong dari `model.OvertimePremium` (PP 35/2021 Pasal 26, 31, 32), lewat `CrashPlan.Marginal` dan `CostToCut`.
 
 ### `lp` — pemrograman linear
 Simpleks dua fase dengan tableau padat dan **aturan Bland** (tidak pernah berputar pada masalah degeneratif — diuji dengan contoh klasik Beale).
@@ -288,7 +303,7 @@ Perakit analisis dan penurun temuan; sumber tunggal kebenaran seluruh data proye
 
 ---
 
-## 5. Referensi 38 rumus
+## 5. Referensi 39 rumus
 
 | Kelompok | Rumus |
 | --- | --- |
@@ -298,7 +313,7 @@ Perakit analisis dan penurun temuan; sumber tunggal kebenaran seluruh data proye
 | **Risiko Kuantitatif** | EMV · Skor & matriks probabilitas-dampak · Struktur anggaran berlapis |
 | **Pengendalian Mutu** | Batas kendali X-bar · Aturan Nelson · Cpk · Biaya kualitas · Analisis Pareto |
 | **Sumber Daya** | Pembebanan & utilisasi · Kehalusan kurva tim |
-| **Levelling & Kompresi Jadwal** | Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan · **Batas bawah energetik & celah optimalitas · Crashing eksak & trade-off biaya total (LP)** |
+| **Levelling & Kompresi Jadwal** | Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan · **Batas bawah energetik & celah optimalitas · Crashing eksak & trade-off biaya total (LP) · Lembur sah pada jadwal berbatas sumber daya** |
 | **Simulasi Terpadu & JCL** | Korelasi lewat kopula Gauss · Kejadian risiko dalam simulasi · Joint Confidence Level · **Biaya sewa yang bergantung waktu · Risiko bergerombol lewat kopula faktor · GERT: putaran rework dengan aturan Mason** |
 | **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat** |
 
@@ -431,7 +446,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**216 fungsi uji di 17 paket, cakupan pernyataan 94,3%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**226 fungsi uji di 18 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -449,6 +464,9 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - Simpleks: contoh buku teks, fase 1, tidak layak, tak terbatas, baris artifisial redundan, dan contoh degeneratif Beale.
 - Kandidat fast-tracking orang-sama tidak boleh dianggap layak.
 - **Premi lembur dihitung ulang menit demi menit** terhadap rumus tertutup; batas 4 jam sehari dan 18 jam seminggu ditolak; setiap aktivitas yang boleh di-crash lembur dalam batas, dan tepat lima melanggarnya.
+- **Biaya crash cembung**: biaya marjinal tidak pernah menurun, jumlahnya sama dengan potongan penuh, A17 cocok dengan hitung tangan (Rp 37.812,5 lalu Rp 58.437,5); potongan berhenti di hari terakhir yang sah bila potongan penuh melanggar batas mingguan; LP diuji brute force dengan biaya per hari.
+- **Serakah bisa gagal** diuji pada jaringan dengan satu aktivitas bersama yang mahal dan dua cabang murah; laporan optimalitas serakah harus konsisten dengan titik-titiknya, bukan dikunci ke satu hasil.
+- **Lembur pada jadwal nyata diuji brute force**: pada jaringan kecil setiap himpunan hari lembur × setiap urutan aktivitas dicoba; durasi minimum dan biaya harus sama. Pada proyek: 113 → 108 terbukti, upah naik saat durasi turun, jam per hari ≤ 3,6 dan per minggu ≤ 18, tidak ada lembur pada hari ujian atau peran paruh waktu, upah dihitung ulang dari pemakaian, sewa dan bersih konsisten.
 - `Search` mencapai batas bawah pada jaringan kecil dengan urutan buruk, berbenih deterministik, jujur melaporkan target yang mustahil, dan menolak jaringan bersiklus.
 
 **Simulasi**
@@ -477,6 +495,8 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Halaman Inggris tidak boleh memuat kata fungsi Indonesia** — uji ini merender HTML sungguhan lalu memindainya, dan menemukan bocoran nyata (label status, notasi rumus, nilai fakta, metrik temuan) yang lolos dari pemeriksaan kelengkapan kamus.
 - Tidak ada singkatan bulan Indonesia di dalam kalimat Inggris.
 - Angka kunci — termasuk angka halaman Optimasi, Simulasi Terpadu, dan Prakiraan Berjalan — harus benar-benar sampai ke HTML dalam kedua bahasa, diformat dari struct analisis, bukan diketik.
+- Setiap tabel harus berkelas `data` agar aturan CSS layar sempit menjadikannya wadah geser, dan aturan itu harus tetap ada.
+- Lembur jadwal nyata harus berangkat dari jadwal levelling halaman, tampil di kedua bahasa, dan beranda tidak boleh lagi menjanjikan hari "dibeli lewat crashing".
 - Rentang premi lembur, tautan PP 35/2021, dan ketiga Z empiris harus tampil di kedua bahasa, dan teks asumsi lama ("k = ", "premi (asumsi)") tidak boleh tersisa.
 - `metrik.json` harus JSON sah dengan seluruh blok baru; seluruh temuan penutup celah harus diturunkan.
 - Setiap fakta Coretax punya URL sumber yang tertaut di HTML dengan `rel="noopener"`.
@@ -510,7 +530,8 @@ Dua alur kerja GitHub Actions:
 | Peluang gagal GERT 30% (regresi) dan 25% (uji penetrasi) | Rerata putaran p/(1−p) tidak linear |
 | Kredibilitas dengan estimator momen satu kelompok | Satu selisih besar yang kebetulan bisa terbaca sistematis; prakiraan tanpa belajar ditampilkan sebagai pembanding |
 | Sewa & langganan sebanding dengan rentang pemakaian | Vendor bulanan membuat biaya naik bertahap, bukan halus |
-| Crashing = lembur PP 35/2021 tanpa kehilangan efisiensi koordinasi; slope linear memakai premi potongan penuh; peluang rework fast-tracking 30% | Premi aturan adalah batas bawah — biaya crash sesungguhnya hanya bisa lebih tinggi |
+| Crashing = lembur PP 35/2021 tanpa kehilangan efisiensi koordinasi; peluang rework fast-tracking 30% | Premi aturan adalah batas bawah — biaya crash sesungguhnya hanya bisa lebih tinggi |
+| Lembur jadwal nyata: tidak pada periode ujian, tidak untuk peran paruh waktu (DevOps), paling banyak 3,6 jam/hari | Lembur saat ujian atau untuk DevOps bisa memotong lebih banyak; durasi minimum 108 terbukti hanya di dalam aturan ini |
 | Peluang gagal cutover Coretax 35% (skenario) | Titik impasnya 0,279% — kesimpulan bertahan |
 
 **Celah yang sudah ditutup** (lima celah versi sebelumnya):
@@ -527,15 +548,22 @@ Dua alur kerja GitHub Actions:
 7. **Bobot kredibilitas k = 10 dipilih** → **estimator momen Bühlmann**: Z dihitung dari selisih dibanding derau estimasi. Hasilnya berbeda nyata dari k = 10: durasi Z 0 (bukan 61,5%), biaya Z 85%, ujian Z 98%.
 8. **Premi crash 75% diasumsikan** → **premi lembur PP 35/2021** per aktivitas (75%–87,5%), dan lima aktivitas dua hari ternyata tidak boleh dipotong secara hukum; durasi crash minimum naik dari 63 ke 68 hari.
 
+**Celah putaran ketiga**:
+
+9. **Slope crash rata-rata** → **biaya lembur per hari** yang cembung, di model, serakah, dan LP. Akibatnya klaim lama "serakah tidak optimal" ternyata artefak slope rata-rata; kini semua teks mengikuti hasil perbandingan, bukan ditulis tetap.
+10. **Saran membeli hari dari kurva crashing CPM** untuk jadwal yang tidak bisa dijalankan → **lembur sah pada jadwal levelling**: hanya 5 hari (113 → 108, terbukti) seharga Rp 450.937, bukan Rp 191.563.
+11. **12 dari 15 halaman bergeser horizontal di layar HP** → tabel menjadi wadah geser di layar sempit; 30 halaman tanpa geser pada 400 px, dikunci uji struktur.
+
 Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; keempat periode ujian diambil dari lampiran kalender akademik resmi, dan UAS ganjil ternyata 19–31 Januari 2026 — seminggu lebih lambat dari asumsi lama 12–23 Januari.
 
 **Batas yang tersisa** (bukan pekerjaan yang lupa, melainkan batas yang harus diketahui):
 
 1. **Optimalitas berlaku di dalam model isi pekerjaan** — laju pecahan tanpa biaya berpindah konteks; tim sungguhan bisa sedikit lebih lambat.
 2. **Parameter tanpa data tetap asumsi** — kapasitas ujian dan bobot kredibilitas kini diestimasi dari realisasi, premi lembur dari PP 35/2021; peluang gagal GERT, λ risiko, dan peluang rework fast-tracking masih asumsi dengan uji kepekaan karena belum ada data untuk mengukurnya.
-3. **Premi lembur adalah batas bawah** — aturan tidak memuat kehilangan efisiensi koordinasi, dan slope linear memakai premi potongan penuh.
-4. **Estimator kredibilitas memakai satu kelompok data** — satu selisih besar yang kebetulan bisa terbaca sebagai penyimpangan sistematis; data lintas proyek akan menstabilkannya.
-5. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
+3. **Premi lembur adalah batas bawah, biaya lembur jadwal nyata adalah batas atas** — aturan tidak memuat kehilangan efisiensi koordinasi; biaya lembur per durasi pada jadwal levelling adalah rencana termurah yang ditemukan, bukan minimum terbukti.
+4. **Batas lembur crashing CPM diperiksa per aktivitas, bukan per orang** — pada jaringan CPM satu orang sudah terjadwal di dua pekerjaan sekaligus, jadi pemeriksaan per orang baru bermakna di jadwal levelling (dan di sana sudah dilakukan).
+5. **Estimator kredibilitas memakai satu kelompok data** — satu selisih besar yang kebetulan bisa terbaca sebagai penyimpangan sistematis; data lintas proyek akan menstabilkannya.
+6. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
 
 ---
 

@@ -32,9 +32,15 @@ func TestExactIsNeverWorseThanGreedy(t *testing.T) {
 			t.Errorf("titik %d lebih murah dari optimum yang dilaporkan", p.Duration)
 		}
 	}
-	// Mengunci temuan halaman Optimasi: serakah tidak optimal pada jaringan ini.
-	if x.GreedyOptimal || x.MaxGreedyExcess <= 0 {
-		t.Errorf("serakah seharusnya melebihi optimum eksak pada paling tidak satu titik, kelebihan %v", x.MaxGreedyExcess)
+	// Laporan optimalitas serakah harus konsisten dengan titik-titiknya.
+	var worst float64
+	for _, p := range x.Points {
+		if p.Greedy >= 0 && p.Greedy-p.CrashCost > worst {
+			worst = p.Greedy - p.CrashCost
+		}
+	}
+	if (worst > 0.5) == x.GreedyOptimal || math.Abs(worst-x.MaxGreedyExcess) > 0.5 && !x.GreedyOptimal {
+		t.Errorf("GreedyOptimal %v, kelebihan terbesar %v, kelebihan dari titik %v", x.GreedyOptimal, x.MaxGreedyExcess, worst)
 	}
 	if be := x.BreakEvenPerDay(x.Normal - 5); be <= 0 {
 		t.Errorf("nilai impas per hari = %v, seharusnya positif", be)
@@ -81,7 +87,7 @@ func TestExactMatchesBruteForce(t *testing.T) {
 			var cost float64
 			for k, a := range acts {
 				dur[a.ID] = a.Duration - cut[k]
-				cost += float64(cut[k]) * plans[k].SlopePerDay
+				cost += plans[k].CostToCut(cut[k])
 			}
 			r := schedule.MustCompute(acts, schedule.Options{DurationOf: func(a model.Activity) int { return dur[a.ID] }})
 			for T := r.Duration; T <= x.Normal; T++ {
@@ -115,6 +121,39 @@ func TestExactMatchesBruteForce(t *testing.T) {
 	}
 	if x.ExactMin != minT {
 		t.Errorf("durasi minimum LP %d, brute force %d", x.ExactMin, minT)
+	}
+}
+
+// TestGreedyCanMissTheExactOptimum: serakah mendahulukan satu potongan yang
+// memendekkan proyek sebelum mencoba pasangan. Pada jaringan dengan satu
+// aktivitas bersama yang mahal dan dua cabang paralel yang murah, satu
+// potongan bersama itu dipilih walaupun pasangan cabangnya lebih murah.
+func TestGreedyCanMissTheExactOptimum(t *testing.T) {
+	shared := []model.TeamSlot{{Role: model.RoleTL, Alloc: 1}, {Role: model.RoleBE, Alloc: 0.5}, {Role: model.RoleFE, Alloc: 0.5}}
+	ux := []model.TeamSlot{{Role: model.RoleUX, Alloc: 1}}
+	acts := []model.Activity{
+		{ID: "S", Duration: 5, Optimistic: 4, Pessimistic: 7, Team: shared},
+		{ID: "P", Duration: 5, Optimistic: 4, Pessimistic: 7, Team: ux, Pred: []model.Predecessor{model.FS("S")}},
+		{ID: "Q", Duration: 5, Optimistic: 4, Pessimistic: 7, Team: ux, Pred: []model.Predecessor{model.FS("S")}},
+	}
+	g, err := compress.Crash(acts, model.RateCard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	x, err := compress.Exact(acts, model.RateCard, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, p := acts[0].Crash(model.RateCard), acts[1].Crash(model.RateCard)
+	if len(g.Steps) == 0 || len(g.Steps[0].Crashed) != 1 || g.Steps[0].Crashed[0] != "S" {
+		t.Fatalf("langkah serakah pertama %v, mau S", g.Steps)
+	}
+	pt, ok := x.PointAt(9)
+	if !ok || math.Abs(pt.CrashCost-2*p.Marginal[0]) > 0.5 || pt.Cuts["S"] != 0 {
+		t.Errorf("LP pada 9 hari: %+v, mau P + Q seharga %v", pt, 2*p.Marginal[0])
+	}
+	if x.GreedyOptimal || math.Abs(x.MaxGreedyExcess-(s.Marginal[0]-2*p.Marginal[0])) > 0.5 {
+		t.Errorf("kelebihan serakah %v, mau %v", x.MaxGreedyExcess, s.Marginal[0]-2*p.Marginal[0])
 	}
 }
 

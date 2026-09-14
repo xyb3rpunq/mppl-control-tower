@@ -184,7 +184,7 @@
   <p class="small muted">{{tx $cr.Exhausted $l}}</p>
 
   <h3>{{if eq $l "id"}}Crashing eksak dan biaya total{{else}}Exact crashing and total cost{{end}}</h3>
-  <p class="section-intro small">{{if eq $l "id"}}Untuk setiap tenggat T, LP meminimalkan jumlah slope × hari dipotong dengan batasan setiap relasi FS dan setiap aktivitas selesai paling lambat T. Matriks batasannya unimodular total, sehingga solusi simpleks selalu berupa hari bulat dan langsung bisa dijalankan - setiap solusi tetap diperiksa ulang dengan CPM. Versi kedua menambahkan biaya sewa server dan langganan tools ({{rp $a.RentalDaily $l}} per hari setelah semuanya berjalan): memendekkan proyek juga memendekkan tagihan.{{else}}For each deadline T, the LP minimises the sum of slope × days cut, subject to every FS relation and every activity finishing by T. The constraint matrix is totally unimodular, so the simplex solution is always whole days and directly executable - each solution is still re-checked with CPM. The second version adds server rental and tool subscriptions ({{rp $a.RentalDaily $l}} per day once all are running): shortening the project also shortens the bill.{{end}}</p>
+  <p class="section-intro small">{{if eq $l "id"}}Untuk setiap tenggat T, LP meminimalkan jumlah biaya marjinal hari-hari yang dipotong - hari kedua dari aktivitas yang sama lebih mahal dari hari pertama - dengan batasan setiap relasi FS dan setiap aktivitas selesai paling lambat T. Matriks batasannya unimodular total, sehingga solusi simpleks selalu berupa hari bulat dan langsung bisa dijalankan - setiap solusi tetap diperiksa ulang dengan CPM. Versi kedua menambahkan biaya sewa server dan langganan tools ({{rp $a.RentalDaily $l}} per hari setelah semuanya berjalan): memendekkan proyek juga memendekkan tagihan.{{else}}For each deadline T, the LP minimises the sum of the marginal costs of the days cut - the second day from the same activity costs more than the first - subject to every FS relation and every activity finishing by T. The constraint matrix is totally unimodular, so the simplex solution is always whole days and directly executable - each solution is still re-checked with CPM. The second version adds server rental and tool subscriptions ({{rp $a.RentalDaily $l}} per day once all are running): shortening the project also shortens the bill.{{end}}</p>
   <div class="kpi-grid four">
     <div class="kpi {{if $ex.GreedyOptimal}}good{{else}}bad{{end}}"><p class="kpi-label">{{if eq $l "id"}}Serakah vs eksak{{else}}Greedy vs exact{{end}}</p><p class="kpi-value">{{if $ex.GreedyOptimal}}={{else}}+{{rp $ex.MaxGreedyExcess $l}}{{end}}</p><p class="kpi-note">{{if $ex.GreedyOptimal}}{{if eq $l "id"}}serakah optimal di setiap titik{{else}}greedy is optimal at every point{{end}}{{else}}{{if eq $l "id"}}kelebihan terbesar serakah{{else}}largest greedy excess{{end}}{{end}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum eksak{{else}}Exact minimum duration{{end}}</p><p class="kpi-value">{{$ex.ExactMin}}</p><p class="kpi-note">{{if eq $l "id"}}serakah{{else}}greedy{{end}} {{$cr.MinDuration}}</p></div>
@@ -213,11 +213,46 @@
     </table>
   </div>
 
-  <h3>{{if eq $l "id"}}Batas crash per aktivitas{{else}}Crash limits per activity{{end}}</h3>
-  <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), slope = biaya tenaga kerja harian × premi lembur. Premi tidak diasumsikan: pekerjaan hari yang dipotong dibagi rata sebagai jam lembur ke hari yang tersisa, lalu dibayar menurut <a href="{{overtimeURL}}" rel="noopener">PP 35/2021</a> - jam pertama 1,5×, jam berikutnya 2× upah sejam, paling lama 4 jam sehari. Empat aktivitas tidak bisa dipercepat dengan uang, dan {{illegalCrashCount}} aktivitas dua hari tidak boleh dipotong karena butuh 8 jam lembur dalam sehari.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), slope = daily labour cost × overtime premium. The premium is not assumed: the cut day's work is spread as overtime over the remaining days and paid under <a href="{{overtimeURL}}" rel="noopener">Government Regulation 35/2021</a> - first hour 1.5×, later hours 2× the hourly wage, at most 4 hours a day. Four activities cannot be accelerated with money, and {{illegalCrashCount}} two-day activities may not be cut because they would need 8 overtime hours in a day.{{end}}</p>
+  <h3>{{if eq $l "id"}}Lembur pada jadwal yang bisa dijalankan{{else}}Overtime on the executable schedule{{end}}</h3>
+  {{$ot := $a.Overtime}}
+  <p class="section-intro small">{{if eq $l "id"}}Kurva di atas memotong jaringan CPM {{$a.Plan.Duration}} hari, yang tidak menghormati kapasitas orang. Pada jadwal levelling {{$ot.Levelled}} hari, lembur tidak memendekkan pekerjaan - lembur menambah hari-orang yang tersedia. Batasnya {{num $ot.HoursPerDay 1 $l}} jam sehari, supaya lembur setiap hari kerja tetap di bawah 18 jam seminggu (<a href="{{overtimeURL}}" rel="noopener">PP 35/2021</a> Pasal 26). Lembur hanya untuk peran penuh waktu{{if $ot.Excluded}} ({{range $i, $r := $ot.Excluded}}{{if $i}}, {{end}}{{$r}}{{end}} paruh waktu tidak diberi lembur){{end}}, dan tidak pada periode ujian: tim yang sedang ujian tidak menjadi lebih tersedia karena dibayar lembur.{{else}}The curve above cuts the {{$a.Plan.Duration}}-day CPM network, which ignores people's capacity. On the {{$ot.Levelled}}-day levelled schedule, overtime does not shorten the work - it adds available person-days. The limit is {{num $ot.HoursPerDay 1 $l}} hours a day, so overtime on every working day stays under 18 hours a week (<a href="{{overtimeURL}}" rel="noopener">Government Regulation 35/2021</a> Art. 26). Only full-time roles work overtime{{if $ot.Excluded}} (part-time {{range $i, $r := $ot.Excluded}}{{if $i}}, {{end}}{{$r}}{{end}} gets none){{end}}, and never during exam periods: a team sitting exams does not become more available because overtime is paid.{{end}}</p>
+  {{if $ot.Points}}{{$minp := index $ot.Points (sub (len $ot.Points) 1)}}{{$days := sub $ot.Levelled $ot.MinDuration}}
+  <div class="kpi-grid four">
+    <div class="kpi {{if $ot.MinProven}}good{{else}}warn{{end}}"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum dengan lembur{{else}}Minimum duration with overtime{{end}}</p><p class="kpi-value">{{$ot.MinDuration}}</p><p class="kpi-note">{{if eq $l "id"}}batas bawah{{else}}lower bound{{end}} {{$ot.Bound.Value}}{{if $ot.MinProven}} - {{if eq $l "id"}}terbukti{{else}}proven{{end}}{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Hari yang bisa dibeli{{else}}Days that can be bought{{end}}</p><p class="kpi-value">{{$days}}</p><p class="kpi-note">{{if eq $l "id"}}dari{{else}}from{{end}} {{$ot.Levelled}} {{t $l "t.days"}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Upah lembur{{else}}Overtime pay{{end}} {{$days}} {{t $l "t.days"}}</p><p class="kpi-value">{{rpShort $minp.Cost $l}}</p><p class="kpi-note">{{if eq $l "id"}}bersih{{else}}net{{end}} {{rpShort $minp.Net $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Crashing CPM, hari sama{{else}}CPM crashing, same days{{end}}</p><p class="kpi-value">{{rpShort (exactAt (sub $ex.Normal $days)).CrashCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}hanya sah di atas kertas{{else}}valid only on paper{{end}}</p></div>
+  </div>
   <div class="table-wrap">
     <table class="data compact">
-      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Crash{{else}}Crash{{end}}</th><th class="num">{{if eq $l "id"}}Lembur/hari{{else}}Overtime/day{{end}}</th><th class="num">{{if eq $l "id"}}Premi{{else}}Premium{{end}}</th><th class="num">{{if eq $l "id"}}Slope/hari{{else}}Slope/day{{end}}</th><th>{{if eq $l "id"}}Catatan{{else}}Note{{end}}</th></tr></thead>
+      <thead><tr><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th>{{if eq $l "id"}}Lembur per peran{{else}}Overtime by role{{end}}</th><th class="num">{{if eq $l "id"}}Hari-peran lembur{{else}}Overtime role-days{{end}}</th><th class="num">{{if eq $l "id"}}Maks/minggu{{else}}Max/week{{end}}</th><th class="num">{{if eq $l "id"}}Upah lembur{{else}}Overtime pay{{end}}</th><th class="num">{{if eq $l "id"}}Sewa dihemat{{else}}Rentals saved{{end}}</th><th class="num">{{if eq $l "id"}}Bersih{{else}}Net{{end}}</th></tr></thead>
+      <tbody>
+        <tr><td class="num">{{$ot.Levelled}}</td><td>{{date ($a.FinishISO $ot.Levelled) $l}}</td><td class="small">{{if eq $l "id"}}tanpa lembur{{else}}no overtime{{end}}</td><td class="num">0</td><td class="num">—</td><td class="num">{{rp 0.0 $l}}</td><td class="num">—</td><td class="num">{{rp 0.0 $l}}</td></tr>
+        {{range $ot.Points}}
+        <tr class="{{if eq .Duration $ot.MinDuration}}highlight{{end}}">
+          <td class="num">{{.Duration}}</td>
+          <td>{{date ($a.FinishISO .Duration) $l}}</td>
+          <td class="small">{{$a.OvertimeRoleText . $l}}</td>
+          <td class="num">{{$a.OvertimeDays .}}</td>
+          <td class="num">{{num .MaxWeek 1 $l}} {{if eq $l "id"}}jam{{else}}h{{end}}</td>
+          <td class="num">{{rp .Cost $l}}</td>
+          <td class="num">{{rp .RentalSaved $l}}</td>
+          <td class="num"><strong>{{rp .Net $l}}</strong></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">{{if eq $l "id"}}Durasi minimum {{$ot.MinDuration}} hari {{if $ot.MinProven}}terbukti: batas bawah energetik pada kapasitas lembur maksimum juga {{$ot.Bound.Value}}, dan setiap rencana lembur sah memakai kapasitas yang tidak lebih besar{{else}}belum terbukti: batas bawah pada kapasitas lembur maksimum {{$ot.Bound.Value}}{{end}}. Upah per durasi adalah rencana termurah yang ditemukan dengan memangkas lembur yang tidak diperlukan - batas atas biaya minimum, bukan minimum yang terbukti.{{else}}The minimum of {{$ot.MinDuration}} days is {{if $ot.MinProven}}proven: the energetic lower bound at maximum overtime capacity is also {{$ot.Bound.Value}}, and every legal overtime plan uses no more capacity{{else}}not proven: the lower bound at maximum overtime capacity is {{$ot.Bound.Value}}{{end}}. The pay per duration is the cheapest plan found by trimming overtime that is not needed - an upper bound on the minimum cost, not a proven minimum.{{end}}</p>
+  {{else}}
+  <p class="small">{{if eq $l "id"}}Lembur sah tidak memendekkan jadwal ini sama sekali.{{else}}Legal overtime does not shorten this schedule at all.{{end}}</p>
+  {{end}}
+
+  <h3>{{if eq $l "id"}}Batas crash per aktivitas{{else}}Crash limits per activity{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), biaya memotong k hari = upah harian × k × premi lembur(k). Premi tidak diasumsikan: pekerjaan hari yang dipotong dibagi rata sebagai jam lembur ke hari yang tersisa, lalu dibayar menurut <a href="{{overtimeURL}}" rel="noopener">PP 35/2021</a> - jam pertama 1,5×, jam berikutnya 2× upah sejam, paling lama 4 jam sehari. Karena jam kedua dan seterusnya dibayar 2×, hari kedua yang dipotong dari aktivitas yang sama lebih mahal dari hari pertama. Empat aktivitas tidak bisa dipercepat dengan uang, dan {{illegalCrashCount}} aktivitas dua hari tidak boleh dipotong karena butuh 8 jam lembur dalam sehari.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), cost of cutting k days = daily wage × k × overtime premium(k). The premium is not assumed: the cut day's work is spread as overtime over the remaining days and paid under <a href="{{overtimeURL}}" rel="noopener">Government Regulation 35/2021</a> - first hour 1.5×, later hours 2× the hourly wage, at most 4 hours a day. Because the second and later hours are paid 2×, the second day cut from the same activity costs more than the first. Four activities cannot be accelerated with money, and {{illegalCrashCount}} two-day activities may not be cut because they would need 8 overtime hours in a day.{{end}}</p>
+  <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Crash{{else}}Crash{{end}}</th><th class="num">{{if eq $l "id"}}Lembur/hari{{else}}Overtime/day{{end}}</th><th class="num">{{if eq $l "id"}}Premi per hari dipotong{{else}}Premium per day cut{{end}}</th><th class="num">{{if eq $l "id"}}Biaya per hari dipotong{{else}}Cost per day cut{{end}}</th><th>{{if eq $l "id"}}Catatan{{else}}Note{{end}}</th></tr></thead>
       <tbody>
         {{range activities}}
         {{if not .Milestone}}
@@ -228,8 +263,8 @@
           <td class="num">{{.Duration}}</td>
           <td class="num">{{if $cp.Allowed}}{{$cp.CrashDur}}{{else}}—{{end}}</td>
           <td class="num">{{if $cp.Allowed}}{{num $cp.OvertimeHrs 2 $l}} {{if eq $l "id"}}jam{{else}}h{{end}}{{else}}—{{end}}</td>
-          <td class="num">{{if $cp.Allowed}}{{pct $cp.Premium 1 $l}}{{else}}—{{end}}</td>
-          <td class="num">{{if $cp.Allowed}}{{rp $cp.SlopePerDay $l}}{{else}}—{{end}}</td>
+          <td class="num">{{if $cp.Allowed}}{{range $i, $m := $cp.MarginalPremium}}{{if $i}} → {{end}}{{pct $m 1 $l}}{{end}}{{else}}—{{end}}</td>
+          <td class="num">{{if $cp.Allowed}}{{range $i, $m := $cp.Marginal}}{{if $i}} → {{end}}{{rp $m $l}}{{end}}{{else}}—{{end}}</td>
           <td class="small">{{if not $cp.Allowed}}{{tx $cp.Reason $l}}{{end}}</td>
         </tr>
         {{end}}

@@ -110,3 +110,48 @@ func TestCrashPlansAreLegal(t *testing.T) {
 		t.Error("aturan lembur harus bersumber")
 	}
 }
+
+// TestCrashCostIsConvex: biaya marjinal tiap hari yang dipotong tidak pernah
+// menurun, jumlahnya sama dengan biaya potongan penuh, dan contoh M = 6 cocok
+// dengan hitungan tangan.
+func TestCrashCostIsConvex(t *testing.T) {
+	for _, a := range model.Activities {
+		p := a.Crash(model.RateCard)
+		if !p.Allowed {
+			continue
+		}
+		daily := a.LabourCost(model.RateCard) / float64(a.Duration)
+		if len(p.Marginal) != p.MaxDaysSaved || len(p.MarginalPremium) != p.MaxDaysSaved {
+			t.Errorf("%s: %d biaya marjinal untuk %d hari", a.ID, len(p.Marginal), p.MaxDaysSaved)
+		}
+		for i := 1; i < len(p.Marginal); i++ {
+			if p.Marginal[i] < p.Marginal[i-1]-1e-9 {
+				t.Errorf("%s: biaya hari ke-%d %v di bawah hari sebelumnya %v", a.ID, i+1, p.Marginal[i], p.Marginal[i-1])
+			}
+		}
+		full := daily * p.Premium * float64(p.MaxDaysSaved)
+		if math.Abs(p.CostToCut(p.MaxDaysSaved)-full) > 1e-6 || math.Abs(p.SlopePerDay*float64(p.MaxDaysSaved)-full) > 1e-6 {
+			t.Errorf("%s: jumlah marjinal %v, potongan penuh %v", a.ID, p.CostToCut(p.MaxDaysSaved), full)
+		}
+		if p.CostToCut(0) != 0 || p.CostToCut(p.MaxDaysSaved+5) != p.CostToCut(p.MaxDaysSaved) {
+			t.Errorf("%s: CostToCut di luar rentang tidak dipotong ke batas", a.ID)
+		}
+	}
+	// M = 6, upah harian 55.000: hari pertama 1,6 jam/hari selama 5 hari,
+	// hari kedua menaikkan ke 4 jam/hari selama 4 hari.
+	a17 := model.ActivityByID()["A17"].Crash(model.RateCard)
+	if len(a17.Marginal) != 2 || math.Abs(a17.Marginal[0]-37812.5) > 1e-6 || math.Abs(a17.Marginal[1]-58437.5) > 1e-6 {
+		t.Errorf("A17 marjinal %v, mau [37812,5 58437,5]", a17.Marginal)
+	}
+}
+
+// TestCrashStopsAtTheLastLegalDay: bila potongan penuh melanggar batas
+// mingguan, hari-hari yang masih sah tetap boleh dipotong.
+func TestCrashStopsAtTheLastLegalDay(t *testing.T) {
+	a := model.Activity{ID: "X", Duration: 9, Optimistic: 1, Pessimistic: 12, Team: []model.TeamSlot{{Role: model.RoleBE, Alloc: 1}}}
+	p := a.Crash(model.RateCard)
+	// k = 3: 4 jam x 5 hari = 20 jam > 18; k = 2: 16/7 jam x 5 hari = 11,4 jam.
+	if !p.Allowed || p.MaxDaysSaved != 2 || p.CrashDur != 7 || math.Abs(p.OvertimeHrs-16.0/7) > 1e-9 {
+		t.Errorf("rencana %+v, mau 2 hari sah sampai durasi 7", p)
+	}
+}

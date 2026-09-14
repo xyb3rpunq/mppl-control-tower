@@ -56,10 +56,10 @@ var upgradeFormulas = []Formula{
 	{
 		Key: "crash", Group: "kompresi", Route: "/optimasi/",
 		Name:     Text{ID: "Crashing dan slope biaya", EN: "Crashing and cost slope"},
-		Notation: Text{ID: "d_crash = max(O, M - max(1, floor(M/3)))     h = 8x / d_crash     premi = (d_crash x (1,5 min(h,1) + 2 max(h-1,0)) / 8 - x) / x     slope = (biaya tenaga kerja / M) x premi", EN: "d_crash = max(O, M - max(1, floor(M/3)))     h = 8x / d_crash     premium = (d_crash x (1.5 min(h,1) + 2 max(h-1,0)) / 8 - x) / x     slope = (labour cost / M) x premium"},
+		Notation: Text{ID: "d_crash = max(O, M - max(1, floor(M/3)))     h_k = 8k / (M - k)     biaya(k) = upah harian x ((M - k) x (1,5 min(h_k,1) + 2 max(h_k-1,0)) / 8 - k)     slope hari ke-k = biaya(k) - biaya(k-1)", EN: "d_crash = max(O, M - max(1, floor(M/3)))     h_k = 8k / (M - k)     cost(k) = daily wage x ((M - k) x (1.5 min(h_k,1) + 2 max(h_k-1,0)) / 8 - k)     slope of day k = cost(k) - cost(k-1)"},
 		Symbols: []Symbol{
-			{"slope", Text{ID: "tambahan biaya per hari yang dipotong dari satu aktivitas", EN: "extra cost per day cut from one activity"}},
-			{"x, h", Text{ID: "hari yang dipotong, dan jam lembur per hari saat pekerjaannya dibagi rata ke hari tersisa; h di atas 4 dilarang PP 35/2021", EN: "days cut, and overtime hours per day when the work is spread over the remaining days; h above 4 is prohibited by Government Regulation 35/2021"}},
+			{"slope", Text{ID: "tambahan biaya hari ke-k yang dipotong dari satu aktivitas; tidak pernah menurun terhadap k", EN: "extra cost of the k-th day cut from one activity; never decreases in k"}},
+			{"k, h_k", Text{ID: "hari yang dipotong, dan jam lembur per hari saat pekerjaannya dibagi rata ke hari tersisa; h_k di atas 4 dilarang PP 35/2021", EN: "days cut, and overtime hours per day when the work is spread over the remaining days; h_k above 4 is prohibited by Government Regulation 35/2021"}},
 			{"premi", Text{ID: "upah lembur PP 35/2021: jam pertama 1,5x, jam berikutnya 2x upah sejam (1/173 upah sebulan)", EN: "overtime pay under Government Regulation 35/2021: first hour 1.5x, later hours 2x the hourly wage (1/173 of monthly pay)"}},
 		},
 		Meaning: Text{ID: "Membeli waktu dengan uang: aktivitas kritis termurah dipercepat lebih dulu, satu hari demi satu hari, sampai tidak ada lagi yang bisa dipotong.", EN: "Buying time with money: the cheapest critical activity is accelerated first, one day at a time, until nothing more can be cut."},

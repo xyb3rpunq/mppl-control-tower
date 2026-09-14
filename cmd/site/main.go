@@ -806,6 +806,7 @@ func metricsJSON(a *site.Analysis) string {
 			"kurva_eksak":               curve,
 			"kandidat_fast_track_layak": len(a.FastViable), "durasi_semua_fast_track": a.FastAllDur,
 		}},
+		{"lembur_jadwal_nyata", overtimeJSON(a)},
 		{"simulasi_terpadu", map[string]interface{}{
 			"rho": simulate.DefaultRho, "lambda_risiko": model.RiskLoading, "iterasi": fin.Config.Iterations,
 			"lapisan": ladder, "jcl70_tenggat": a.JCL70.Duration, "jcl70_anggaran": a.JCL70.Budget,
@@ -893,4 +894,32 @@ func ruleName(r level.Rule, lang string) string {
 func crashCost(a *site.Analysis, days int) float64 {
 	v, _ := a.Crash.CostToSave(days)
 	return v
+}
+
+// overtimeJSON melaporkan lembur sah pada jadwal levelling.
+func overtimeJSON(a *site.Analysis) map[string]interface{} {
+	ot := a.Overtime
+	var points []map[string]interface{}
+	for _, p := range ot.Points {
+		hours := map[string]float64{}
+		for r, h := range p.Hours {
+			if h > 0 {
+				hours[string(r)] = h
+			}
+		}
+		points = append(points, map[string]interface{}{
+			"durasi": p.Duration, "tanggal_selesai": a.FinishISO(p.Duration), "jam_lembur_per_peran": hours,
+			"upah_lembur": p.Cost, "sewa_dihemat": p.RentalSaved, "biaya_bersih": p.Net,
+			"jam_maks_per_hari": p.MaxDay, "jam_maks_per_minggu": p.MaxWeek,
+		})
+	}
+	var excluded []string
+	for _, r := range ot.Excluded {
+		excluded = append(excluded, string(r))
+	}
+	return map[string]interface{}{
+		"durasi_tanpa_lembur": ot.Levelled, "durasi_minimum": ot.MinDuration, "batas_bawah": ot.Bound.Value,
+		"terbukti_minimum": ot.MinProven, "jam_lembur_per_hari": ot.HoursPerDay, "peran_paruh_waktu_dikecualikan": excluded,
+		"biaya_adalah_batas_atas": true, "titik": points,
+	}
 }

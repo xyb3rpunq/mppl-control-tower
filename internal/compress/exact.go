@@ -16,15 +16,19 @@ import (
 //
 // Pemecahan eksaknya adalah pemrograman linear (Kelley, 1961). Untuk tenggat T:
 //
-//	minimalkan   sum c_i x_i
-//	dengan       t_j >= t_i + d_i - x_i      untuk setiap relasi FS i -> j
+//	minimalkan   sum_i sum_k c_ik x_ik
+//	dengan       x_i = sum_k x_ik
+//	             t_j >= t_i + d_i - x_i      untuk setiap relasi FS i -> j
 //	             t_i + d_i - x_i <= E <= T   untuk setiap aktivitas i
-//	             0 <= x_i <= d_i - crash_i,  t_i >= 0
+//	             0 <= x_ik <= 1,  t_i >= 0
 //
-// Matriks batasannya adalah matriks jaringan yang unimodular total, sehingga
-// titik sudut optimum simpleks selalu bilangan bulat - potongan hari yang
-// dihasilkan LP langsung bisa dijalankan, tanpa pembulatan yang merusak
-// optimalitas. Solusinya tetap diperiksa ulang dengan CPM.
+// x_ik adalah hari ke-k yang dipotong dari aktivitas i dengan biaya marjinal
+// c_ik. Biaya lembur cembung (c_ik tidak menurun terhadap k), sehingga LP
+// mengisi hari yang lebih murah lebih dulu dan kurva biaya cembung terwakili
+// persis tanpa variabel bulat. Kolom x_ik untuk aktivitas yang sama identik,
+// dan menduplikasi kolom mempertahankan unimodularitas total matriks jaringan -
+// titik sudut optimum simpleks tetap bilangan bulat, sehingga potongan hari
+// langsung bisa dijalankan. Solusinya tetap diperiksa ulang dengan CPM.
 //
 // Dengan biaya sewa (cost.Rental), tujuan yang sama diperluas menjadi biaya
 // TOTAL: sum c_i x_i + sum tarif_k (E - t_pembeli_k). Titik terendah kurva
@@ -106,9 +110,22 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 		plans[i] = a.Crash(rates)
 	}
 
+	// Satu kolom per hari yang boleh dipotong, setelah kolom t_0..t_{n-1} dan E.
+	var segCost []float64
+	segsOf := make([][]int, n)
+	for i := range acts {
+		if !plans[i].Allowed {
+			continue
+		}
+		for _, m := range plans[i].Marginal {
+			segsOf[i] = append(segsOf[i], n+1+len(segCost))
+			segCost = append(segCost, m)
+		}
+	}
+	E := n
+	nv := n + 1 + len(segCost)
+
 	build := func(T int, withRental bool) ([]float64, [][]float64, []float64, error) {
-		nv := 2*n + 1
-		E := 2 * n
 		var A [][]float64
 		var b []float64
 		row := func() []float64 { return make([]float64, nv) }
@@ -118,7 +135,10 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 				r := row()
 				switch p.Type {
 				case "", "FS":
-					r[i], r[n+i], r[j] = 1, -1, -1
+					r[i], r[j] = 1, -1
+					for _, col := range segsOf[i] {
+						r[col] = -1
+					}
 					A, b = append(A, r), append(b, -float64(acts[i].Duration)-float64(p.Lag))
 				case "SS":
 					r[i], r[j] = 1, -1
@@ -128,7 +148,10 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 				}
 			}
 			r := row()
-			r[j], r[n+j], r[E] = 1, -1, -1
+			r[j], r[E] = 1, -1
+			for _, col := range segsOf[j] {
+				r[col] = -1
+			}
 			A, b = append(A, r), append(b, -float64(a.Duration))
 			if len(a.Pred) == 0 {
 				// Tanggal mulai proyek dikunci Project Charter. Tanpa batasan
@@ -150,20 +173,12 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 			r[E] = -1
 			A, b = append(A, r), append(b, -float64(T))
 		}
-		for i := range acts {
-			r := row()
-			r[n+i] = 1
-			u := 0.0
-			if plans[i].Allowed {
-				u = float64(acts[i].Duration - plans[i].CrashDur)
-			}
-			A, b = append(A, r), append(b, u)
-		}
 		c := make([]float64, nv)
-		for i := range acts {
-			if plans[i].Allowed {
-				c[n+i] = plans[i].SlopePerDay
-			}
+		for k, m := range segCost {
+			r := row()
+			r[n+1+k] = 1
+			A, b = append(A, r), append(b, 1)
+			c[n+1+k] = m
 		}
 		if withRental {
 			for _, rt := range rentals {
@@ -178,9 +193,13 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 		cuts := map[string]int{}
 		dur := make(map[string]int, n)
 		for i, a := range acts {
-			k := int(math.Round(x[n+i]))
-			if math.Abs(x[n+i]-float64(k)) > 1e-6 {
-				return nil, fmt.Errorf("compress: LP memberi potongan pecahan %v pada %s", x[n+i], a.ID)
+			var xi float64
+			for _, col := range segsOf[i] {
+				xi += x[col]
+			}
+			k := int(math.Round(xi))
+			if math.Abs(xi-float64(k)) > 1e-6 {
+				return nil, fmt.Errorf("compress: LP memberi potongan pecahan %v pada %s", xi, a.ID)
 			}
 			dur[a.ID] = a.Duration - k
 			if k > 0 {
@@ -235,7 +254,7 @@ func Exact(acts []model.Activity, rates map[model.Role]float64, greedy Curve) (T
 			return TradeOff{}, fmt.Errorf("compress: LP biaya total untuk %d hari %v", T, tot.Status)
 		}
 		for _, rt := range rentals {
-			pt.Rental += rt.Rate * (tot.X[2*n] - tot.X[rt.Index])
+			pt.Rental += rt.Rate * (tot.X[E] - tot.X[rt.Index])
 		}
 		pt.Total = clean(tot.Objective)
 		pt.TotalCrash = clean(pt.Total - pt.Rental)

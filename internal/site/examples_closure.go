@@ -56,8 +56,31 @@ func closureExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 				p5.Duration, strings.Join(cuts, ", "), tr2(lang, "crash", "crash"), rp(p5.TotalCrash), tr2(lang, "sewa", "rentals"), rp(p5.Rental)),
 			Result: fmt.Sprintf("%s(%d) = %s;  %s(%d) = %s", tr2(lang, "total", "total"), p5.Duration, rp(p5.Total), tr2(lang, "total", "total"), p0.Duration, rp(p0.Total)),
 			Comment: model.Text{
-				ID: fmt.Sprintf("Mempercepat lima hari berbiaya bersih %s, bukan premi %s, karena sewa ikut memendek. Kurva serakah lebih mahal dari LP sampai %s pada satu titik.", rp(a.TradeOffNet(5)), rp(p5.CrashCost), rp(a.Exact.MaxGreedyExcess)),
-				EN: fmt.Sprintf("Accelerating five days costs a net %s, not the %s premium, because rentals shorten too. The greedy curve costs up to %s more than the LP at one point.", rp(a.TradeOffNet(5)), rp(p5.CrashCost), rp(a.Exact.MaxGreedyExcess)),
+				ID: fmt.Sprintf("Mempercepat lima hari berbiaya bersih %s, bukan premi %s, karena sewa ikut memendek. %s", rp(a.TradeOffNet(5)), rp(p5.CrashCost), greedyNoteID(a)),
+				EN: fmt.Sprintf("Accelerating five days costs a net %s, not the %s premium, because rentals shorten too. %s", rp(a.TradeOffNet(5)), rp(p5.CrashCost), greedyNoteEN(a)),
+			},
+		}
+	}
+
+	if ot := a.Overtime; len(ot.Points) > 0 {
+		p := ot.Points[len(ot.Points)-1]
+		var role model.Role
+		for _, r := range p.Roles() {
+			if p.Hours[r] > p.Hours[role] {
+				role = r
+			}
+		}
+		first := ot.Points[0]
+		ex["lemburlevelling"] = WorkedExample{
+			Substitution: fmt.Sprintf("h = min(4, 18/5) = %s;  %s %d → %d;  %s = %s %s (%d %s)",
+				n(ot.HoursPerDay, 1), tr2(lang, "durasi", "duration"), ot.Levelled, ot.MinDuration,
+				string(role), n(p.Hours[role], 1), tr2(lang, "jam", "h"), p.Days[role], tr2(lang, "hari", "days")),
+			Result: fmt.Sprintf("%s(%d) = %s;  %s(%d) = %s;  %s = %d",
+				tr2(lang, "upah", "pay"), p.Duration, rp(p.Cost), tr2(lang, "upah", "pay"), first.Duration, rp(first.Cost),
+				tr2(lang, "batas bawah", "lower bound"), ot.Bound.Value),
+			Comment: model.Text{
+				ID: fmt.Sprintf("Crashing CPM menyebut %d hari seharga %s. Pada jadwal yang bisa dijalankan, hari yang sama butuh upah lembur %s, bersih %s setelah sewa yang dihemat.", ot.Levelled-ot.MinDuration, rp(cpmCost(a, ot.Levelled-ot.MinDuration)), rp(p.Cost), rp(p.Net)),
+				EN: fmt.Sprintf("CPM crashing prices %d days at %s. On the executable schedule the same days need %s in overtime pay, net %s after the rentals saved.", ot.Levelled-ot.MinDuration, rp(cpmCost(a, ot.Levelled-ot.MinDuration)), rp(p.Cost), rp(p.Net)),
 			},
 		}
 	}
@@ -158,4 +181,10 @@ func RiskCostDelta(a *Analysis) float64 {
 	}
 	l1, l2 := a.Ladder[simulate.LayerCorrelated], a.Ladder[simulate.LayerRisks]
 	return (l2.CostMean - l2.TimeCost) - (l1.CostMean - l1.TimeCost)
+}
+
+// cpmCost adalah biaya crashing eksak pada jaringan CPM untuk memotong days hari.
+func cpmCost(a *Analysis, days int) float64 {
+	p, _ := a.Exact.PointAt(a.Exact.Normal - days)
+	return p.CrashCost
 }

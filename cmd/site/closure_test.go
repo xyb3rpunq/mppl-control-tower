@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func TestClosurePagesCarryLiveNumbers(t *testing.T) {
 		opt := pages[lang+" /optimasi/"]
 		for _, want := range []string{
 			render.Rp(a.TradeOffNet(5), lang),
-			render.Rp(a.Exact.MaxGreedyExcess, lang),
+			greedyClaim(a.Exact.GreedyOptimal, a.Exact.MaxGreedyExcess, lang),
 			map[string]string{"id": "Terbukti optimal", "en": "Proven optimal"}[lang],
 		} {
 			if !strings.Contains(opt, want) {
@@ -70,7 +71,7 @@ func TestClosureFindingsArePresent(t *testing.T) {
 	for _, f := range a.Findings {
 		keys[f.Key] = true
 	}
-	for _, k := range []string{"levelling-terbukti-optimal", "crashing-hampir-impas", "risiko-bergerombol", "rework-berulang", "prakiraan-berjalan", "ujian-terkalibrasi"} {
+	for _, k := range []string{"levelling-terbukti-optimal", "crashing-hampir-impas", "risiko-bergerombol", "rework-berulang", "prakiraan-berjalan", "ujian-terkalibrasi", "lembur-jadwal-nyata"} {
 		if !keys[k] {
 			t.Errorf("temuan %q tidak diturunkan", k)
 		}
@@ -166,6 +167,54 @@ func TestCalibratedParametersReachThePages(t *testing.T) {
 		t.Error("metrik.json harus melaporkan kredibilitas empiris beserta varians penaksirnya")
 	}
 }
+
+// TestOvertimeReachesThePages: lembur sah pada jadwal nyata harus memakai
+// jadwal levelling yang sama, tampil di kedua bahasa, dan menggantikan saran
+// lama yang membeli hari dari jaringan CPM.
+func TestOvertimeReachesThePages(t *testing.T) {
+	a := analysisFor(t)
+	ot := a.Overtime
+	if ot.Levelled != a.Level.Duration || ot.Base.Duration != a.Level.Duration {
+		t.Fatalf("lembur berangkat dari %d hari, jadwal halaman %d", ot.Levelled, a.Level.Duration)
+	}
+	minp, ok := ot.PointAt(ot.MinDuration)
+	if !ok {
+		t.Fatal("tidak ada rencana lembur pada durasi minimum")
+	}
+	pages := renderAll(t)
+	for _, lang := range i18n.Langs {
+		opt := pages[lang+" /optimasi/"]
+		for _, want := range []string{
+			render.Rp(minp.Cost, lang), render.Rp(minp.Net, lang), a.OvertimeRoleText(minp, lang),
+			map[string]string{"id": "Lembur pada jadwal yang bisa dijalankan", "en": "Overtime on the executable schedule"}[lang],
+		} {
+			if !strings.Contains(opt, want) {
+				t.Errorf("/optimasi/ (%s) tidak memuat %q", lang, want)
+			}
+		}
+		home := pages[lang+" /"]
+		for _, bad := range []string{"dibeli lewat crashing", "bought through crashing"} {
+			if strings.Contains(home, bad) {
+				t.Errorf("beranda (%s) masih menjanjikan hari dari crashing CPM: %q", lang, bad)
+			}
+		}
+	}
+	for _, f := range a.Findings {
+		if f.Key == "jadwal-tak-terjalankan" && !strings.Contains(f.Action.ID, fmtRpForTest(minp.Cost)) {
+			t.Errorf("rekomendasi jadwal tak terjalankan tidak memakai upah lembur: %q", f.Action.ID)
+		}
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(metricsJSON(a)), &doc); err != nil {
+		t.Fatal(err)
+	}
+	lj := doc["lembur_jadwal_nyata"].(map[string]any)
+	if lj["terbukti_minimum"] != true || int(lj["durasi_minimum"].(float64)) != ot.MinDuration || len(lj["titik"].([]any)) != len(ot.Points) {
+		t.Errorf("metrik.json lembur tidak lengkap: %v", lj)
+	}
+}
+
+func fmtRpForTest(v float64) string { return render.Rp(v, "id") }
 
 func TestForecastIsConsistentWithActuals(t *testing.T) {
 	a := analysisFor(t)
@@ -320,5 +369,39 @@ func TestAssetVersionBustsStaleCaches(t *testing.T) {
 	}
 	if strings.Contains(string(sw), "__ASSET_VERSION__") || !strings.Contains(string(sw), "ct-mppl-") {
 		t.Error("service worker harus memuat nama cache berversi, bukan penanda mentah")
+	}
+}
+
+// greedyClaim adalah teks KPI serakah vs eksak yang harus tampil sesuai hasilnya.
+func greedyClaim(optimal bool, excess float64, lang string) string {
+	if optimal {
+		return map[string]string{"id": "serakah optimal di setiap titik", "en": "greedy is optimal at every point"}[lang]
+	}
+	return "+" + render.Rp(excess, lang)
+}
+
+// TestTablesNeverWidenThePage: halaman tidak boleh bergeser horizontal di
+// layar sempit. Setiap tabel harus berkelas "data" (aturan CSS layar sempit
+// menjadikannya wadah geser) atau berada di dalam .table-wrap, dan aturan
+// CSS-nya harus tetap ada.
+func TestTablesNeverWidenThePage(t *testing.T) {
+	css, err := os.ReadFile("web/static/css/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule := regexp.MustCompile(`(?s)@media \(max-width: 720px\) \{\s*table\.data \{[^}]*display: block;[^}]*overflow-x: auto;`)
+	if !rule.Match(css) {
+		t.Fatal("aturan CSS tabel geser di layar sempit hilang")
+	}
+	if !strings.Contains(string(css), ".risk-list { display: grid; grid-template-columns: minmax(0, 1fr);") {
+		t.Error("kolom grid kartu risiko harus boleh menyusut, atau tabelnya melebarkan halaman")
+	}
+	table := regexp.MustCompile(`<table(\s[^>]*)?>`)
+	for key, html := range renderAll(t) {
+		for _, m := range table.FindAllStringSubmatch(html, -1) {
+			if !strings.Contains(m[1], `class="data`) {
+				t.Errorf("%s: tabel tanpa kelas data tidak tertangani aturan layar sempit: %s", key, m[0])
+			}
+		}
 	}
 }

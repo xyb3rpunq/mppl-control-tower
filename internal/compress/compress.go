@@ -57,16 +57,21 @@ func (c Curve) CostToSave(n int) (float64, bool) {
 // dan hasilnya jujur - tidak ada hari yang "dibeli" tetapi tidak benar-benar
 // memendekkan proyek.
 //
-// Serakah per hari tidak menjamin kurva optimum global (pemecahan eksaknya
-// adalah pemrograman linear). Untuk jaringan dengan slope linear dan satu
-// langkah per hari, selisihnya kecil, dan heuristik ini dinyatakan terbuka.
+// Setiap potongan dibayar dengan biaya marjinal hari itu, bukan slope rata-rata:
+// hari kedua yang dipotong dari aktivitas yang sama lebih mahal dari hari
+// pertama. Serakah per hari tidak menjamin kurva optimum global (pemecahan
+// eksaknya adalah pemrograman linear), dan heuristik ini dinyatakan terbuka.
 func Crash(acts []model.Activity, rates map[model.Role]float64) (Curve, error) {
 	dur := make(map[string]int, len(acts))
+	normal := make(map[string]int, len(acts))
 	plans := make(map[string]model.CrashPlan, len(acts))
 	for _, a := range acts {
 		dur[a.ID] = a.Duration
+		normal[a.ID] = a.Duration
 		plans[a.ID] = a.Crash(rates)
 	}
+	// next adalah biaya marjinal memotong satu hari lagi dari aktivitas id.
+	next := func(id string) float64 { return plans[id].Marginal[normal[id]-dur[id]] }
 	durOf := func(a model.Activity) int { return dur[a.ID] }
 
 	base, err := schedule.Compute(acts, schedule.Options{DurationOf: durOf})
@@ -96,7 +101,7 @@ func Crash(acts []model.Activity, rates map[model.Role]float64) (Curve, error) {
 			}
 		}
 		sort.Slice(cand, func(i, j int) bool {
-			ci, cj := plans[cand[i]].SlopePerDay, plans[cand[j]].SlopePerDay
+			ci, cj := next(cand[i]), next(cand[j])
 			if ci != cj {
 				return ci < cj
 			}
@@ -119,7 +124,7 @@ func Crash(acts []model.Activity, rates map[model.Role]float64) (Curve, error) {
 		cost := func(ids []string) float64 {
 			var c float64
 			for _, id := range ids {
-				c += plans[id].SlopePerDay
+				c += next(id)
 			}
 			return c
 		}

@@ -71,7 +71,9 @@ type Analysis struct {
 
 	// Penutupan celah: crashing eksak, biaya bergantung waktu, risiko
 	// bergerombol, putaran GERT, dan prakiraan dari tanggal data.
-	Exact     compress.TradeOff
+	Exact compress.TradeOff
+	// Overtime adalah lembur sah pada jadwal levelling yang bisa dijalankan.
+	Overtime  compress.OvertimeCurve
 	Rentals   []cost.Rental
 	RiskSweep []RiskPoint
 	GERT      []GERTRow

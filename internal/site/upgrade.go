@@ -3,6 +3,7 @@ package site
 import (
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/cost"
@@ -56,6 +57,9 @@ func buildUpgrade(a *Analysis) error {
 		return err
 	}
 	if a.Exact, err = compress.Exact(model.Activities, model.RateCard, a.Crash); err != nil {
+		return err
+	}
+	if a.Overtime, err = compress.LevelledOvertime(model.Activities, opts, model.RateCard); err != nil {
 		return err
 	}
 	if a.Rentals, _, err = cost.Rentals(model.Activities); err != nil {
@@ -142,7 +146,6 @@ func upgradeFindings(a *Analysis) []Finding {
 
 	if lv.Duration > a.Plan.Duration {
 		extra := lv.Duration - a.Plan.Duration
-		save5, _ := a.Crash.CostToSave(5)
 		out = append(out, Finding{
 			Key: "jadwal-tak-terjalankan", Severity: "kritis", Route: "/optimasi/",
 			Title: model.Text{
@@ -155,8 +158,8 @@ func upgradeFindings(a *Analysis) []Finding {
 			},
 			Metric: model.Text{ID: "levelling SGS vs CPM", EN: "SGS levelling vs CPM"},
 			Action: model.Text{
-				ID: "Tambah kapasitas pada peran " + string(a.CriticalRole) + " selama fase pengembangan, dan geser pekerjaan ber-float agar tidak beririsan dengan ujian. Kalau tanggal tetap dikunci, lima hari pertama bisa dibeli lewat crashing seharga " + fmtRp(save5) + ".",
-				EN: "Add capacity to the " + string(a.CriticalRole) + " role during development and move float-bearing work out of the exam window. If the date stays locked, the first five days can be bought through crashing for " + fmtRp(save5) + ".",
+				ID: "Tambah kapasitas pada peran " + string(a.CriticalRole) + " selama fase pengembangan, dan geser pekerjaan ber-float agar tidak beririsan dengan ujian. " + a.overtimeActionID(),
+				EN: "Add capacity to the " + string(a.CriticalRole) + " role during development and move float-bearing work out of the exam window. " + a.overtimeActionEN(),
 			},
 		})
 	}
@@ -211,4 +214,43 @@ func upgradeFindings(a *Analysis) []Finding {
 		}
 	}
 	return out
+}
+
+// overtimeActionID dan overtimeActionEN menyebut berapa hari yang bisa dibeli
+// dengan lembur sah pada jadwal yang bisa dijalankan, bukan pada jaringan CPM.
+func (a *Analysis) overtimeActionID() string {
+	ot := a.Overtime
+	p, ok := ot.PointAt(ot.MinDuration)
+	if !ok {
+		return "Lembur sah tidak memendekkan jadwal ini sama sekali."
+	}
+	return "Kalau tanggal tetap dikunci, lembur sah paling banyak memotong " + fmtInt(float64(ot.Levelled-ot.MinDuration)) + " hari, sampai " + fmtInt(float64(ot.MinDuration)) + " hari kerja, dengan upah lembur " + fmtRp(p.Cost) + "."
+}
+
+func (a *Analysis) overtimeActionEN() string {
+	ot := a.Overtime
+	p, ok := ot.PointAt(ot.MinDuration)
+	if !ok {
+		return "Legal overtime does not shorten this schedule at all."
+	}
+	return "If the date stays locked, legal overtime cuts at most " + fmtInt(float64(ot.Levelled-ot.MinDuration)) + " days, down to " + fmtInt(float64(ot.MinDuration)) + " working days, for " + fmtRp(p.Cost) + " in overtime pay."
+}
+
+// OvertimeRoleText menulis jam lembur per peran, mis. "BE 32 jam, BA 3,6 jam".
+func (a *Analysis) OvertimeRoleText(p compress.OvertimePoint, lang string) string {
+	unit := map[string]string{"id": "jam", "en": "h"}[lang]
+	var parts []string
+	for _, r := range p.Roles() {
+		parts = append(parts, string(r)+" "+render.Num(p.Hours[r], 1, lang)+" "+unit)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// OvertimeDays menjumlah hari-peran yang memakai lembur.
+func (a *Analysis) OvertimeDays(p compress.OvertimePoint) int {
+	n := 0
+	for _, d := range p.Days {
+		n += d
+	}
+	return n
 }
