@@ -183,8 +183,7 @@ func finishClosure(a *Analysis) error {
 	if s.SPIt > 0 {
 		a.IEACt = s.AtDay + (float64(a.Plan.Duration)-s.ES)/s.SPIt
 	}
-	finishDecision(a)
-	return nil
+	return finishDecision(a)
 }
 
 // EvidenceRow adalah satu aktivitas selesai yang menjadi bukti kalibrasi.
@@ -415,14 +414,14 @@ func closureFindings(a *Analysis) []Finding {
 			ID: "Pertahankan komitmen tanpa percepatan: " + fmtInt(base.JCL70.Duration) + " hari kerja dengan " + fmtRp(base.JCL70.Budget) + ".",
 			EN: "Keep the commitment without acceleration: " + fmtInt(base.JCL70.Duration) + " working days with " + fmtRp(base.JCL70.Budget) + ".",
 		}
-		if c, ok := d.CheapestOption(); ok {
+		if c, ok := d.CheapestOption(); ok && len(d.Bands) > 0 {
 			title = model.Text{
 				ID: "Dari tanggal data, percepatan termurah memajukan " + fmtInt(c.DaysEarlier) + " hari seharga " + fmtRp(c.PricePerDay) + " per hari",
 				EN: "From the data date, the cheapest acceleration gains " + fmtInt(c.DaysEarlier) + " days at " + fmtRp(c.PricePerDay) + " per day",
 			}
 			act = model.Text{
-				ID: "Beri sponsor dua harga, bukan satu janji: tanpa percepatan " + fmtInt(base.JCL70.Duration) + " hari kerja dengan " + fmtRp(base.JCL70.Budget) + ", atau " + lowerFirst(c.Name.ID) + " untuk " + fmtInt(c.JCL70.Duration) + " hari kerja dengan " + fmtRp(c.JCL70.Budget) + ". Putuskan dengan membandingkan " + fmtRp(c.PricePerDay) + " per hari dengan nilai satu hari lebih cepat bagi sponsor.",
-				EN: "Give the sponsor two prices, not one promise: no acceleration at " + fmtInt(base.JCL70.Duration) + " working days with " + fmtRp(base.JCL70.Budget) + ", or " + lowerFirst(c.Name.EN) + " for " + fmtInt(c.JCL70.Duration) + " working days with " + fmtRp(c.JCL70.Budget) + ". Decide by comparing " + fmtRp(c.PricePerDay) + " per day with what a day earlier is worth to the sponsor.",
+				ID: "Jangan menjanjikan satu tanggal; berikan aturan. " + d.BandRuleID(),
+				EN: "Do not promise one date; give a rule. " + d.BandRuleEN(),
 			}
 		}
 		out = append(out, Finding{

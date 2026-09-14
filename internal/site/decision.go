@@ -58,6 +58,62 @@ type Decision struct {
 	// pertama) yang jatuh sebelum tanggal data, dengan tanggal pertamanya.
 	PlanMissed      int
 	PlanMissedFirst string
+
+	// Bands adalah pita nilai satu hari lebih cepat atas opsi tanpa asumsi.
+	Bands []ValueBand
+	// Robust adalah sebaran angka keputusan menurut bootstrap berpasangan.
+	Robust *Robustness
+	// ScenarioOptions adalah indeks opsi yang dijalankan ulang pada setiap
+	// skenario asumsi; Scenarios hasilnya.
+	ScenarioOptions []int
+	Scenarios       []Scenario
+}
+
+// BandOption mengembalikan opsi sebuah pita.
+func (d *Decision) BandOption(b ValueBand) AccelOption { return d.Options[b.Option] }
+
+// NeverBest mengembalikan opsi tanpa asumsi yang tidak pernah terbaik pada
+// nilai satu hari berapa pun.
+func (d *Decision) NeverBest() []AccelOption {
+	on := map[int]bool{}
+	for _, b := range d.Bands {
+		on[b.Option] = true
+	}
+	var out []AccelOption
+	for i, o := range d.Options {
+		if o.Assumption.ID == "" && !on[i] {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// ScenariosSame menghitung skenario asumsi (tanpa pembanding) yang
+// rekomendasinya sama dengan pembanding.
+func (d *Decision) ScenariosSame() int {
+	n := 0
+	for _, s := range d.AssumptionScenarios() {
+		if s.Same {
+			n++
+		}
+	}
+	return n
+}
+
+// AssumptionScenarios mengembalikan skenario selain pembanding asumsi dasar.
+func (d *Decision) AssumptionScenarios() []Scenario {
+	if len(d.Scenarios) < 2 {
+		return nil
+	}
+	return d.Scenarios[1:]
+}
+
+// ScenarioBase mengembalikan skenario pembanding asumsi dasar.
+func (d *Decision) ScenarioBase() Scenario {
+	if len(d.Scenarios) == 0 {
+		return Scenario{Cheapest: -1}
+	}
+	return d.Scenarios[0]
 }
 
 // Option mengembalikan opsi berdasarkan kunci.
@@ -109,6 +165,14 @@ func prepareDecision(a *Analysis, fl *simulate.InFlight) (*Decision, error) {
 		Accel:      &simulate.Acceleration{From: fl.Now, Hire: hire, RampDays: RampDays, RampFactor: RampFactor},
 		Assumption: model.Text{ID: "Asumsi tanpa data: 10 hari kerja pertama pada setengah laju.", EN: "Assumed without data: the first 10 working days at half speed."},
 	})
+	defer func() {
+		for i, o := range d.Options {
+			if o.Assumption.ID == "" {
+				d.ScenarioOptions = append(d.ScenarioOptions, i)
+			}
+		}
+		d.Scenarios = scenarios()
+	}()
 	if len(roles) > 0 {
 		d.Options = append(d.Options, AccelOption{
 			Key:   "tambah-lembur",
@@ -158,14 +222,29 @@ func decisionJobs(a *Analysis, fl *simulate.InFlight, fc simulate.IntegratedConf
 			return err
 		})
 	}
+	for si := range d.Scenarios {
+		sc := &d.Scenarios[si]
+		sc.Sims = make([]simulate.IntegratedResult, len(d.ScenarioOptions))
+		for k, oi := range d.ScenarioOptions {
+			k, accel := k, d.Options[oi].Accel
+			jobs = append(jobs, func() (err error) {
+				c := fc
+				c.Iterations, c.ExactLevel = ScenarioIterations, false
+				sc.Config(&c)
+				c.Accel = accel
+				sc.Sims[k], err = simulate.RunIntegrated(model.Activities, c)
+				return err
+			})
+		}
+	}
 	return jobs
 }
 
 // finishDecision menurunkan komitmen, harga per hari, dan rekomendasi.
-func finishDecision(a *Analysis) {
+func finishDecision(a *Analysis) error {
 	d := a.Decision
 	if d == nil {
-		return
+		return nil
 	}
 	for i := range d.Options {
 		o := &d.Options[i]
@@ -196,6 +275,26 @@ func finishDecision(a *Analysis) {
 		}
 	}
 
+	// Pita nilai, bootstrap berpasangan, dan skenario asumsi.
+	days := make([]float64, len(d.Options))
+	extra := make([]float64, len(d.Options))
+	eligible := make([]bool, len(d.Options))
+	for i, o := range d.Options {
+		days[i], extra[i], eligible[i] = o.DaysEarlier, o.ExtraBudget, o.Assumption.ID == "" && (i == 0 || o.JCL70.Feasible)
+	}
+	d.Bands = valueBands(days, extra, eligible)
+	var err error
+	if d.Robust, err = robustness(d); err != nil {
+		return err
+	}
+	for si := range d.Scenarios {
+		if si == 0 {
+			finishScenario(d, &d.Scenarios[0], d.Cheapest, d.Bands)
+			continue
+		}
+		finishScenario(d, &d.Scenarios[si], d.Scenarios[0].Cheapest, d.Scenarios[0].Bands)
+	}
+
 	// Rencana lembur perencanaan: berapa hari-peran lemburnya sudah lewat.
 	ot := a.Overtime
 	if p, ok := ot.PointAt(ot.MinDuration); ok {
@@ -219,6 +318,7 @@ func finishDecision(a *Analysis) {
 			}
 		}
 	}
+	return nil
 }
 
 // jcl70 mengambil titik frontier JCL 70% pertama yang layak.

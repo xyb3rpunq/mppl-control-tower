@@ -87,6 +87,9 @@ type IntegratedConfig struct {
 	// lembur dan orang baru masuk ke grid levelling, dan biayanya masuk ke
 	// biaya setiap iterasi.
 	Accel *Acceleration
+	// ReworkScale mengalikan peluang gagal setiap putaran rework GERT, untuk
+	// uji kepekaan asumsi. Nol berarti 1; hasil perkalian dibatasi 0,95.
+	ReworkScale float64
 }
 
 // DefaultSearchMoves adalah anggaran langkah pencarian lokal per iterasi yang
@@ -407,7 +410,11 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 				if fl != nil && fl.ClosedLoop[ls.loop.ID] {
 					continue
 				}
-				n := gert.SampleCycles(u, ls.loop.FailProb)
+				p := ls.loop.FailProb
+				if cfg.ReworkScale > 0 {
+					p = math.Min(0.95, p*cfg.ReworkScale)
+				}
+				n := gert.SampleCycles(u, p)
 				if n == 0 {
 					continue
 				}
@@ -873,6 +880,67 @@ func Ladder(acts []model.Activity, base IntegratedConfig) ([]IntegratedResult, e
 			return nil, err
 		}
 		out = append(out, r)
+	}
+	return out, nil
+}
+
+// FirstFeasible mengembalikan titik frontier pertama yang layak untuk tingkat
+// keyakinan target: durasi terkecil yang mencakup cukup iterasi, dan anggaran
+// minimum pada durasi itu. Hasilnya sama dengan titik layak pertama Frontier
+// untuk durasi bulat, tanpa memindai setiap durasi.
+func FirstFeasible(pairs [][2]float64, target float64) FrontierPoint {
+	need := int(math.Ceil(target * float64(len(pairs))))
+	if need == 0 || need > len(pairs) {
+		return FrontierPoint{}
+	}
+	durs := make([]float64, len(pairs))
+	for i, p := range pairs {
+		durs[i] = p[0]
+	}
+	sort.Float64s(durs)
+	d := durs[need-1]
+	costs := make([]float64, 0, len(pairs))
+	for _, p := range pairs {
+		if p[0] <= d+1e-9 {
+			costs = append(costs, p[1])
+		}
+	}
+	sort.Float64s(costs)
+	return FrontierPoint{Duration: d, Budget: costs[need-1], Feasible: true}
+}
+
+// PairedBootstrap menarik ulang indeks iterasi dengan pengembalian, SAMA untuk
+// setiap hasil, lalu menghitung titik JCL pertama yang layak. Semua hasil
+// harus berasal dari benih yang sama sehingga iterasi ke-i di setiap opsi
+// memakai skenario acak yang sama; menarik ulang berpasangan menjaga korelasi
+// itu, sehingga selisih antar-opsi jauh lebih stabil daripada angka mutlaknya.
+// Keluaran [ulangan][hasil].
+func PairedBootstrap(results []IntegratedResult, target float64, reps int, seed uint32) ([][]FrontierPoint, error) {
+	if len(results) == 0 || reps <= 0 {
+		return nil, nil
+	}
+	n := len(results[0].pairs)
+	for _, r := range results {
+		if len(r.pairs) != n {
+			return nil, fmt.Errorf("simulate: bootstrap berpasangan butuh jumlah iterasi yang sama")
+		}
+	}
+	rng := NewPRNG(seed)
+	out := make([][]FrontierPoint, reps)
+	idx := make([]int, n)
+	buf := make([][2]float64, n)
+	for b := 0; b < reps; b++ {
+		for i := range idx {
+			idx[i] = int(rng.Float64() * float64(n))
+		}
+		row := make([]FrontierPoint, len(results))
+		for k, r := range results {
+			for i, j := range idx {
+				buf[i] = r.pairs[j]
+			}
+			row[k] = FirstFeasible(buf, target)
+		}
+		out[b] = row
 	}
 	return out, nil
 }

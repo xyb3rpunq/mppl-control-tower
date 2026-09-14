@@ -22,7 +22,7 @@ Satu basis kode yang sama merender situs statis di server *dan* berjalan di pera
 2. [Temuan utama](#2-temuan-utama)
 3. [Peta situs: 16 halaman × 2 bahasa](#3-peta-situs-16-halaman--2-bahasa)
 4. [Mesin hitung](#4-mesin-hitung)
-5. [Referensi 40 rumus](#5-referensi-40-rumus)
+5. [Referensi 41 rumus](#5-referensi-41-rumus)
 6. [Bedah kasus Coretax](#6-bedah-kasus-coretax)
 7. [Interaktivitas lewat WebAssembly](#7-interaktivitas-lewat-webassembly)
 8. [Data terbuka](#8-data-terbuka)
@@ -67,7 +67,7 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
 | 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
 | 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
-| 10 | tinggi | Dari tanggal data, percepatan termurah memajukan 8 hari seharga Rp 141.607 per hari | Rencana lembur dari hari pertama tidak bisa dibeli lagi (23 hari-peran lemburnya sebelum 19 Des 2025). Dari tanggal data pada titik JCL 70%: lembur sah BE, DBA, FE, SA, TL **121 → 113 hari** (+Rp 1.132.859); tambah satu BE 117 hari (+Rp 2.235.840, Rp 558.960/hari); keduanya 111 hari (+Rp 2.806.461) |
+| 10 | tinggi | Dari tanggal data, percepatan termurah memajukan 8 hari seharga Rp 141.607 per hari | Aturan menurut nilai satu hari lebih cepat: **< Rp 141.607** tanpa percepatan (121 hari); **Rp 141.607–836.801** lembur sah BE, DBA, FE, SA, TL (113 hari, Rp 22.952.401); **≥ Rp 836.801** tambah satu BE + lembur (111 hari, Rp 24.626.003). Tambah BE saja tidak pernah terbaik. Urutan bertahan pada 96,5% ulangan bootstrap dan 6 dari 6 skenario asumsi |
 | 11 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,69 |
 | 12 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
 | 13 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
@@ -201,6 +201,9 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
   | Tambah satu BE + lembur sah | 93 | 114 | **111** (8 Apr) | Rp 24.626.003 | 10 | Rp 280.646 |
 
   Peran lembur diturunkan dari rencana termurah durasi minimum (lantai 95 terbukti, upah Rp 773.813); orang baru dibayar dari tanggal data sampai pekerjaan terakhir perannya selesai; masa adaptasi tidak mengubah hasil karena pekerjaan BE yang menunggu baru menumpuk setelahnya.
+- **Aturan keputusan menurut nilai satu hari lebih cepat** (selubung atas garis manfaat bersih): di bawah Rp 141.607 tanpa percepatan; Rp 141.607–836.801 lembur sah; Rp 836.801 ke atas tambah satu BE + lembur sah. Tambah satu BE saja tidak pernah terbaik pada nilai berapa pun.
+- **Ketahanan terhadap derau**: bootstrap berpasangan 200 ulangan (iterasi yang sama ditarik ulang untuk semua opsi). Opsi termurah tetap sama pada 98,5% ulangan, urutan pita pada 96,5%; interval 90% batas pertama Rp 80.136–260.542, batas kedua Rp 615.852–1.530.740; JCL 70% setiap opsi bergeser paling banyak satu hari.
+- **Kepekaan terhadap asumsi tanpa data**: ρ 0,25/0,75, λ risiko 0,3/0,9, peluang gagal GERT ×0,5/×1,5 — masing-masing 3.000 iterasi dengan levelling cepat, dibandingkan dengan asumsi dasar yang dihitung dengan cara yang sama. Rekomendasi sama pada **6 dari 6** skenario; batas pertama bergeser antara Rp 106.433 dan Rp 174.769.
 - **Satu permintaan anggaran**: Rp 5.819.542 di atas pagu, dari JCL 70% berjalan — bukan dari EAC (Rp 157.314, buta risiko) dan tidak ditambah kenaikan cadangan (risiko yang sama sudah di dalamnya).
 - **Tindakan lain dari temuan** dan **yang tidak bisa diputuskan dengan kode**: nilai satu hari lebih cepat bagi sponsor, tarif dan ketersediaan BE nyata, realisasi baru lewat `realisasi.csv`.
 
@@ -297,6 +300,7 @@ PV/EV/AC dengan kemajuan linear dalam aktivitas; SV, CV, SPI, CPI; **Earned Sche
 - **Kopula Gauss** per peran dominan: u = Φ(ρ·z_peran + √(1−ρ²)·ε); faktor laten peran bisa dibaca untuk kopula risiko.
 - Simulasi PERT: histogram, kuantil, peluang, sensitivitas Spearman, porsi kritis.
 - **Simulasi terpadu** lima lapisan: biaya per iterasi termasuk sewa bergantung waktu, **kopula faktor risiko** dengan phi terealisasi, **putaran rework GERT**, levelling per iterasi yang **dibuktikan optimal** (SGS cepat → batas bawah → `level.Search`, anggaran dinaikkan 10× bila perlu) dan dijalankan paralel tanpa mengubah hasil, Joint Confidence Level, frontier iso-JCL, histogram 2D.
+- **`FirstFeasible`** (titik JCL layak pertama langsung dari pasangan iterasi) dan **`PairedBootstrap`** (menarik ulang indeks iterasi yang sama untuk semua opsi); `ReworkScale` untuk skenario peluang gagal GERT.
 - **Opsi percepatan** (`Acceleration`): lembur sah (kapasitas + `RateCap`), orang baru (kapasitas, masa adaptasi), grid per opsi, dan upah per iterasi (`Pay`) yang masuk ke biaya dan JCL.
 - **Prakiraan berjalan** (`PrepareInFlight`, `Deterministic` untuk jaringan sisa pada durasi paling mungkin): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann empiris** (estimator momen; derau dari varians beta-PERT, estimator sandwich, dan metode delta) untuk durasi, biaya, dan kapasitas ujian.
 
@@ -316,11 +320,11 @@ Metrik turunan dari fakta bersumber, empat skenario transisi dengan EMV, titik i
 Pembangun kanvas SVG dan 25 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, dan sebaran jumlah risiko), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks.
 
 ### `site`, `model`, `i18n`
-Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari tanggal data, lantai terbukti, harga per hari, satu komitmen, satu permintaan anggaran); sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa. `cmd/site` juga mengekspor dan mengimpor `realisasi.csv`.
+Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari tanggal data, lantai terbukti, harga per hari, satu komitmen, satu permintaan anggaran, pita nilai waktu, bootstrap berpasangan, dan skenario asumsi); sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa. `cmd/site` juga mengekspor dan mengimpor `realisasi.csv`.
 
 ---
 
-## 5. Referensi 40 rumus
+## 5. Referensi 41 rumus
 
 | Kelompok | Rumus |
 | --- | --- |
@@ -332,7 +336,7 @@ Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari 
 | **Sumber Daya** | Pembebanan & utilisasi · Kehalusan kurva tim |
 | **Levelling & Kompresi Jadwal** | Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan · **Batas bawah energetik & celah optimalitas · Crashing eksak & trade-off biaya total (LP) · Lembur sah pada jadwal berbatas sumber daya** |
 | **Simulasi Terpadu & JCL** | Korelasi lewat kopula Gauss · Kejadian risiko dalam simulasi · Joint Confidence Level · **Biaya sewa yang bergantung waktu · Risiko bergerombol lewat kopula faktor · GERT: putaran rework dengan aturan Mason** |
-| **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat · Harga per hari percepatan dari tanggal data** |
+| **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat · Harga per hari percepatan dari tanggal data · Pita nilai waktu dan ketahanan keputusan** |
 
 Rumus bercetak tebal ditambahkan pada upgrade terakhir. Setiap rumus punya contoh hitung dari data hidup — uji `TestEveryFormulaHasAWorkedExample` gagal bila ada yang tidak. Rumus lama yang maknanya bergeser (SGS, crashing, kejadian risiko) ikut diperbarui notasi dan jebakannya.
 
@@ -465,7 +469,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**238 fungsi uji di 18 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**245 fungsi uji di 18 paket, cakupan pernyataan 94,5%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -489,6 +493,8 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Batas bawah sah pada kapasitas di atas dasar**: brute force pada grid yang dinaikkan, dengan dan tanpa `RateCap`; uji ini **gagal pada kode lama** (batas 9 melampaui jadwal 8) sebelum perbaikan. `RateCap` mempercepat satu pekerjaan (6 hari → 5), orang kedua tidak; `Excess` mencatat jam di atas alokasi.
 - **Opsi percepatan**: aturan PP 35/2021 ditolak bila dilanggar, tidak ada lembur pada hari ujian atau untuk peran paruh waktu, upah dihitung tangan, opsi kosong identik dengan prakiraan, orang baru tidak pernah memperlambat.
 - **Keputusan sponsor**: opsi tanpa percepatan sama persis dengan prakiraan berjalan; setiap titik JCL 70% benar-benar mencapai 70%; harga per hari, opsi termurah, dan opsi tercepat konsisten dengan angkanya; peran lembur sama dengan rencana termurah durasi minimum; tidak ada temuan yang lagi menyuruh memegang komitmen lain, mengajukan kenaikan cadangan terpisah, atau menjanjikan hari dari crashing CPM.
+- **Pita nilai dihitung tangan**: selubung atas empat garis (termasuk opsi yang tidak pernah terbaik), seri, opsi yang lebih cepat dan lebih murah sekaligus; opsi berasumsi tidak boleh menjadi termurah. Pada analisis sungguhan manfaat bersih opsi pita memang terbesar di tengah pitanya, angka titik berada di dalam interval bootstrap 90%, dan setiap skenario benar-benar memakai asumsi yang dinamainya.
+- **`FirstFeasible` sama dengan pemindaian `Frontier`**; bootstrap berpasangan berbenih dan menarik indeks yang sama; `ReworkScale` menggeser rerata putaran sesuai p/(1−p).
 - **Realisasi**: ekspor → impor mengembalikan realisasi persis; mengubah satu durasi mengubah kalibrasi prakiraan; sepuluh jenis berkas rusak ditolak tanpa mengubah apa pun.
 - `Search` mencapai batas bawah pada jaringan kecil dengan urutan buruk, berbenih deterministik, jujur melaporkan target yang mustahil, dan menolak jaringan bersiklus.
 
@@ -586,6 +592,11 @@ Dua alur kerja GitHub Actions:
 15. **Enam komitmen di enam halaman** → halaman **Keputusan Sponsor**: satu komitmen, satu permintaan anggaran; temuan P80, JCL perencanaan, EAC, cadangan, dan crashing CPM kini merujuk ke sana.
 16. **"Kumpulkan realisasi" tanpa jalur masuk** → `realisasi.csv` diekspor dan diimpor lewat `-realisasi` dengan validasi ketat.
 
+**Celah putaran kelima**:
+
+17. **Harga per hari tanpa aturan keputusan** → pita nilai satu hari lebih cepat: sponsor cukup menyatakan rentang nilainya.
+18. **Rekomendasi yang mungkin hanya derau** → bootstrap berpasangan 200 ulangan (98,5% dan 96,5%) dan enam skenario asumsi tanpa data (6 dari 6 sama).
+
 Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; keempat periode ujian diambil dari lampiran kalender akademik resmi, dan UAS ganjil ternyata 19–31 Januari 2026 — seminggu lebih lambat dari asumsi lama 12–23 Januari.
 
 **Batas yang tersisa** (bukan pekerjaan yang lupa, melainkan batas yang harus diketahui):
@@ -596,7 +607,8 @@ Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optima
 4. **Batas lembur crashing CPM diperiksa per aktivitas, bukan per orang** — pada jaringan CPM satu orang sudah terjadwal di dua pekerjaan sekaligus, jadi pemeriksaan per orang baru bermakna di jadwal levelling (dan di sana sudah dilakukan).
 5. **Estimator kredibilitas memakai satu kelompok data** — satu selisih besar yang kebetulan bisa terbaca sebagai penyimpangan sistematis; data lintas proyek akan menstabilkannya.
 6. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya; `realisasi.csv` adalah jalur untuk data nyata.
-7. **Nilai satu hari lebih cepat tidak ada di data** — harga per hari setiap opsi hanya berarti bila dibandingkan dengan denda keterlambatan atau tenggat eksternal yang tidak tercatat.
+7. **Nilai satu hari lebih cepat tetap harus datang dari sponsor** — aturan pita memberi opsi terbaik per rentang, tetapi rentang yang benar bergantung pada denda keterlambatan atau tenggat eksternal yang tidak tercatat.
+9. **Skenario asumsi memakai cara yang lebih ringan** — 3.000 iterasi dengan levelling cepat, dibandingkan dengan asumsi dasar dengan cara yang sama; yang diuji urutan opsi, bukan nilai batasnya. Satu iterasi dari 10.000 pada opsi masa adaptasi belum terbukti optimal (celah satu hari).
 8. **Opsi orang baru memakai tarif kartu proyek dan ketersediaan pada tanggal data** — tarif dan tanggal mulai kontraktor nyata belum ada.
 
 ---

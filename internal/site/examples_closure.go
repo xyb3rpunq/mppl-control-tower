@@ -104,6 +104,27 @@ func closureExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 		}
 	}
 
+	if d := a.Decision; d != nil && len(d.Bands) > 0 {
+		var edges []string
+		for _, b := range d.Bands[1:] {
+			edges = append(edges, rp(b.From))
+		}
+		sub := tr2(lang, "tanpa batas", "no boundary")
+		if len(d.Bands) > 1 {
+			prev, next := d.Options[d.Bands[0].Option], d.Options[d.Bands[1].Option]
+			sub = fmt.Sprintf("(%s - %s) / (%s - %s) = %s", rp(next.ExtraBudget), rp(prev.ExtraBudget), n(next.DaysEarlier, 0), n(prev.DaysEarlier, 0), rp(d.Bands[1].From))
+		}
+		res := fmt.Sprintf("%s: %s", tr2(lang, "batas", "boundaries"), strings.Join(edges, "; "))
+		if d.Robust != nil {
+			res += fmt.Sprintf(";  %s %s", tr2(lang, "urutan sama pada", "same order in"), render.Pct(d.Robust.BandsSame, 1, lang))
+		}
+		ex["pitanilai"] = WorkedExample{
+			Substitution: sub,
+			Result:       res,
+			Comment:      model.Text{ID: d.BandRuleID(), EN: d.BandRuleEN()},
+		}
+	}
+
 	if len(a.Rentals) > 0 {
 		r := a.Rentals[0]
 		for _, x := range a.Rentals {

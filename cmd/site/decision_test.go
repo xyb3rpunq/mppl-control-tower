@@ -12,6 +12,7 @@ import (
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/simulate"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/site"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/workcal"
 )
 
@@ -264,5 +265,89 @@ func TestLoadActualsFromFile(t *testing.T) {
 		if model.Activities[i].Actual != before[i].Actual {
 			t.Fatalf("%s berubah setelah memuat ekspornya sendiri", before[i].ID)
 		}
+	}
+}
+
+// TestDecisionRuleAndRobustness mengunci aturan pita nilai, bootstrap, dan
+// skenario asumsi pada analisis sungguhan.
+func TestDecisionRuleAndRobustness(t *testing.T) {
+	a := analysisFor(t)
+	d := a.Decision
+	if len(d.Bands) == 0 || d.Bands[0].Option != 0 || d.Bands[0].From != 0 || !d.Bands[len(d.Bands)-1].Open() {
+		t.Fatalf("pita nilai tidak dimulai dari tanpa percepatan atau tidak terbuka di atas: %+v", d.Bands)
+	}
+	if len(d.Bands) > 1 {
+		if c, _ := d.CheapestOption(); d.Options[d.Bands[1].Option].Key != c.Key || math.Abs(d.Bands[1].From-c.PricePerDay) > 1e-6 {
+			t.Errorf("pita kedua harus opsi termurah dengan batas = harga per harinya")
+		}
+	}
+	// Manfaat bersih opsi pita memang terbesar di tengah setiap pita.
+	for _, b := range d.Bands {
+		v := b.From + 1
+		if !b.Open() {
+			v = (b.From + b.To) / 2
+		}
+		win := d.Options[b.Option]
+		for _, o := range d.Options {
+			if o.Assumption.ID == "" && v*o.DaysEarlier-o.ExtraBudget > v*win.DaysEarlier-win.ExtraBudget+1e-6 {
+				t.Errorf("pada nilai %v, %s lebih baik dari opsi pita %s", v, o.Key, win.Key)
+			}
+		}
+	}
+	r := d.Robust
+	if r == nil || r.Reps != site.BootstrapReps {
+		t.Fatal("bootstrap tidak dijalankan")
+	}
+	for i, o := range d.Options {
+		if o.JCL70.Duration < r.DurLo[i] || o.JCL70.Duration > r.DurHi[i] || o.JCL70.Budget < r.BudgetLo[i]-1 || o.JCL70.Budget > r.BudgetHi[i]+1 {
+			t.Errorf("%s: angka titik di luar interval bootstrap 90%%", o.Key)
+		}
+	}
+	if r.CheapestSame <= 0 || r.CheapestSame > 1 || r.BandsSame <= 0 || r.BandsSame > 1 || len(r.EdgeLo) != len(d.Bands)-1 {
+		t.Errorf("ketahanan tidak konsisten: %+v", r)
+	}
+	if len(d.Scenarios) != 7 || d.Scenarios[0].Key != "dasar" {
+		t.Fatalf("%d skenario, mau pembanding + 6 asumsi", len(d.Scenarios))
+	}
+	for _, s := range d.Scenarios {
+		if len(s.Sims) != len(d.ScenarioOptions) {
+			t.Fatalf("%s: %d simulasi untuk %d opsi", s.Key, len(s.Sims), len(d.ScenarioOptions))
+		}
+		for _, sim := range s.Sims {
+			if sim.Config.Iterations != site.ScenarioIterations || sim.Config.ExactLevel {
+				t.Errorf("%s: skenario harus %d iterasi dengan levelling cepat", s.Key, site.ScenarioIterations)
+			}
+		}
+	}
+	if got := d.Scenarios[3].Sims[0].Config.RiskLoading; got != 0.3 {
+		t.Errorf("skenario lambda rendah memakai lambda %v", got)
+	}
+	if got := d.Scenarios[6].Sims[0].Config.ReworkScale; got != 1.5 {
+		t.Errorf("skenario GERT tinggi memakai skala %v", got)
+	}
+	pages := renderAll(t)
+	for _, lang := range i18n.Langs {
+		page := pages[lang+" /keputusan/"]
+		for _, b := range d.Bands[1:] {
+			if !strings.Contains(page, render.Rp(b.From, lang)) {
+				t.Errorf("/keputusan/ (%s) tidak memuat batas pita %v", lang, b.From)
+			}
+		}
+		if !strings.Contains(page, render.Pct(r.BandsSame, 1, lang)) {
+			t.Errorf("/keputusan/ (%s) tidak melaporkan ketahanan urutan pita", lang)
+		}
+	}
+	for _, f := range a.Findings {
+		if f.Key == "percepatan-tanggal-data" && (!strings.Contains(f.Action.ID, render.Rp(d.Bands[len(d.Bands)-1].From, "id")) || !strings.Contains(f.Action.EN, "assumption scenarios")) {
+			t.Errorf("temuan percepatan tidak memakai aturan pita: %q", f.Action.ID)
+		}
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(metricsJSON(a)), &doc); err != nil {
+		t.Fatal(err)
+	}
+	ks := doc["keputusan_sponsor"].(map[string]any)
+	if len(ks["pita_nilai_satu_hari"].([]any)) != len(d.Bands) || len(ks["skenario_asumsi"].([]any)) != len(d.Scenarios) || ks["ketahanan_bootstrap"] == nil {
+		t.Error("metrik.json tanpa pita, ketahanan, atau skenario")
 	}
 }

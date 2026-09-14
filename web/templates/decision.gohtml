@@ -55,6 +55,67 @@
   </table>
   </div>
   <p class="small muted">{{if eq $l "id"}}Lantai adalah durasi terpendek pada durasi paling mungkin, dibuktikan batas bawah energetik{{if not $d.AllFloorsProven}} (* belum terbukti){{end}}. Harga per hari adalah tambahan anggaran JCL 70% dibagi hari yang dimajukan - biaya sewa yang ikut memendek sudah terhitung.{{if $d.RampChangesNothing}} Masa adaptasi tidak mengubah hasil: pekerjaan {{$a.CriticalRole}} yang menunggu baru menumpuk setelah {{$d.Ramp}} hari kerja pertama.{{end}}{{else}}The floor is the shortest duration at most-likely durations, proven by the energetic lower bound{{if not $d.AllFloorsProven}} (* not proven){{end}}. The price per day is the extra 70% JCL budget divided by the days gained - rentals that shorten too are already counted.{{if $d.RampChangesNothing}} The ramp-up changes nothing: the {{$a.CriticalRole}} work that waits only piles up after the first {{$d.Ramp}} working days.{{end}}{{end}}</p>
+  {{if $d.Bands}}
+  <h3>{{if eq $l "id"}}Aturan keputusan menurut nilai satu hari lebih cepat{{else}}Decision rule by what a day earlier is worth{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Nilai satu hari lebih cepat bagi sponsor tidak ada di data, jadi halaman ini tidak menebaknya. Untuk setiap rentang nilai, opsi di bawah memberi manfaat bersih terbesar: nilai x hari lebih cepat - tambahan anggaran pada titik JCL 70%. Batas antar-rentang adalah selisih anggaran dibagi selisih hari.{{else}}What a day earlier is worth to the sponsor is not in the data, so this page does not guess it. For each value range, the option below gives the largest net benefit: value x days earlier - extra budget at the 70% JCL. The boundary between ranges is the budget difference divided by the day difference.{{end}}</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>{{if eq $l "id"}}Nilai satu hari lebih cepat{{else}}Value of a day earlier{{end}}</th><th>{{if eq $l "id"}}Opsi terbaik{{else}}Best option{{end}}</th><th class="num">JCL 70%</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran{{else}}Budget{{end}}</th></tr></thead>
+      <tbody>
+        {{range $d.Bands}}{{$o := $d.BandOption .}}
+        <tr>
+          <td>{{if eq .From 0.0}}{{if .Open}}{{if eq $l "id"}}berapa pun{{else}}any{{end}}{{else}}{{if eq $l "id"}}di bawah{{else}}below{{end}} {{rp .To $l}}{{end}}{{else}}{{rp .From $l}}{{if .Open}}{{if eq $l "id"}} ke atas{{else}} and above{{end}}{{else}} – {{rp .To $l}}{{end}}{{end}}</td>
+          <th>{{tx $o.Name $l}}</th>
+          <td class="num">{{num $o.JCL70.Duration 0 $l}}</td>
+          <td>{{date ($a.FinishISO (int $o.JCL70.Duration)) $l}}</td>
+          <td class="num">{{rp $o.JCL70.Budget $l}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{with $d.NeverBest}}<p class="small muted">{{if eq $l "id"}}Tidak pernah terbaik pada nilai berapa pun:{{else}}Never the best at any value:{{end}} {{range $i, $o := .}}{{if $i}}, {{end}}{{tx $o.Name $l}}{{end}}.</p>{{end}}
+
+  {{with $d.Robust}}
+  <h3>{{if eq $l "id"}}Seberapa kokoh terhadap derau simulasi{{else}}How robust against simulation noise{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Setiap opsi memakai skenario acak yang sama per iterasi. Bootstrap berpasangan menarik ulang iterasi yang sama untuk semua opsi sebanyak {{.Reps}} kali, sehingga selisih antar-opsi diuji tanpa kehilangan pasangan itu. Opsi termurah per hari tetap sama pada <strong>{{pct .CheapestSame 1 $l}}</strong> ulangan, dan urutan opsi pada aturan di atas sama pada <strong>{{pct .BandsSame 1 $l}}</strong>.{{else}}Every option uses the same random scenario per iteration. A paired bootstrap resamples the same iterations for all options {{.Reps}} times, so differences between options are tested without breaking that pairing. The cheapest option per day stays the same in <strong>{{pct .CheapestSame 1 $l}}</strong> of resamples, and the option order in the rule above holds in <strong>{{pct .BandsSame 1 $l}}</strong>.{{end}}</p>
+  {{$rb := .}}
+  <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>{{if eq $l "id"}}Opsi{{else}}Option{{end}}</th><th class="num">{{if eq $l "id"}}JCL 70% (90%){{else}}70% JCL (90%){{end}}</th><th class="num">{{if eq $l "id"}}Anggaran (90%){{else}}Budget (90%){{end}}</th><th class="num">{{if eq $l "id"}}Harga per hari (90%){{else}}Price per day (90%){{end}}</th></tr></thead>
+      <tbody>
+        {{range $i, $o := $d.Options}}
+        <tr><th>{{tx $o.Name $l}}</th><td class="num">{{num (index $rb.DurLo $i) 0 $l}}–{{num (index $rb.DurHi $i) 0 $l}}</td><td class="num">{{rpShort (index $rb.BudgetLo $i) $l}}–{{rpShort (index $rb.BudgetHi $i) $l}}</td><td class="num">{{if gt (index $rb.PriceHi $i) 0.0}}{{rpShort (index $rb.PriceLo $i) $l}}–{{rpShort (index $rb.PriceHi $i) $l}}{{else}}—{{end}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .EdgeLo}}<p class="small muted">{{if eq $l "id"}}Interval 90% batas aturan:{{else}}90% interval of the rule boundaries:{{end}} {{range $i, $lo := .EdgeLo}}{{if $i}}; {{end}}{{rp $lo $l}} – {{rp (index $rb.EdgeHi $i) $l}}{{end}}.</p>{{end}}
+  {{end}}
+
+  {{if $d.Scenarios}}{{$sb := $d.ScenarioBase}}
+  <h3>{{if eq $l "id"}}Kepekaan terhadap asumsi tanpa data{{else}}Sensitivity to assumptions without data{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Keputusan dihitung ulang dengan satu asumsi diganti. Supaya build tetap wajar, setiap skenario memakai {{num (iterf $sb.Iterations) 0 $l}} iterasi dan levelling cepat tanpa pembuktian per iterasi, lalu dibandingkan dengan asumsi dasar yang dihitung dengan cara yang sama - perubahan rekomendasi hanya bisa lahir dari asumsinya. Rekomendasi sama pada <strong>{{$d.ScenariosSame}} dari {{len $d.AssumptionScenarios}}</strong> skenario{{if $sb.Same}}, dan pembanding cara skenario sendiri memberi rekomendasi yang sama dengan keputusan utama{{else}}; <strong>pembanding cara skenario memberi rekomendasi berbeda dari keputusan utama</strong>{{end}}.{{else}}The decision is recomputed with one assumption changed. To keep the build reasonable, each scenario uses {{num (iterf $sb.Iterations) 0 $l}} iterations and fast levelling without per-iteration proof, then is compared with the base assumptions computed the same way - a changed recommendation can only come from the assumption. The recommendation is the same in <strong>{{$d.ScenariosSame}} of {{len $d.AssumptionScenarios}}</strong> scenarios{{if $sb.Same}}, and the scenario-method baseline itself gives the same recommendation as the main decision{{else}}; <strong>the scenario-method baseline gives a different recommendation from the main decision</strong>{{end}}.{{end}}</p>
+  <div class="table-wrap">
+    <table class="data compact">
+      <thead><tr><th>{{if eq $l "id"}}Skenario{{else}}Scenario{{end}}</th><th class="num">{{if eq $l "id"}}JCL 70% tanpa percepatan{{else}}70% JCL without acceleration{{end}}</th><th>{{if eq $l "id"}}Opsi termurah per hari{{else}}Cheapest option per day{{end}}</th><th class="num">{{if eq $l "id"}}Harga per hari{{else}}Price per day{{end}}</th><th>{{if eq $l "id"}}Batas aturan{{else}}Rule boundaries{{end}}</th><th>{{if eq $l "id"}}Rekomendasi sama{{else}}Same recommendation{{end}}</th></tr></thead>
+      <tbody>
+        {{range $si, $sc := $d.Scenarios}}
+        <tr class="{{if eq $si 0}}highlight{{end}}">
+          <th>{{tx $sc.Name $l}}</th>
+          <td class="num">{{num (index $sc.JCL70 0).Duration 0 $l}} · {{rpShort (index $sc.JCL70 0).Budget $l}}</td>
+          <td>{{if ge $sc.Cheapest 0}}{{tx (index $d.Options $sc.Cheapest).Name $l}}{{else}}—{{end}}</td>
+          <td class="num">{{if ge $sc.Cheapest 0}}{{rp $sc.Price $l}}{{else}}—{{end}}</td>
+          <td class="small">{{range $i, $b := slice $sc.Bands 1}}{{if $i}} · {{end}}{{rp $b.From $l}}{{end}}</td>
+          <td>{{if $sc.Same}}{{if eq $l "id"}}ya{{else}}yes{{end}}{{else}}<strong>{{if eq $l "id"}}tidak{{else}}no{{end}}</strong>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+  {{end}}
+
   {{if $d.Overtime.Points}}
   <h3>{{if eq $l "id"}}Lembur sah dari tanggal data, pada durasi paling mungkin{{else}}Legal overtime from the data date, at most-likely durations{{end}}</h3>
   <div class="table-wrap">

@@ -966,8 +966,59 @@ func decisionJSON(a *site.Analysis) map[string]interface{} {
 		},
 		"permintaan_anggaran": d.BudgetRequest, "opsi": opts, "opsi_termurah_per_hari": key(d.Cheapest), "opsi_tercepat": key(d.Fastest),
 		"rencana_lembur_perencanaan_hari_peran_lewat": d.PlanMissed,
+		"pita_nilai_satu_hari":                        bandsJSON(d, d.Bands), "ketahanan_bootstrap": robustJSON(d), "skenario_asumsi": scenariosJSON(d),
 		"lembur_dari_tanggal_data": map[string]interface{}{
 			"durasi_tanpa_lembur": d.Overtime.Levelled, "durasi_minimum": d.Overtime.MinDuration, "terbukti_minimum": d.Overtime.MinProven,
 		},
 	}
+}
+
+// bandsJSON menulis pita nilai; batas atas terbuka ditulis null.
+func bandsJSON(d *site.Decision, bands []site.ValueBand) []map[string]interface{} {
+	var out []map[string]interface{}
+	for _, b := range bands {
+		var to interface{} = b.To
+		if b.Open() {
+			to = nil
+		}
+		out = append(out, map[string]interface{}{"opsi": d.Options[b.Option].Key, "dari": b.From, "sampai": to})
+	}
+	return out
+}
+
+func robustJSON(d *site.Decision) map[string]interface{} {
+	r := d.Robust
+	if r == nil {
+		return nil
+	}
+	var opts []map[string]interface{}
+	for i, o := range d.Options {
+		opts = append(opts, map[string]interface{}{
+			"kunci": o.Key, "jcl70_durasi_90": []float64{r.DurLo[i], r.DurHi[i]},
+			"jcl70_anggaran_90": []float64{r.BudgetLo[i], r.BudgetHi[i]}, "harga_per_hari_90": []float64{r.PriceLo[i], r.PriceHi[i]},
+		})
+	}
+	var edges [][]float64
+	for i := range r.EdgeLo {
+		edges = append(edges, []float64{r.EdgeLo[i], r.EdgeHi[i]})
+	}
+	return map[string]interface{}{
+		"ulangan": r.Reps, "porsi_opsi_termurah_sama": r.CheapestSame, "porsi_urutan_pita_sama": r.BandsSame,
+		"batas_pita_90": edges, "opsi": opts,
+	}
+}
+
+func scenariosJSON(d *site.Decision) []map[string]interface{} {
+	var out []map[string]interface{}
+	for _, s := range d.Scenarios {
+		cheapest := ""
+		if s.Cheapest >= 0 {
+			cheapest = d.Options[s.Cheapest].Key
+		}
+		out = append(out, map[string]interface{}{
+			"kunci": s.Key, "nama": s.Name.ID, "iterasi": s.Iterations(), "jcl70_tanpa_percepatan": map[string]interface{}{"durasi": s.JCL70[0].Duration, "anggaran": s.JCL70[0].Budget},
+			"opsi_termurah_per_hari": cheapest, "harga_per_hari": s.Price, "pita": bandsJSON(d, s.Bands), "rekomendasi_sama": s.Same,
+		})
+	}
+	return out
 }

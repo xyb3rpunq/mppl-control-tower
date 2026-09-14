@@ -133,7 +133,7 @@ func TestClosureFormulasAreRegistered(t *testing.T) {
 		}
 		keys[f.Key] = f
 	}
-	for _, k := range []string{"batasbawah", "lpcrash", "lemburlevelling", "hargaperhari", "biayawaktu", "kopularisiko", "gert", "kredibilitas"} {
+	for _, k := range []string{"batasbawah", "lpcrash", "lemburlevelling", "hargaperhari", "pitanilai", "biayawaktu", "kopularisiko", "gert", "kredibilitas"} {
 		f, ok := keys[k]
 		if !ok {
 			t.Errorf("rumus %q tidak terdaftar", k)

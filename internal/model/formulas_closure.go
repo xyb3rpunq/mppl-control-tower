@@ -36,6 +36,19 @@ func applyClosureFormulas() {
 
 var closureFormulas = []Formula{
 	{
+		Key: "pitanilai", Group: "prakiraan", Route: "/keputusan/",
+		Name:     Text{ID: "Pita nilai waktu dan ketahanan keputusan", EN: "Value-of-time bands and decision robustness"},
+		Notation: Text{ID: "manfaat_i(v) = v x hari lebih cepat_i - tambahan anggaran_i     opsi terbaik(v) = argmax_i manfaat_i(v)     batas antar-opsi = selisih anggaran / selisih hari     ketahanan = porsi ulangan bootstrap berpasangan dengan urutan opsi yang sama", EN: "benefit_i(v) = v x days earlier_i - extra budget_i     best option(v) = argmax_i benefit_i(v)     boundary between options = budget difference / day difference     robustness = share of paired bootstrap resamples with the same option order"},
+		Symbols: []Symbol{
+			{"v", Text{ID: "nilai satu hari lebih cepat bagi sponsor, rupiah per hari - tidak ada di data, jadi dijawab per rentang", EN: "what a day earlier is worth to the sponsor, rupiah per day - not in the data, so answered per range"}},
+			{"bootstrap berpasangan", Text{ID: "menarik ulang indeks iterasi yang sama untuk semua opsi, karena iterasi ke-i memakai skenario acak yang sama", EN: "resampling the same iteration indices for all options, because iteration i uses the same random scenario"}},
+		},
+		Meaning: Text{ID: "Selubung atas garis manfaat bersih: setiap opsi terbaik pada satu rentang nilai. Opsi yang garisnya tidak pernah di atas selubung tidak pernah layak dipilih, berapa pun nilai waktunya.", EN: "The upper envelope of net-benefit lines: each option is best over one value range. An option whose line never reaches the envelope is never worth choosing, whatever time is worth."},
+		Reading: Text{ID: "Sponsor cukup menjawab di rentang mana nilai satu hari lebih cepat berada. Ketahanan dan skenario asumsi menunjukkan apakah urutan itu kebetulan derau atau asumsi.", EN: "The sponsor only has to say which range a day earlier falls in. Robustness and assumption scenarios show whether that order is an accident of noise or of assumptions."},
+		Pitfall: Text{ID: "Bootstrap tanpa pasangan membuat selisih antar-opsi tampak jauh lebih tidak pasti daripada sebenarnya, karena derau skenario yang sama dihitung dua kali.", EN: "An unpaired bootstrap makes differences between options look far less certain than they are, because the noise of the same scenario is counted twice."},
+		Source:  Text{ID: "Efron & Tibshirani (1993) - bootstrap; analisis keputusan nilai waktu", EN: "Efron & Tibshirani (1993) - the bootstrap; value-of-time decision analysis"},
+	},
+	{
 		Key: "hargaperhari", Group: "prakiraan", Route: "/keputusan/",
 		Name:     Text{ID: "Harga per hari percepatan dari tanggal data", EN: "Price per day of acceleration from the data date"},
 		Notation: Text{ID: "harga per hari = (anggaran JCL70 opsi - anggaran JCL70 tanpa percepatan) / (durasi JCL70 tanpa percepatan - durasi JCL70 opsi)     permintaan anggaran = anggaran JCL70 tanpa percepatan - pagu", EN: "price per day = (option 70% JCL budget - no-acceleration 70% JCL budget) / (no-acceleration 70% JCL duration - option 70% JCL duration)     budget request = no-acceleration 70% JCL budget - cap"},

@@ -137,3 +137,95 @@ func TestAccelerationInTheForecast(t *testing.T) {
 		t.Error("lembur yang melanggar batas harus ditolak simulasi")
 	}
 }
+
+// TestFirstFeasibleMatchesFrontier: titik layak pertama yang dihitung langsung
+// harus sama dengan pemindaian Frontier.
+func TestFirstFeasibleMatchesFrontier(t *testing.T) {
+	c := baseConfig(2000)
+	c.Layer = simulate.LayerRework
+	r, err := simulate.RunIntegrated(model.Activities, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ds []float64
+	for d := math.Floor(r.DurP50); d <= r.Durations[len(r.Durations)-1]; d++ {
+		ds = append(ds, d)
+	}
+	var want simulate.FrontierPoint
+	for _, p := range r.Frontier(0.7, ds) {
+		if p.Feasible {
+			want = p
+			break
+		}
+	}
+	if got := simulate.FirstFeasible(r.Pairs(), 0.7); got != want {
+		t.Errorf("FirstFeasible %+v, Frontier %+v", got, want)
+	}
+	if got := simulate.FirstFeasible(nil, 0.7); got.Feasible {
+		t.Error("tanpa iterasi tidak ada titik layak")
+	}
+	if got := simulate.FirstFeasible([][2]float64{{3, 10}}, 1.5); got.Feasible {
+		t.Error("target di atas 100% tidak mungkin layak")
+	}
+}
+
+// TestPairedBootstrap: berbenih deterministik, menarik ulang indeks yang sama
+// untuk setiap hasil, dan menolak jumlah iterasi yang berbeda.
+func TestPairedBootstrap(t *testing.T) {
+	c := baseConfig(1000)
+	c.Layer = simulate.LayerRework
+	a, _ := simulate.RunIntegrated(model.Activities, c)
+	b1, err := simulate.PairedBootstrap([]simulate.IntegratedResult{a, a}, 0.7, 50, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b2, _ := simulate.PairedBootstrap([]simulate.IntegratedResult{a, a}, 0.7, 50, 7)
+	if len(b1) != 50 {
+		t.Fatalf("%d ulangan, mau 50", len(b1))
+	}
+	point := simulate.FirstFeasible(a.Pairs(), 0.7)
+	var lower, higher int
+	for i := range b1 {
+		// Dua salinan hasil yang sama pada indeks yang sama harus identik.
+		if b1[i][0] != b1[i][1] || b1[i][0] != b2[i][0] {
+			t.Fatal("bootstrap berpasangan tidak menarik indeks yang sama atau tidak berbenih")
+		}
+		if b1[i][0].Budget < point.Budget {
+			lower++
+		} else if b1[i][0].Budget > point.Budget {
+			higher++
+		}
+	}
+	if lower == 0 || higher == 0 {
+		t.Errorf("sebaran bootstrap tidak mengapit angka titik: %d di bawah, %d di atas", lower, higher)
+	}
+	c.Iterations = 500
+	short, _ := simulate.RunIntegrated(model.Activities, c)
+	if _, err := simulate.PairedBootstrap([]simulate.IntegratedResult{a, short}, 0.7, 5, 1); err == nil {
+		t.Error("jumlah iterasi berbeda seharusnya galat")
+	}
+	if out, err := simulate.PairedBootstrap(nil, 0.7, 5, 1); out != nil || err != nil {
+		t.Error("tanpa hasil, bootstrap kosong tanpa galat")
+	}
+}
+
+// TestReworkScaleMovesLoops: skala peluang gagal menaikkan dan menurunkan
+// rerata putaran sesuai p/(1-p), dengan bilangan acak yang sama.
+func TestReworkScaleMovesLoops(t *testing.T) {
+	c := baseConfig(4000)
+	c.Layer = simulate.LayerRework
+	base, _ := simulate.RunIntegrated(model.Activities, c)
+	c.ReworkScale = 1.5
+	high, _ := simulate.RunIntegrated(model.Activities, c)
+	c.ReworkScale = 0.5
+	low, _ := simulate.RunIntegrated(model.Activities, c)
+	if !(low.ReworkDays < base.ReworkDays && base.ReworkDays < high.ReworkDays) {
+		t.Errorf("hari rework %v / %v / %v tidak naik bersama skala", low.ReworkDays, base.ReworkDays, high.ReworkDays)
+	}
+	for _, l := range model.ReworkLoops {
+		p := math.Min(0.95, l.FailProb*1.5)
+		if want := p / (1 - p); math.Abs(high.ReworkCycles[l.ID]-want) > 0.08 {
+			t.Errorf("%s: rerata putaran %v pada skala 1,5, mau %v", l.ID, high.ReworkCycles[l.ID], want)
+		}
+	}
+}
