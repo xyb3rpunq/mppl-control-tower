@@ -59,17 +59,22 @@
   // ------------------------------------------------- WebAssembly loader
   var base = (document.querySelector('link[rel="stylesheet"]') || {}).href || '';
   base = base.replace(/\/assets\/css\/app\.css.*$/, '');
+  // Versi aset adalah hash isi web/static yang ditulis generator. Tanpa itu,
+  // cache HTTP (max-age GitHub Pages) bisa memasangkan HTML baru dengan
+  // WebAssembly lama, dan panel yang butuh fungsi baru diam tanpa galat.
+  var ver = document.documentElement.dataset.assetVersion;
+  var q = ver ? '?v=' + ver : '';
 
   function loadWasm() {
     if (typeof WebAssembly !== 'object') return;
     if (!document.querySelector('[data-wasm-panel]')) return; // halaman ini tak butuh
 
     var s = document.createElement('script');
-    s.src = base + '/assets/js/wasm_exec.js';
+    s.src = base + '/assets/js/wasm_exec.js' + q;
     s.onload = function () {
       if (typeof Go !== 'function') return;
       var go = new Go();
-      var src = base + '/assets/js/mppl.wasm';
+      var src = base + '/assets/js/mppl.wasm' + q;
       var run = function (result) { go.run(result.instance); };
       if (WebAssembly.instantiateStreaming) {
         WebAssembly.instantiateStreaming(fetch(src), go.importObject).then(run).catch(fallback);

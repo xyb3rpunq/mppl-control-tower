@@ -1,5 +1,5 @@
 {{define "base"}}<!doctype html>
-<html lang="{{.Lang}}" data-route="{{.Page.Route}}">
+<html lang="{{.Lang}}" data-route="{{.Page.Route}}" data-asset-version="{{.AssetVersion}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="{{if eq .Lang "id"}}id_ID{{else}}en_US{{end}}">
 <meta name="theme-color" content="#0b1020">
-<link rel="stylesheet" href="{{.BaseURL}}/assets/css/app.css">
+<link rel="stylesheet" href="{{.BaseURL}}/assets/css/app.css?v={{.AssetVersion}}">
 <link rel="manifest" href="{{.BaseURL}}/assets/manifest.webmanifest">
 <link rel="icon" href="{{.BaseURL}}/assets/img/favicon.svg" type="image/svg+xml">
 <script>
@@ -86,7 +86,7 @@ try {
   </main>
 </div>
 
-<script src="{{.BaseURL}}/assets/js/app.js" defer></script>
+<script src="{{.BaseURL}}/assets/js/app.js?v={{.AssetVersion}}" defer></script>
 </body>
 </html>
 {{end}}

@@ -8,6 +8,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -46,11 +48,14 @@ type PageData struct {
 	Title     string
 	Desc      string
 	BuildTime string
-	Content   template.HTML
-	Analysis  *site.Analysis
-	Examples  map[string]site.WorkedExample
-	Charter   model.Charter
-	Risk      risk.Register
+	// AssetVersion adalah hash isi web/static; ditempel pada URL aset agar
+	// cache peramban tidak pernah memasangkan HTML baru dengan aset lama.
+	AssetVersion string
+	Content      template.HTML
+	Analysis     *site.Analysis
+	Examples     map[string]site.WorkedExample
+	Charter      model.Charter
+	Risk         risk.Register
 }
 
 // T menerjemahkan kunci i18n dalam bahasa halaman.
@@ -85,26 +90,31 @@ func main() {
 	if err != nil {
 		log.Fatalf("gagal memuat templat: %v", err)
 	}
+	version, err := assetVersion(filepath.Join("web", "static"))
+	if err != nil {
+		log.Fatalf("gagal menghitung versi aset: %v", err)
+	}
 
 	pages := 0
 	for _, lang := range i18n.Langs {
 		examples := analysis.Examples(lang)
 		for _, p := range site.Pages {
 			data := PageData{
-				Lang:      lang,
-				OtherLang: i18n.OtherLang(lang),
-				Page:      p,
-				Pages:     site.Pages,
-				Canonical: strings.TrimRight(*baseURL, "/") + site.PathFor(p.Route, lang),
-				AltURL:    strings.TrimRight(*baseURL, "/") + site.PathFor(p.Route, i18n.OtherLang(lang)),
-				BaseURL:   strings.TrimRight(*baseURL, "/"),
-				Title:     p.NavLabel(lang) + " - " + i18n.T(lang, "site.name"),
-				Desc:      p.Summary.Get(lang),
-				BuildTime: time.Now().UTC().Format("2006-01-02 15:04 MST"),
-				Analysis:  analysis,
-				Examples:  examples,
-				Charter:   model.ProjectCharter,
-				Risk:      analysis.Risk,
+				Lang:         lang,
+				OtherLang:    i18n.OtherLang(lang),
+				Page:         p,
+				Pages:        site.Pages,
+				Canonical:    strings.TrimRight(*baseURL, "/") + site.PathFor(p.Route, lang),
+				AltURL:       strings.TrimRight(*baseURL, "/") + site.PathFor(p.Route, i18n.OtherLang(lang)),
+				BaseURL:      strings.TrimRight(*baseURL, "/"),
+				Title:        p.NavLabel(lang) + " - " + i18n.T(lang, "site.name"),
+				Desc:         p.Summary.Get(lang),
+				BuildTime:    time.Now().UTC().Format("2006-01-02 15:04 MST"),
+				AssetVersion: version,
+				Analysis:     analysis,
+				Examples:     examples,
+				Charter:      model.ProjectCharter,
+				Risk:         analysis.Risk,
 			}
 			if p.Route == "/" {
 				data.Title = i18n.T(lang, "site.name") + " - " + i18n.T(lang, "site.tagline")
@@ -496,6 +506,43 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 	return tmpl.ParseGlob(filepath.Join("web", "templates", "*.gohtml"))
 }
 
+// assetVersion menghitung sidik sepuluh heksadesimal atas nama dan isi seluruh
+// berkas di bawah root, dalam urutan jalur yang tetap. Berkas WebAssembly ikut
+// dihitung bila sudah dibangun, sehingga mesin hitung yang berubah pasti
+// mengganti versi.
+func assetVersion(root string) (string, error) {
+	var paths []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	sort.Strings(paths)
+	h := sha256.New()
+	for _, p := range paths {
+		rel, _ := filepath.Rel(root, p)
+		h.Write([]byte(filepath.ToSlash(rel)))
+		h.Write([]byte{0})
+		f, err := os.Open(p)
+		if err != nil {
+			return "", err
+		}
+		_, err = io.Copy(h, f)
+		f.Close()
+		if err != nil {
+			return "", err
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))[:10], nil
+}
+
 func copyStatic(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -542,6 +589,11 @@ func writeExtras(out, baseURL string, a *site.Analysis) error {
 	if err != nil {
 		return err
 	}
+	version, err := assetVersion(filepath.Join("web", "static"))
+	if err != nil {
+		return err
+	}
+	sw = []byte(strings.ReplaceAll(string(sw), "__ASSET_VERSION__", version))
 	if err := os.WriteFile(filepath.Join(out, "sw.js"), sw, 0o644); err != nil {
 		return err
 	}

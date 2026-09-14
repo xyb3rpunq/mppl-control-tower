@@ -82,8 +82,9 @@ func renderPages(t *testing.T, analysis *site.Analysis) map[string]string {
 				Canonical: site.PathFor(p.Route, lang),
 				AltURL:    site.PathFor(p.Route, i18n.OtherLang(lang)),
 				Title:     p.NavLabel(lang), Desc: p.Summary.Get(lang),
-				BuildTime: time.Now().Format(time.RFC3339),
-				Analysis:  analysis, Examples: examples,
+				BuildTime:    time.Now().Format(time.RFC3339),
+				AssetVersion: "uji1234567",
+				Analysis:     analysis, Examples: examples,
 				Charter: model.ProjectCharter, Risk: analysis.Risk,
 			}
 			var body bytes.Buffer

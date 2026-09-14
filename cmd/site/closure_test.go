@@ -214,3 +214,51 @@ func TestAnalysisHelpersAndStaticCopy(t *testing.T) {
 		t.Error("direktori sumber yang tidak ada seharusnya galat")
 	}
 }
+
+// TestAssetVersionBustsStaleCaches: versi aset harus stabil untuk isi yang
+// sama, berubah bila satu bait pun berubah, menempel pada URL aset di HTML,
+// dan menggantikan penanda nama cache service worker.
+func TestAssetVersionBustsStaleCaches(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(dir+"/js", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dir+"/js/mppl.wasm", []byte("versi-1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	v1, err := assetVersion(dir)
+	if err != nil || len(v1) != 10 {
+		t.Fatalf("versi %q, galat %v", v1, err)
+	}
+	if again, _ := assetVersion(dir); again != v1 {
+		t.Error("versi aset harus stabil untuk isi yang sama")
+	}
+	if err := os.WriteFile(dir+"/js/mppl.wasm", []byte("versi-2"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if v2, _ := assetVersion(dir); v2 == v1 {
+		t.Error("versi aset tidak berubah padahal isi WebAssembly berubah")
+	}
+	if _, err := assetVersion(dir + "/tidak-ada"); err == nil {
+		t.Error("direktori yang tidak ada seharusnya galat")
+	}
+
+	html := renderAll(t)["id /prakiraan/"]
+	for _, want := range []string{`app.css?v=uji1234567`, `app.js?v=uji1234567`, `data-asset-version="uji1234567"`} {
+		if !strings.Contains(html, want) {
+			t.Errorf("HTML tidak memuat %q", want)
+		}
+	}
+
+	out := t.TempDir()
+	if err := writeExtras(out, "https://example.test", analysisFor(t)); err != nil {
+		t.Fatal(err)
+	}
+	sw, err := os.ReadFile(out + "/sw.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(sw), "__ASSET_VERSION__") || !strings.Contains(string(sw), "ct-mppl-") {
+		t.Error("service worker harus memuat nama cache berversi, bukan penanda mentah")
+	}
+}
