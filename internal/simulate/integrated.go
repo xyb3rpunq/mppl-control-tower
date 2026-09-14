@@ -3,7 +3,10 @@ package simulate
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sort"
+	"sync"
+	"sync/atomic"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/cost"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/gert"
@@ -71,27 +74,45 @@ type IntegratedConfig struct {
 	// InFlight, bila tidak nil, menjalankan simulasi dari tanggal data:
 	// realisasi dikunci, sisa pekerjaan diambil sampelnya.
 	InFlight *InFlight
-	// AuditEvery, bila > 0 pada lapisan kapasitas, menjalankan level.Optimize
-	// dan level.LowerBound pada setiap iterasi ke-AuditEvery dengan durasi yang
-	// sama persis, untuk mengukur seberapa jauh SGS per iterasi dari optimum.
-	// Audit tidak mengubah hasil simulasi.
-	AuditEvery   int
-	AuditSamples int
+	// ExactLevel, pada lapisan kapasitas, membuktikan jadwal SETIAP iterasi
+	// optimal: batas bawah dihitung untuk durasi iterasi itu, dan bila SGS
+	// cepat belum menyentuhnya, level.Search mencari urutan yang lebih baik
+	// sampai menyentuh. Tanpa ini, P80 lapisan kapasitas bisa sedikit terlalu
+	// pesimistis karena satu aturan prioritas tidak selalu optimal.
+	ExactLevel bool
+	// SearchMoves adalah anggaran langkah pencarian lokal per iterasi yang belum
+	// terbukti optimal oleh SGS cepat.
+	SearchMoves int
 }
 
-// LevelAudit mengukur mutu levelling cepat yang dipakai di dalam simulasi.
-type LevelAudit struct {
-	Audited int
-	// SGSGap adalah durasi SGS per iterasi dikurangi jadwal terbaik Optimize.
-	SGSGapMean float64
-	SGSGapMax  int
-	// BoundGap adalah jadwal terbaik dikurangi batas bawah.
-	BoundGapMean float64
-	BoundGapMax  int
-	// ProvenShare adalah porsi iterasi teraudit yang jadwal terbaiknya terbukti
-	// optimal; SGSOptimalShare porsi yang SGS per iterasinya sudah optimal.
-	ProvenShare     float64
-	SGSOptimalShare float64
+// DefaultSearchMoves adalah anggaran langkah pencarian lokal per iterasi yang
+// belum terbukti optimal oleh SGS cepat. Pencarian berhenti begitu batas
+// bawah tersentuh, jadi kebanyakan iterasi memakai jauh lebih sedikit.
+const DefaultSearchMoves = 200
+
+// LevelProof mencatat bukti optimalitas levelling di dalam simulasi.
+type LevelProof struct {
+	Iterations int
+	// ByFastSGS adalah iterasi yang SGS cepatnya sudah menyentuh batas bawah.
+	ByFastSGS int
+	// BySearch adalah iterasi yang baru menyentuh batas bawah setelah pencarian.
+	BySearch int
+	// Unproven adalah iterasi yang jadwal terbaiknya masih di atas batas bawah.
+	Unproven int
+	// MaxGap adalah selisih terbesar jadwal terbaik terhadap batas bawah.
+	MaxGap int
+	// FastGapMean adalah rerata hari yang dihemat pencarian dibanding SGS cepat
+	// - besarnya bias bila simulasi hanya memakai satu aturan prioritas.
+	FastGapMean float64
+	FastGapMax  int
+}
+
+// ProvenShare mengembalikan porsi iterasi yang terbukti optimal.
+func (p LevelProof) ProvenShare() float64 {
+	if p.Iterations == 0 {
+		return 0
+	}
+	return float64(p.ByFastSGS+p.BySearch) / float64(p.Iterations)
 }
 
 // DefaultRho adalah korelasi baku antar-aktivitas yang dikerjakan peran sama.
@@ -142,7 +163,7 @@ type IntegratedResult struct {
 	// benar-benar muncul di sampel.
 	RealisedSameRole float64
 
-	Audit LevelAudit
+	Proof LevelProof
 }
 
 // exposure memetakan risiko ke aktivitas yang menanggung hari tambahannya:
@@ -275,6 +296,9 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 		capGrid = level.CapacityGridWith(cfg.Calendar, cfg.Capacity, true, levelHorizon, cfg.ExamFactor)
 	}
 
+	if cfg.SearchMoves <= 0 {
+		cfg.SearchMoves = DefaultSearchMoves
+	}
 	res := IntegratedResult{Config: cfg, RiskHits: map[string]int{}, ReworkCycles: map[string]float64{}}
 	res.pairs = make([][2]float64, 0, cfg.Iterations)
 	res.RiskCount = make([]float64, len(model.Risks)+1)
@@ -294,6 +318,15 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 	}
 
 	durOf := func(a model.Activity) int { return withRisk[sampler.Index(a.ID)] }
+	// Lapisan kapasitas memisahkan pengambilan sampel (berurutan, karena
+	// aliran bilangan acak harus tetap) dari levelling (mahal, dan tiap
+	// iterasi saling bebas). Input levelling setiap iterasi disimpan dulu.
+	var levelInputs [][]int
+	var preTotals []float64
+	if cfg.Layer >= LayerResources {
+		levelInputs = make([][]int, 0, cfg.Iterations)
+		preTotals = make([]float64, 0, cfg.Iterations)
+	}
 	var releaseOf func(model.Activity) int
 	if release != nil {
 		releaseOf = func(a model.Activity) int { return release[sampler.Index(a.ID)] }
@@ -377,72 +410,23 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 			}
 		}
 
-		var dur int
-		starts := func(i int) int { return 0 }
 		if cfg.Layer >= LayerResources {
-			base := level.Options{
-				Calendar: cfg.Calendar, Capacity: cfg.Capacity, UseWindows: true, ExamFactor: cfg.ExamFactor,
-				DurationOf: durOf, ReleaseOf: releaseOf, Horizon: levelHorizon, Lite: true, CapGrid: capGrid,
-			}
-			lv, err := level.Run(netActs, base)
-			if err != nil {
-				return IntegratedResult{}, err
-			}
-			if len(cfg.LevelOrder) > 0 {
-				alt := base
-				alt.Order = cfg.LevelOrder
-				lo, err := level.Run(netActs, alt)
-				if err != nil {
-					return IntegratedResult{}, err
-				}
-				if lo.Duration < lv.Duration {
-					lv = lo
-				}
-			}
-			dur = lv.Duration
-			starts = func(i int) int { return lv.Tasks[acts[i].ID].Start }
-			if cfg.AuditEvery > 0 && it%cfg.AuditEvery == 0 {
-				opt, err := level.Optimize(netActs, level.OptimizeOptions{Options: base, Samples: cfg.AuditSamples, Seed: cfg.Seed + uint32(it)})
-				if err != nil {
-					return IntegratedResult{}, err
-				}
-				a := &res.Audit
-				a.Audited++
-				sg := dur - opt.Best.Duration
-				if sg < 0 {
-					sg = 0
-				}
-				a.SGSGapMean += float64(sg)
-				if sg > a.SGSGapMax {
-					a.SGSGapMax = sg
-				}
-				a.BoundGapMean += float64(opt.Gap)
-				if opt.Gap > a.BoundGapMax {
-					a.BoundGapMax = opt.Gap
-				}
-				if opt.Proven {
-					a.ProvenShare++
-				}
-				if dur == opt.Bound.Value {
-					a.SGSOptimalShare++
-				}
-			}
-		} else {
-			cpm, err := schedule.Compute(netActs, schedule.Options{DurationOf: durOf, ReleaseOf: releaseOf})
-			if err != nil {
-				return IntegratedResult{}, err
-			}
-			dur = cpm.ProjectFinish
-			starts = func(i int) int { return cpm.Tasks[acts[i].ID].StartX }
+			levelInputs = append(levelInputs, append([]int(nil), withRisk...))
+			preTotals = append(preTotals, total)
+			continue
 		}
-
+		cpm, err := schedule.Compute(netActs, schedule.Options{DurationOf: durOf, ReleaseOf: releaseOf})
+		if err != nil {
+			return IntegratedResult{}, err
+		}
+		dur := cpm.ProjectFinish
 		for _, t := range tcs {
 			var c float64
 			if fl != nil && fl.State[t.Index].Kind != NotStarted {
 				// Nilai rencana sudah ada di biaya aktual; tambahkan selisih rentang.
 				c = t.Cost(fl.State[t.Index].Start, dur) - t.Amount
 			} else {
-				c = t.Cost(starts(t.Index), dur)
+				c = t.Cost(cpm.Tasks[acts[t.Index].ID].StartX, dur)
 			}
 			total += c
 			res.TimeCost += c
@@ -450,12 +434,48 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 		res.pairs = append(res.pairs, [2]float64{float64(dur), total})
 	}
 
-	if a := &res.Audit; a.Audited > 0 {
-		k := float64(a.Audited)
-		a.SGSGapMean /= k
-		a.BoundGapMean /= k
-		a.ProvenShare /= k
-		a.SGSOptimalShare /= k
+	if cfg.Layer >= LayerResources {
+		outs, err := levelAll(netActs, acts, cfg, capGrid, levelInputs, releaseOf, sampler, tcs)
+		if err != nil {
+			return IntegratedResult{}, err
+		}
+		for it, o := range outs {
+			total := preTotals[it]
+			for ti, t := range tcs {
+				var c float64
+				if fl != nil && fl.State[t.Index].Kind != NotStarted {
+					c = t.Cost(fl.State[t.Index].Start, o.dur) - t.Amount
+				} else {
+					c = t.Cost(o.anchorStart[ti], o.dur)
+				}
+				total += c
+				res.TimeCost += c
+			}
+			res.pairs = append(res.pairs, [2]float64{float64(o.dur), total})
+			if cfg.ExactLevel {
+				pr := &res.Proof
+				pr.Iterations++
+				switch o.proof {
+				case proofFast:
+					pr.ByFastSGS++
+				case proofSearch:
+					pr.BySearch++
+				default:
+					pr.Unproven++
+					if o.gap > pr.MaxGap {
+						pr.MaxGap = o.gap
+					}
+				}
+				pr.FastGapMean += float64(o.saved)
+				if o.saved > pr.FastGapMax {
+					pr.FastGapMax = o.saved
+				}
+			}
+		}
+	}
+
+	if pr := &res.Proof; pr.Iterations > 0 {
+		pr.FastGapMean /= float64(pr.Iterations)
 	}
 	n := float64(cfg.Iterations)
 	res.ReworkDays /= n
@@ -496,6 +516,138 @@ func RunIntegrated(acts []model.Activity, cfg IntegratedConfig) (IntegratedResul
 		res.RiskPhi = realisedRiskPhi(fired)
 	}
 	return res, nil
+}
+
+// Hasil bukti optimalitas satu iterasi.
+const (
+	proofFast = iota
+	proofSearch
+	proofNone
+)
+
+// levelOut adalah hasil levelling satu iterasi.
+type levelOut struct {
+	dur         int
+	anchorStart []int // mulai aktivitas pembeli setiap sewa, urutan tcs
+	proof       int
+	gap, saved  int
+}
+
+// LevelWorkers menentukan jumlah pekerja levelling paralel. Nilai bawaan
+// GOMAXPROCS; di WebAssembly nilainya satu.
+var LevelWorkers = func() int { return runtime.GOMAXPROCS(0) }
+
+// levelAll menjalankan levelling setiap iterasi secara paralel. Setiap
+// iterasi hanya membaca input dan grid bersama, dan pencariannya berbenih
+// dari nomor iterasi, sehingga hasilnya identik berapa pun jumlah pekerja.
+//
+// Dengan satu pekerja, levelling berjalan berurutan tanpa goroutine. Ini
+// wajib di WebAssembly: dengan goroutine pekerja di dalam callback js.FuncOf,
+// runtime sempat menerima panggilan JavaScript kedua sebelum callback pertama
+// selesai, dan runtime Go mati dengan "fatal error: unknown caller pc".
+func levelAll(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64,
+	inputs [][]int, releaseOf func(model.Activity) int, sampler *Sampler, tcs []cost.Rental) ([]levelOut, error) {
+
+	outs := make([]levelOut, len(inputs))
+	workers := LevelWorkers()
+	if workers > len(inputs) {
+		workers = len(inputs)
+	}
+	if workers <= 1 {
+		for it := range inputs {
+			o, err := levelOne(netActs, acts, cfg, capGrid, inputs[it], releaseOf, sampler, tcs, it)
+			if err != nil {
+				return nil, err
+			}
+			outs[it] = o
+		}
+		return outs, nil
+	}
+	errs := make([]error, len(inputs))
+	var next int64 = -1
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				it := int(atomic.AddInt64(&next, 1))
+				if it >= len(inputs) {
+					return
+				}
+				outs[it], errs[it] = levelOne(netActs, acts, cfg, capGrid, inputs[it], releaseOf, sampler, tcs, it)
+			}
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return outs, nil
+}
+
+func levelOne(netActs, acts []model.Activity, cfg IntegratedConfig, capGrid map[model.Role][]float64,
+	d []int, releaseOf func(model.Activity) int, sampler *Sampler, tcs []cost.Rental, it int) (levelOut, error) {
+
+	durOf := func(a model.Activity) int { return d[sampler.Index(a.ID)] }
+	base := level.Options{
+		Calendar: cfg.Calendar, Capacity: cfg.Capacity, UseWindows: true, ExamFactor: cfg.ExamFactor,
+		DurationOf: durOf, ReleaseOf: releaseOf, Horizon: levelHorizon, Lite: true, CapGrid: capGrid,
+	}
+	lv, err := level.Run(netActs, base)
+	if err != nil {
+		return levelOut{}, err
+	}
+	if len(cfg.LevelOrder) > 0 {
+		alt := base
+		alt.Order = cfg.LevelOrder
+		lo, err := level.Run(netActs, alt)
+		if err != nil {
+			return levelOut{}, err
+		}
+		if lo.Duration < lv.Duration {
+			lv = lo
+		}
+	}
+	out := levelOut{}
+	if cfg.ExactLevel {
+		fast := lv.Duration
+		bound, err := level.LowerBound(netActs, base)
+		if err != nil {
+			return levelOut{}, err
+		}
+		if lv.Duration <= bound.Value {
+			out.proof = proofFast
+		} else {
+			var ok bool
+			lv, ok, err = level.Search(netActs, base, lv, bound.Value, cfg.SearchMoves, cfg.Seed^uint32(it)*2654435761)
+			if err != nil {
+				return levelOut{}, err
+			}
+			if !ok {
+				// Kasus sulit jarang terjadi; anggaran sepuluh kali lipat dengan
+				// benih lain hanya dibayar oleh iterasi yang benar-benar butuh.
+				lv, ok, err = level.Search(netActs, base, lv, bound.Value, 10*cfg.SearchMoves, cfg.Seed^uint32(it)*2246822519)
+				if err != nil {
+					return levelOut{}, err
+				}
+			}
+			out.proof = proofSearch
+			if !ok {
+				out.proof = proofNone
+				out.gap = lv.Duration - bound.Value
+			}
+			out.saved = fast - lv.Duration
+		}
+	}
+	out.dur = lv.Duration
+	out.anchorStart = make([]int, len(tcs))
+	for ti, t := range tcs {
+		out.anchorStart[ti] = lv.Tasks[acts[t.Index].ID].Start
+	}
+	return out, nil
 }
 
 // realisedRiskPhi menghitung rerata koefisien phi antar-pasangan risiko yang

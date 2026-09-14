@@ -20,10 +20,18 @@ import (
 //     biaya aktualnya; aktivitas yang sedang berjalan tidak mungkin berdurasi
 //     kurang dari hari yang sudah dilaluinya, jadi durasinya diambil dari
 //     sebaran bersyarat F(x | x > e).
-//  2. Estimasi belajar dari realisasi lewat bobot kredibilitas Buhlmann:
-//     faktor = Z x teramati + (1 - Z) x rencana, dengan Z = n / (n + k).
-//     n adalah jumlah bukti, k bobot keyakinan awal. Bukti sedikit berarti
-//     rencana masih dominan; bukti banyak berarti data yang bicara.
+//  2. Estimasi belajar dari realisasi lewat kredibilitas Buhlmann:
+//     faktor = Z x teramati + (1 - Z) x rencana. Z tidak dipilih, melainkan
+//     diestimasi dari data dengan metode momen:
+//
+//     Var  = varians penaksir teramati bila tim bekerja persis sesuai rencana
+//     tau2 = max(0, (teramati - rencana)^2 - Var)
+//     Z    = tau2 / (tau2 + Var)
+//
+//     Artinya: selisih yang masih bisa dijelaskan derau estimasi memberi Z
+//     mendekati nol; selisih yang jauh melampaui derau memberi Z mendekati
+//     satu. Untuk durasi, Var dihitung dari sebaran beta-PERT setiap
+//     aktivitas; untuk biaya, dari sebaran rasio antar-aktivitas.
 //  3. Yang sudah lewat ditutup: risiko berstatus "terjadi" atau "tertutup"
 //     sudah tercermin di realisasi, dan putaran rework yang pemeriksaannya
 //     sudah selesai tidak bisa berulang lagi. Risiko yang masih terbuka tetap
@@ -36,10 +44,24 @@ const (
 	Completed
 )
 
-// DefaultPriorWeight adalah bobot keyakinan awal k pada kredibilitas Buhlmann,
-// dalam satuan "aktivitas". 10 berarti rencana dihargai setara sepuluh
-// aktivitas yang sudah terbukti. ASUMSI, dinyatakan di halaman Metode.
-const DefaultPriorWeight = 10.0
+// Credibility mengembalikan bobot kredibilitas Buhlmann dengan estimator
+// momen: tau2 = max(0, (teramati - rencana)^2 - varPenaksir), dan
+// Z = tau2 / (tau2 + varPenaksir). Tanpa varians penaksir (tidak ada derau)
+// selisih apa pun dipercaya penuh; tanpa selisih, Z nol.
+func Credibility(observed, prior, estimatorVar float64) (z, tau2 float64) {
+	if estimatorVar < 0 {
+		estimatorVar = 0
+	}
+	d := observed - prior
+	tau2 = d*d - estimatorVar
+	if tau2 < 0 {
+		tau2 = 0
+	}
+	if tau2+estimatorVar == 0 {
+		return 0, 0
+	}
+	return tau2 / (tau2 + estimatorVar), tau2
+}
 
 // ActState adalah status satu aktivitas pada tanggal data.
 type ActState struct {
@@ -65,20 +87,31 @@ type InFlight struct {
 	Residual []model.Activity
 	Release  []int
 
+	// Empirical bernilai true bila Z diestimasi dari data (estimator momen
+	// Buhlmann); false bila bobot keyakinan awal PriorWeight dipaksakan.
+	Empirical   bool
+	PriorWeight float64
+
 	// Kalibrasi durasi dari aktivitas yang sudah selesai.
 	Evidence       int
-	PriorWeight    float64
 	Credibility    float64 // Z
 	ObservedRatio  float64 // jumlah durasi aktual / jumlah rerata PERT
+	DurationVar    float64 // varians rasio bila tim persis sesuai beta-PERT
+	DurationTau2   float64
 	DurationFactor float64
 
 	// Kalibrasi biaya tenaga kerja per hari.
 	ObservedCostRatio float64 // biaya tenaga kerja aktual / (tarif harian x durasi aktual)
+	CostVar           float64
+	CostTau2          float64
+	CostCredibility   float64
 	CostFactor        float64
 
 	// Kalibrasi kapasitas saat ujian dari jendela yang sudah lewat.
 	ExamEvidence    int
 	ExamObserved    float64 // laju saat ujian / laju di luar ujian, teramati
+	ExamVar         float64
+	ExamTau2        float64
 	ExamCredibility float64
 	ExamFactor      float64 // pengganti model.ExamCapacityFactor
 
@@ -100,12 +133,16 @@ type InFlight struct {
 // PrepareInFlight membaca realisasi pada model.Activities sampai statusDay.
 // acAt mengembalikan Actual Cost kumulatif pada hari t (dari mesin EVM),
 // supaya prakiraan dan halaman Earned Value berangkat dari AC yang sama.
+//
+// priorWeight nol memakai kredibilitas empiris. priorWeight positif memaksa
+// Z = n / (n + priorWeight) - dipakai untuk pembanding "tanpa belajar" dengan
+// bobot yang sangat besar.
 func PrepareInFlight(acts []model.Activity, cal *workcal.Calendar, statusDay float64, priorWeight float64, acAt func(float64) float64) (*InFlight, error) {
 	if cal == nil {
 		return nil, fmt.Errorf("simulate: prakiraan berjalan butuh kalender")
 	}
-	if priorWeight <= 0 {
-		priorWeight = DefaultPriorWeight
+	if priorWeight < 0 {
+		priorWeight = 0
 	}
 	fl := &InFlight{
 		StatusDay:   statusDay,
@@ -114,12 +151,15 @@ func PrepareInFlight(acts []model.Activity, cal *workcal.Calendar, statusDay flo
 		Residual:    make([]model.Activity, len(acts)),
 		Release:     make([]int, len(acts)),
 		PriorWeight: priorWeight,
+		Empirical:   priorWeight == 0,
 		ClosedRisk:  map[string]bool{},
 		ClosedLoop:  map[string]bool{},
 	}
 	sampler := NewSampler(acts)
 
-	var sumActual, sumMean, sumLabourActual, sumLabourPlanRate float64
+	var sumActual, sumMean, sumPERTVar, sumLabourActual, sumLabourPlanRate float64
+	type costObs struct{ w, r float64 }
+	var costs []costObs
 	for i, a := range acts {
 		st := ActState{Kind: NotStarted}
 		act := a.Actual
@@ -144,13 +184,19 @@ func PrepareInFlight(acts []model.Activity, cal *workcal.Calendar, statusDay flo
 			if !a.Milestone {
 				sumActual += float64(act.Duration)
 				sumMean += sampler.PERTMean(i)
+				sumPERTVar += sampler.PERTVar(i)
 				fl.Evidence++
 				var rate float64
 				for _, s := range a.Team {
 					rate += model.RateCard[s.Role] * s.Alloc
 				}
-				sumLabourActual += act.Cost - a.ExtraCost()
-				sumLabourPlanRate += rate * float64(act.Duration)
+				labour := act.Cost - a.ExtraCost()
+				sumLabourActual += labour
+				w := rate * float64(act.Duration)
+				sumLabourPlanRate += w
+				if w > 0 {
+					costs = append(costs, costObs{w, labour / w})
+				}
 			}
 		case InProgress:
 			fl.InProgress = append(fl.InProgress, a.ID)
@@ -162,19 +208,36 @@ func PrepareInFlight(acts []model.Activity, cal *workcal.Calendar, statusDay flo
 		fl.Residual[i] = r
 	}
 
+	fl.ObservedRatio = 1
 	if sumMean > 0 {
 		fl.ObservedRatio = sumActual / sumMean
-	} else {
-		fl.ObservedRatio = 1
+		// Rasio jumlah: bila setiap durasi aktual adalah sampel beta-PERT yang
+		// saling bebas, variansnya jumlah varians dibagi kuadrat jumlah rerata.
+		fl.DurationVar = sumPERTVar / (sumMean * sumMean)
 	}
-	fl.Credibility = float64(fl.Evidence) / (float64(fl.Evidence) + priorWeight)
-	fl.DurationFactor = fl.Credibility*fl.ObservedRatio + (1 - fl.Credibility)
+	fl.ObservedCostRatio = 1
 	if sumLabourPlanRate > 0 {
 		fl.ObservedCostRatio = sumLabourActual / sumLabourPlanRate
-	} else {
-		fl.ObservedCostRatio = 1
+		// Estimator sandwich untuk rasio berbobot: derau diukur dari sebaran
+		// rasio antar-aktivitas, karena biaya tidak punya sebaran rencana.
+		if n := float64(len(costs)); n > 1 {
+			var num float64
+			for _, c := range costs {
+				d := c.r - fl.ObservedCostRatio
+				num += c.w * c.w * d * d
+			}
+			fl.CostVar = n / (n - 1) * num / (sumLabourPlanRate * sumLabourPlanRate)
+		}
 	}
-	fl.CostFactor = fl.Credibility*fl.ObservedCostRatio + (1 - fl.Credibility)
+	if fl.Empirical {
+		fl.Credibility, fl.DurationTau2 = Credibility(fl.ObservedRatio, 1, fl.DurationVar)
+		fl.CostCredibility, fl.CostTau2 = Credibility(fl.ObservedCostRatio, 1, fl.CostVar)
+	} else {
+		fl.Credibility = float64(fl.Evidence) / (float64(fl.Evidence) + priorWeight)
+		fl.CostCredibility = fl.Credibility
+	}
+	fl.DurationFactor = fl.Credibility*fl.ObservedRatio + (1 - fl.Credibility)
+	fl.CostFactor = fl.CostCredibility*fl.ObservedCostRatio + (1 - fl.CostCredibility)
 
 	fl.calibrateExam(acts, cal, sampler, priorWeight)
 
@@ -240,7 +303,8 @@ func PrepareInFlight(acts []model.Activity, cal *workcal.Calendar, statusDay flo
 // calibrateExam membandingkan laju kerja aktivitas yang beririsan dengan
 // jendela ujian yang sudah lewat terhadap laju aktivitas lain. Laju sebuah
 // aktivitas adalah rerata PERT-nya dibagi durasi aktualnya: 1 berarti sesuai
-// estimasi, di bawah 1 berarti lebih lambat.
+// estimasi, di bawah 1 berarti lebih lambat. Varians laju satu aktivitas
+// diturunkan dengan metode delta dari varians beta-PERT: mu^2 sigma^2 / D^4.
 func (fl *InFlight) calibrateExam(acts []model.Activity, cal *workcal.Calendar, sampler *Sampler, k float64) {
 	type win struct{ from, to int }
 	var past []win
@@ -262,13 +326,15 @@ func (fl *InFlight) calibrateExam(acts []model.Activity, cal *workcal.Calendar, 
 		fl.ExamFactor = model.ExamCapacityFactor
 		return
 	}
-	var inW, inDays, outW, outDays float64
+	var inW, inDays, outW, outDays, inVar, outVar float64
 	for i, a := range acts {
 		st := fl.State[i]
 		if st.Kind != Completed || a.Milestone || a.Actual.Duration <= 0 {
 			continue
 		}
-		rate := sampler.PERTMean(i) / float64(a.Actual.Duration)
+		mu, dAct := sampler.PERTMean(i), float64(a.Actual.Duration)
+		rate := mu / dAct
+		v := mu * mu * sampler.PERTVar(i) / (dAct * dAct * dAct * dAct)
 		overlap := 0
 		for _, w := range past {
 			lo, hi := st.Start, st.Finish
@@ -284,20 +350,32 @@ func (fl *InFlight) calibrateExam(acts []model.Activity, cal *workcal.Calendar, 
 		}
 		if overlap > 0 {
 			fl.ExamEvidence++
-			inW += rate * float64(overlap)
-			inDays += float64(overlap)
-			outW += rate * float64(a.Actual.Duration-overlap)
-			outDays += float64(a.Actual.Duration - overlap)
+			o := float64(overlap)
+			inW += rate * o
+			inDays += o
+			inVar += o * o * v
+			rest := dAct - o
+			outW += rate * rest
+			outDays += rest
+			outVar += rest * rest * v
 			continue
 		}
-		outW += rate * float64(a.Actual.Duration)
-		outDays += float64(a.Actual.Duration)
+		outW += rate * dAct
+		outDays += dAct
+		outVar += dAct * dAct * v
 	}
 	if inDays > 0 && outDays > 0 && outW > 0 {
-		fl.ExamObserved = (inW / inDays) / (outW / outDays)
+		in, out := inW/inDays, outW/outDays
+		fl.ExamObserved = in / out
+		vIn, vOut := inVar/(inDays*inDays), outVar/(outDays*outDays)
+		fl.ExamVar = vIn/(out*out) + in*in*vOut/(out*out*out*out)
 	}
 	obs := math.Min(1, fl.ExamObserved)
-	fl.ExamCredibility = float64(fl.ExamEvidence) / (float64(fl.ExamEvidence) + k)
+	if fl.Empirical {
+		fl.ExamCredibility, fl.ExamTau2 = Credibility(obs, model.ExamCapacityFactor, fl.ExamVar)
+	} else {
+		fl.ExamCredibility = float64(fl.ExamEvidence) / (float64(fl.ExamEvidence) + k)
+	}
 	fl.ExamFactor = fl.ExamCredibility*obs + (1-fl.ExamCredibility)*model.ExamCapacityFactor
 }
 

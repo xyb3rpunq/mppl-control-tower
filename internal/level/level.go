@@ -75,6 +75,11 @@ type Options struct {
 	// yang paling awal muncul di daftar ini. Aktivitas yang tidak tercantum
 	// diletakkan di belakang menurut aturan LST.
 	Order []string
+
+	// plan adalah CPM yang sudah dihitung untuk durasi dan tanggal rilis yang
+	// sama. Search mengisinya sekali untuk ratusan langkah, karena CPM tidak
+	// berubah selama yang berubah hanya urutan aktivitas.
+	plan *schedule.Result
 }
 
 // Rule adalah aturan prioritas pemilihan aktivitas pada SGS.
@@ -182,9 +187,14 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 		durationOf = func(a model.Activity) int { return a.Duration }
 	}
 
-	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: durationOf, ReleaseOf: opts.ReleaseOf})
-	if err != nil {
-		return Result{}, err
+	var plan schedule.Result
+	if opts.plan != nil {
+		plan = *opts.plan
+	} else {
+		var err error
+		if plan, err = schedule.Compute(acts, schedule.Options{DurationOf: durationOf, ReleaseOf: opts.ReleaseOf}); err != nil {
+			return Result{}, err
+		}
 	}
 	key := priorityKeys(acts, plan, opts, durationOf)
 	byID := make(map[string]model.Activity, len(acts))

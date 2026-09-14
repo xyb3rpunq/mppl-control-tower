@@ -49,8 +49,9 @@
   </div>
   <figure class="figure"><div class="figure-body scrollable">{{boundChart $l}}</div></figure>
   <div class="note-box">
-    <h4>{{if eq $l "id"}}Levelling di dalam simulasi juga diaudit{{else}}Levelling inside the simulation is audited too{{end}}</h4>
-    <p>{{if eq $l "id"}}Simulasi terpadu tidak bisa menjalankan pencarian lengkap pada sepuluh ribu iterasi. Setiap iterasinya memakai SGS cepat - aturan LST dan urutan jadwal optimal di atas, diambil yang lebih pendek. Seberapa jauh itu dari optimum? Pada {{(.Analysis.Final).Audit.Audited}} iterasi teraudit dengan durasi acak yang sama persis, SGS cepat rata-rata hanya {{num (.Analysis.Final).Audit.SGSGapMean 2 $l}} hari di atas jadwal terbaik (paling jauh {{(.Analysis.Final).Audit.SGSGapMax}} hari), dan {{pct (.Analysis.Final).Audit.SGSOptimalShare 0 $l}} iterasi sudah optimal. Jadwal terbaik pada {{pct (.Analysis.Final).Audit.ProvenShare 0 $l}} iterasi teraudit terbukti optimal lewat batas bawah.{{else}}The integrated simulation cannot run a full search on ten thousand iterations. Each iteration uses a fast SGS - the LST rule and the optimal schedule order above, taking the shorter. How far is that from the optimum? Across {{(.Analysis.Final).Audit.Audited}} audited iterations with exactly the same random durations, the fast SGS averages only {{num (.Analysis.Final).Audit.SGSGapMean 2 $l}} days above the best schedule (at most {{(.Analysis.Final).Audit.SGSGapMax}} days), and {{pct (.Analysis.Final).Audit.SGSOptimalShare 0 $l}} of iterations are already optimal. The best schedule in {{pct (.Analysis.Final).Audit.ProvenShare 0 $l}} of audited iterations is proven optimal by the lower bound.{{end}}</p>
+    {{$pr := (.Analysis.Final).Proof}}
+    <h4>{{if eq $l "id"}}Setiap iterasi simulasi juga dibuktikan optimal{{else}}Every simulation iteration is proven optimal too{{end}}</h4>
+    <p>{{if eq $l "id"}}Levelling di dalam simulasi terpadu berjalan bertingkat. Pertama SGS cepat (aturan LST dan urutan jadwal optimal di atas). Lalu batas bawah dihitung untuk durasi acak iterasi itu. Bila keduanya belum bertemu, pencarian lokal memindah satu aktivitas demi satu aktivitas sampai jadwalnya menyentuh batas bawah. Dari {{num (iterf $pr.Iterations) 0 $l}} iterasi: {{num (iterf $pr.ByFastSGS) 0 $l}} sudah optimal dengan SGS cepat, {{num (iterf $pr.BySearch) 0 $l}} terbukti setelah pencarian, dan {{num (iterf $pr.Unproven) 0 $l}} belum terbukti - {{pct $pr.ProvenShare 2 $l}} terbukti optimal. Pencarian menghemat rata-rata {{num $pr.FastGapMean 2 $l}} hari per iterasi (paling banyak {{$pr.FastGapMax}} hari); tanpa itu P80 lapisan kapasitas akan sedikit terlalu pesimistis.{{else}}Levelling inside the integrated simulation runs in tiers. First a fast SGS (the LST rule and the optimal schedule order above). Then a lower bound is computed for that iteration's random durations. If the two do not meet, local search moves one activity at a time until the schedule touches the lower bound. Of {{num (iterf $pr.Iterations) 0 $l}} iterations: {{num (iterf $pr.ByFastSGS) 0 $l}} are already optimal with the fast SGS, {{num (iterf $pr.BySearch) 0 $l}} are proven after search, and {{num (iterf $pr.Unproven) 0 $l}} remain unproven - {{pct $pr.ProvenShare 2 $l}} proven optimal. Search saves {{num $pr.FastGapMean 2 $l}} days per iteration on average (at most {{$pr.FastGapMax}} days); without it the capacity layer's P80 would be slightly too pessimistic.{{end}}</p>
   </div>
 </section>
 
@@ -158,7 +159,7 @@
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum{{else}}Minimum duration{{end}}</p><p class="kpi-value">{{$cr.MinDuration}}</p><p class="kpi-note">{{if eq $l "id"}}dari{{else}}from{{end}} {{$cr.NormalDuration}} {{t $l "t.days"}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}5 hari pertama{{else}}First 5 days{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps 4).TotalCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}premi; bersih setelah sewa{{else}}premium; net of rentals{{end}} {{rpShort (netCrash 5) $l}}</p></div>
     <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Kompresi penuh{{else}}Full compression{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps (sub (len $cr.Steps) 1)).TotalCost $l}}</p><p class="kpi-note">{{len $cr.Steps}} {{if eq $l "id"}}hari dipotong{{else}}days cut{{end}}</p></div>
-    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Premi crash{{else}}Crash premium{{end}}</p><p class="kpi-value">{{pct (crashPremium) 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}dari biaya tenaga kerja harian (asumsi){{else}}of daily labour cost (assumed){{end}}</p></div>
+    {{$pr := crashPremiumRange}}<div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Premi lembur{{else}}Overtime premium{{end}}</p><p class="kpi-value">{{pct (index $pr 0) 0 $l}}–{{pct (index $pr 1) 1 $l}}</p><p class="kpi-note"><a href="{{overtimeURL}}" rel="noopener">PP 35/2021</a>; {{illegalCrashCount}} {{if eq $l "id"}}aktivitas melebihi batas 4 jam{{else}}activities exceed the 4-hour limit{{end}}</p></div>
   </div>
   <figure class="figure">
     <div class="figure-body scrollable">{{crashCurve $l}}</div>
@@ -213,10 +214,10 @@
   </div>
 
   <h3>{{if eq $l "id"}}Batas crash per aktivitas{{else}}Crash limits per activity{{end}}</h3>
-  <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), slope = biaya tenaga kerja harian × premi. Empat aktivitas tidak bisa dipercepat dengan uang, dan alasannya dicatat.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), slope = daily labour cost × premium. Four activities cannot be accelerated with money, and the reasons are recorded.{{end}}</p>
+  <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), slope = biaya tenaga kerja harian × premi lembur. Premi tidak diasumsikan: pekerjaan hari yang dipotong dibagi rata sebagai jam lembur ke hari yang tersisa, lalu dibayar menurut <a href="{{overtimeURL}}" rel="noopener">PP 35/2021</a> - jam pertama 1,5×, jam berikutnya 2× upah sejam, paling lama 4 jam sehari. Empat aktivitas tidak bisa dipercepat dengan uang, dan {{illegalCrashCount}} aktivitas dua hari tidak boleh dipotong karena butuh 8 jam lembur dalam sehari.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), slope = daily labour cost × overtime premium. The premium is not assumed: the cut day's work is spread as overtime over the remaining days and paid under <a href="{{overtimeURL}}" rel="noopener">Government Regulation 35/2021</a> - first hour 1.5×, later hours 2× the hourly wage, at most 4 hours a day. Four activities cannot be accelerated with money, and {{illegalCrashCount}} two-day activities may not be cut because they would need 8 overtime hours in a day.{{end}}</p>
   <div class="table-wrap">
     <table class="data compact">
-      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Crash{{else}}Crash{{end}}</th><th class="num">{{if eq $l "id"}}Slope/hari{{else}}Slope/day{{end}}</th><th>{{if eq $l "id"}}Catatan{{else}}Note{{end}}</th></tr></thead>
+      <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Crash{{else}}Crash{{end}}</th><th class="num">{{if eq $l "id"}}Lembur/hari{{else}}Overtime/day{{end}}</th><th class="num">{{if eq $l "id"}}Premi{{else}}Premium{{end}}</th><th class="num">{{if eq $l "id"}}Slope/hari{{else}}Slope/day{{end}}</th><th>{{if eq $l "id"}}Catatan{{else}}Note{{end}}</th></tr></thead>
       <tbody>
         {{range activities}}
         {{if not .Milestone}}
@@ -226,6 +227,8 @@
           <td>{{tx .Name $l}}</td>
           <td class="num">{{.Duration}}</td>
           <td class="num">{{if $cp.Allowed}}{{$cp.CrashDur}}{{else}}—{{end}}</td>
+          <td class="num">{{if $cp.Allowed}}{{num $cp.OvertimeHrs 2 $l}} {{if eq $l "id"}}jam{{else}}h{{end}}{{else}}—{{end}}</td>
+          <td class="num">{{if $cp.Allowed}}{{pct $cp.Premium 1 $l}}{{else}}—{{end}}</td>
           <td class="num">{{if $cp.Allowed}}{{rp $cp.SlopePerDay $l}}{{else}}—{{end}}</td>
           <td class="small">{{if not $cp.Allowed}}{{tx $cp.Reason $l}}{{end}}</td>
         </tr>

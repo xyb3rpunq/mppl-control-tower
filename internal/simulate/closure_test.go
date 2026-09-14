@@ -193,8 +193,11 @@ func TestInFlightStateAtTheDataDate(t *testing.T) {
 	if len(fl.InProgress) != 3 {
 		t.Errorf("sedang berjalan %v, mau A17, A19, A21", fl.InProgress)
 	}
-	if fl.Evidence <= 0 || math.Abs(fl.Credibility-float64(fl.Evidence)/(float64(fl.Evidence)+simulate.DefaultPriorWeight)) > 1e-12 {
-		t.Errorf("kredibilitas %v tidak sesuai n/(n+k) dengan n = %d", fl.Credibility, fl.Evidence)
+	if !fl.Empirical || fl.Evidence <= 0 {
+		t.Errorf("prakiraan bawaan harus memakai kredibilitas empiris dengan bukti, dapat %+v", fl.Empirical)
+	}
+	if z, _ := simulate.Credibility(fl.ObservedRatio, 1, fl.DurationVar); math.Abs(fl.Credibility-z) > 1e-12 {
+		t.Errorf("kredibilitas durasi %v tidak sesuai estimator momen %v", fl.Credibility, z)
 	}
 	if want := fl.Credibility*fl.ObservedRatio + 1 - fl.Credibility; math.Abs(fl.DurationFactor-want) > 1e-12 {
 		t.Error("faktor durasi tidak sesuai rumus kredibilitas")
@@ -259,9 +262,39 @@ func TestInFlightForecastRespectsActuals(t *testing.T) {
 	}
 }
 
-// TestAuditAndLevelOrder: urutan jadwal optimal tidak pernah membuat levelling
-// per iterasi lebih panjang, dan audit mengukur jaraknya dari optimum.
-func TestAuditAndLevelOrder(t *testing.T) {
+// TestLevellingIsIdenticalForAnyWorkerCount: jalur berurutan (WebAssembly)
+// dan jalur paralel (server) harus memberi hasil yang sama persis.
+func TestLevellingIsIdenticalForAnyWorkerCount(t *testing.T) {
+	defer func(f func() int) { simulate.LevelWorkers = f }(simulate.LevelWorkers)
+	c := baseConfig(300)
+	c.Layer = simulate.LayerResources
+	c.ExactLevel = true
+	var runs []simulate.IntegratedResult
+	for _, w := range []int{1, 4} {
+		w := w
+		simulate.LevelWorkers = func() int { return w }
+		r, err := simulate.RunIntegrated(model.Activities, c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		runs = append(runs, r)
+	}
+	a, b := runs[0], runs[1]
+	if a.Proof != b.Proof || a.CostP80 != b.CostP80 || a.DurP80 != b.DurP80 {
+		t.Fatalf("hasil berbeda: satu pekerja %+v P80 %v biaya %v, empat pekerja %+v P80 %v biaya %v",
+			a.Proof, a.DurP80, a.CostP80, b.Proof, b.DurP80, b.CostP80)
+	}
+	for i := range a.Durations {
+		if a.Durations[i] != b.Durations[i] || a.Costs[i] != b.Costs[i] {
+			t.Fatalf("iterasi terurut ke-%d berbeda", i)
+		}
+	}
+}
+
+// TestExactLevellingProvesIterations: urutan jadwal optimal tidak pernah
+// memperpanjang levelling per iterasi, dan mode eksak membuktikan setiap
+// iterasi optimal tanpa pernah memperpanjang durasi dibanding mode cepat.
+func TestExactLevellingProvesIterations(t *testing.T) {
 	cal := workcal.MustNew(model.ProjectCharter.StartDate, 400)
 	opt, err := level.Optimize(model.Activities, level.OptimizeOptions{Options: level.Options{Calendar: cal, Capacity: model.Capacity, UseWindows: true}, Samples: 60})
 	if err != nil {
@@ -273,7 +306,7 @@ func TestAuditAndLevelOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.LevelOrder, c.AuditEvery, c.AuditSamples = opt.Best.Order, 100, 20
+	c.LevelOrder = opt.Best.Order
 	ordered, err := simulate.RunIntegrated(model.Activities, c)
 	if err != nil {
 		t.Fatal(err)
@@ -281,14 +314,27 @@ func TestAuditAndLevelOrder(t *testing.T) {
 	if ordered.DurMean > plain.DurMean+1e-9 {
 		t.Errorf("urutan optimal memperpanjang rerata durasi: %v -> %v", plain.DurMean, ordered.DurMean)
 	}
-	a := ordered.Audit
-	if a.Audited != 4 {
-		t.Errorf("teraudit %d iterasi, mau 4", a.Audited)
+	c.ExactLevel = true
+	exact, err := simulate.RunIntegrated(model.Activities, c)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if a.SGSGapMean < 0 || a.BoundGapMean < 0 || a.ProvenShare < 0 || a.ProvenShare > 1 || a.SGSOptimalShare > 1 {
-		t.Errorf("hasil audit tidak masuk akal: %+v", a)
+	for i := range exact.Durations {
+		if exact.Durations[i] > ordered.Durations[i]+1e-9 {
+			t.Fatalf("mode eksak memperpanjang kuantil ke-%d: %v -> %v", i, ordered.Durations[i], exact.Durations[i])
+		}
 	}
-	if plain.Audit.Audited != 0 {
-		t.Error("audit tidak boleh berjalan bila AuditEvery nol")
+	pr := exact.Proof
+	if pr.Iterations != 400 || pr.ByFastSGS+pr.BySearch+pr.Unproven != pr.Iterations {
+		t.Errorf("catatan bukti tidak menjumlah: %+v", pr)
+	}
+	if pr.ProvenShare() < 0.99 {
+		t.Errorf("hanya %.3f iterasi terbukti optimal: %+v", pr.ProvenShare(), pr)
+	}
+	if pr.FastGapMean < 0 || (pr.BySearch > 0 && pr.FastGapMax < 1) {
+		t.Errorf("penghematan pencarian tidak masuk akal: %+v", pr)
+	}
+	if plain.Proof.Iterations != 0 || (simulate.LevelProof{}).ProvenShare() != 0 {
+		t.Error("tanpa ExactLevel tidak boleh ada catatan bukti")
 	}
 }

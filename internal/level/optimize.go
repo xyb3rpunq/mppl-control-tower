@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/schedule"
 )
 
 // OptimizeOptions mengatur pencarian jadwal levelling terbaik.
@@ -346,4 +347,114 @@ func (r *randSource) float64() float64 {
 	z ^= z + (z^(z>>7))*(z|61)
 	z ^= z >> 14
 	return float64(z) / 4294967296.0
+}
+
+// Search memperbaiki sebuah jadwal sampai durasinya menyentuh target -
+// biasanya batas bawah - lalu berhenti. Dipakai simulasi terpadu agar setiap
+// iterasi bisa dibuktikan optimal tanpa menjalankan Optimize penuh: sebagian
+// besar iterasi sudah menyentuh batas bawah dengan SGS pertama, dan sisanya
+// diperbaiki di sini.
+//
+// Tiga tahap, masing-masing berhenti begitu target tercapai:
+//
+//  1. pencarian lokal atas daftar aktivitas jadwal awal: satu aktivitas
+//     dipindah ke posisi lain; langkah yang tidak memperburuk diterima, jadi
+//     pencarian bisa menyeberangi dataran berdurasi sama;
+//  2. enam aturan prioritas, masing-masing dengan justifikasi;
+//  3. sampel acak berbias sebagai lompatan keluar dari lembah lokal.
+//
+// CPM dihitung sekali untuk seluruh langkah, karena durasi tidak berubah -
+// hanya urutan. Urutannya tetap dan acaknya berbenih, sehingga hasil server
+// dan WebAssembly identik. moves adalah anggaran langkah lokal; tahap 3 memakai
+// seperempatnya sebagai jumlah sampel.
+func Search(acts []model.Activity, opts Options, start Result, target, moves int, seed uint32) (Result, bool, error) {
+	best := start
+	if best.Duration <= target {
+		return best, true, nil
+	}
+	opts.Lite = true
+	opts.Rule = ""
+	durationOf := opts.DurationOf
+	if durationOf == nil {
+		durationOf = func(a model.Activity) int { return a.Duration }
+	}
+	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: durationOf, ReleaseOf: opts.ReleaseOf})
+	if err != nil {
+		return best, false, err
+	}
+	opts.plan = &plan
+	consider := func(r Result) bool {
+		if r.Duration < best.Duration {
+			best = r
+		}
+		return best.Duration <= target
+	}
+
+	rng := newRand(seed)
+	cur := best
+	order := append([]string(nil), cur.Order...)
+	n := len(order)
+	cand := make([]string, 0, n)
+	for m := 0; m < moves && n > 1; m++ {
+		i := int(rng.float64() * float64(n))
+		j := int(rng.float64() * float64(n))
+		if i == j {
+			continue
+		}
+		cand = cand[:0]
+		moved := order[i]
+		for k, id := range order {
+			if k == i {
+				continue
+			}
+			if len(cand) == j {
+				cand = append(cand, moved)
+			}
+			cand = append(cand, id)
+		}
+		if len(cand) < n {
+			cand = append(cand, moved)
+		}
+		o := opts
+		o.Order = cand
+		r, err := Run(acts, o)
+		if err != nil {
+			return best, false, err
+		}
+		if r.Duration <= cur.Duration {
+			cur, order = r, r.Order
+			if consider(r) {
+				return best, true, nil
+			}
+		}
+	}
+
+	for _, rule := range Rules {
+		o := opts
+		o.Order, o.Rule = nil, rule
+		r, err := Run(acts, o)
+		if err != nil {
+			return best, false, err
+		}
+		if consider(r) || consider(Justify(acts, opts, r, 4)) {
+			return best, true, nil
+		}
+	}
+
+	for s := 0; s < moves/4; s++ {
+		ord, err := biasedOrder(acts, opts, rng)
+		if err != nil {
+			return best, false, err
+		}
+		o := opts
+		o.Order = ord
+		r, err := Run(acts, o)
+		if err != nil {
+			return best, false, err
+		}
+		if consider(r) || consider(Justify(acts, opts, r, 4)) {
+			return best, true, nil
+		}
+	}
+	return best, false, nil
 }

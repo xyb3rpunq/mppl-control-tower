@@ -1,5 +1,11 @@
 package model
 
+import (
+	"fmt"
+	"math"
+	"strings"
+)
+
 // Berkas ini memodelkan dua hal yang CPM abaikan sama sekali: kapan orang
 // benar-benar bisa bekerja, dan berapa ongkos mempercepat pekerjaan.
 
@@ -109,12 +115,60 @@ func CapacityOnDateWith(role Role, iso string, base map[Role]float64, examFactor
 	return c
 }
 
-// CrashPremium adalah tambahan biaya per hari yang dipercepat, sebagai porsi
-// dari biaya tenaga kerja harian aktivitas. 0,75 = premi lembur 50% ditambah
-// 25% kehilangan efisiensi koordinasi saat orang dipaksa bekerja lebih rapat
-// (hukum Brooks dalam bentuk paling ringan). Ini ASUMSI, dan dinyatakan begitu
-// di halaman Metode.
-const CrashPremium = 0.75
+// Crashing di proyek ini berarti lembur: pekerjaan hari yang dipotong
+// dikerjakan sebagai jam lembur pada hari-hari yang tersisa. Ongkosnya tidak
+// diasumsikan, melainkan dihitung dari aturan upah lembur PP 35/2021:
+//
+//	Pasal 26 ayat (1): lembur paling lama 4 jam sehari dan 18 jam seminggu
+//	Pasal 31 ayat (1): jam lembur pertama 1,5 x upah sejam; jam berikutnya 2 x
+//	Pasal 32:          upah sejam = 1/173 x upah sebulan
+//
+// 173 jam sebulan sama dengan 8 jam x 21,6 hari kerja, sehingga upah sejam
+// setara upah harian dibagi 8. Efek koordinasi (hukum Brooks) tidak
+// ditambahkan karena tidak ada data untuk mengukurnya; premi di sini adalah
+// premi minimum menurut aturan.
+const (
+	OvertimeFirstHour  = 1.5
+	OvertimeNextHour   = 2.0
+	OvertimeMaxDaily   = 4.0
+	OvertimeMaxWeekly  = 18.0
+	RegularHoursPerDay = 8.0
+
+	// OvertimeRegulationURL adalah salinan PP 35/2021 (JDIH/Hukumonline).
+	OvertimeRegulationURL = "https://learning.hukumonline.com/wp-content/uploads/2021/03/Peraturan-Pemerintah-Nomor-35-tahun-2021-Perjanjian-Kerja-Waktu-Tertentu-Alih-Daya-Waktu-Kerja-dan-Waktu-Istirahat-dan-Pemutusan-Hubungan-Kerja.pdf"
+)
+
+// OvertimeUnits mengembalikan upah lembur satu hari dalam satuan upah sejam
+// untuk h jam lembur: 1,5 untuk jam pertama dan 2 untuk setiap jam berikutnya.
+func OvertimeUnits(h float64) float64 {
+	if h <= 0 {
+		return 0
+	}
+	first := math.Min(h, 1)
+	return OvertimeFirstHour*first + OvertimeNextHour*math.Max(h-1, 0)
+}
+
+// OvertimePremium menghitung premi per hari yang dipotong bila daysCut hari
+// kerja dipindah menjadi lembur yang dibagi rata ke crashDays hari tersisa -
+// pembagian rata adalah yang termurah karena jam pertama paling murah.
+//
+//	jam lembur per hari h = 8 x daysCut / crashDays
+//	tambahan biaya        = upah harian x (crashDays x unit(h) / 8 - daysCut)
+//	premi per hari        = tambahan biaya / (upah harian x daysCut)
+//
+// ok bernilai false bila h melampaui 4 jam sehari atau 18 jam seminggu.
+func OvertimePremium(daysCut, crashDays int) (premium, hoursPerDay float64, ok bool) {
+	if daysCut <= 0 || crashDays <= 0 {
+		return 0, 0, false
+	}
+	h := RegularHoursPerDay * float64(daysCut) / float64(crashDays)
+	weekDays := math.Min(float64(crashDays), 5)
+	if h > OvertimeMaxDaily+1e-9 || h*weekDays > OvertimeMaxWeekly+1e-9 {
+		return 0, h, false
+	}
+	extra := float64(crashDays)*OvertimeUnits(h)/RegularHoursPerDay - float64(daysCut)
+	return extra / float64(daysCut), h, true
+}
 
 // crashForbidden adalah aktivitas yang durasinya tidak bisa dibeli dengan uang,
 // beserta alasannya. Menambah lembur tidak membuat pemangku kepentingan lebih
@@ -132,14 +186,16 @@ type CrashPlan struct {
 	CrashDur     int     // durasi terpendek yang masih masuk akal
 	SlopePerDay  float64 // tambahan biaya per hari yang dipotong
 	MaxDaysSaved int
-	Reason       Text // diisi bila Allowed == false
+	Premium      float64 // premi lembur per hari dipotong, porsi upah harian
+	OvertimeHrs  float64 // jam lembur per hari saat dipotong penuh
+	Reason       Text    // diisi bila Allowed == false
 }
 
 // Crash menurunkan batas percepatan sebuah aktivitas dengan aturan yang sama
 // untuk semuanya, supaya tidak ada angka yang dipilih-pilih:
 //
 //	durasi crash = max(O, M - max(1, M/3))
-//	slope        = biaya tenaga kerja harian x CrashPremium
+//	slope        = biaya tenaga kerja harian x OvertimePremium(M - crash, crash)
 //
 // Estimasi optimistis O dipakai sebagai lantai: kalau tim sendiri menilai
 // pekerjaan itu tidak mungkin selesai lebih cepat dari O dalam kondisi terbaik,
@@ -165,11 +221,21 @@ func (a Activity) Crash(rates map[Role]float64) CrashPlan {
 	if crash >= a.Duration {
 		return CrashPlan{Reason: Text{ID: "Estimasi optimistis sudah sama dengan durasi rencana", EN: "The optimistic estimate already equals the planned duration"}}
 	}
+	cutDays := a.Duration - crash
+	premium, hrs, ok := OvertimePremium(cutDays, crash)
+	if !ok {
+		return CrashPlan{OvertimeHrs: hrs, Reason: Text{
+			ID: fmt.Sprintf("Memotong %d hari menjadi %d butuh %s jam lembur per hari - melampaui batas 4 jam sehari (PP 35/2021 Pasal 26)", a.Duration, crash, strings.ReplaceAll(fmt.Sprintf("%.1f", hrs), ".", ",")),
+			EN: fmt.Sprintf("Cutting %d days to %d needs %.1f overtime hours a day - beyond the 4-hour daily limit (Government Regulation 35/2021, Art. 26)", a.Duration, crash, hrs),
+		}}
+	}
 	daily := a.LabourCost(rates) / float64(a.Duration)
 	return CrashPlan{
 		Allowed:      true,
 		CrashDur:     crash,
-		SlopePerDay:  daily * CrashPremium,
-		MaxDaysSaved: a.Duration - crash,
+		SlopePerDay:  daily * premium,
+		MaxDaysSaved: cutDays,
+		Premium:      premium,
+		OvertimeHrs:  hrs,
 	}
 }

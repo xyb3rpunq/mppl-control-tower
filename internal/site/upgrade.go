@@ -98,6 +98,8 @@ func (a *Analysis) baseSimConfig() simulate.IntegratedConfig {
 		Budget:      model.TotalAuthorised,
 		Deadline:    float64(a.Plan.Duration),
 		LevelOrder:  a.Level.Order,
+		// Setiap iterasi lapisan kapasitas dibuktikan optimal lewat batas bawah.
+		ExactLevel: true,
 	}
 }
 

@@ -120,8 +120,9 @@ func closureExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 			break
 		}
 		ex["kredibilitas"] = WorkedExample{
-			Substitution: fmt.Sprintf("Z = %d / (%d + %s) = %s;  %s = %s x %s + %s x 1", fl.Evidence, fl.Evidence, n(fl.PriorWeight, 0), n(fl.Credibility, 3),
-				tr2(lang, "faktor", "factor"), n(fl.Credibility, 3), n(fl.ObservedRatio, 3), n(1-fl.Credibility, 3)),
+			Substitution: fmt.Sprintf("Var = %s;  tau2 = max(0, (%s - 1)^2 - %s) = %s;  Z = %s;  %s: tau2 = %s, Z = %s",
+				n(fl.DurationVar, 5), n(fl.ObservedRatio, 4), n(fl.DurationVar, 5), n(fl.DurationTau2, 5), n(fl.Credibility, 3),
+				tr2(lang, "ujian", "exams"), n(fl.ExamTau2, 4), n(fl.ExamCredibility, 3)),
 			Result: fmt.Sprintf("%s = %s;  %s", tr2(lang, "faktor durasi", "duration factor"), n(fl.DurationFactor, 3), running),
 			Comment: model.Text{
 				ID: fmt.Sprintf("Dengan realisasi dikunci, P80 dari tanggal data %s hari kerja; tanpa belajar dari realisasi %s hari. Faktor kapasitas ujian ikut diperbarui dari %s menjadi %s.", n(a.Forecast.DurP80, 0), n(a.ForecastPrior.DurP80, 0), render.Pct(model.ExamCapacityFactor, 0, lang), render.Pct(fl.ExamFactor, 1, lang)),

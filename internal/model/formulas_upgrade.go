@@ -56,10 +56,11 @@ var upgradeFormulas = []Formula{
 	{
 		Key: "crash", Group: "kompresi", Route: "/optimasi/",
 		Name:     Text{ID: "Crashing dan slope biaya", EN: "Crashing and cost slope"},
-		Notation: Text{ID: "d_crash = max(O, M - max(1, floor(M/3)))     slope = (biaya tenaga kerja / M) x premi     langkah: potong kombinasi kritis termurah yang memendekkan proyek 1 hari", EN: "d_crash = max(O, M - max(1, floor(M/3)))     slope = (labour cost / M) x premium     step: cut the cheapest critical combination that shortens the project by 1 day"},
+		Notation: Text{ID: "d_crash = max(O, M - max(1, floor(M/3)))     h = 8x / d_crash     premi = (d_crash x (1,5 min(h,1) + 2 max(h-1,0)) / 8 - x) / x     slope = (biaya tenaga kerja / M) x premi", EN: "d_crash = max(O, M - max(1, floor(M/3)))     h = 8x / d_crash     premium = (d_crash x (1.5 min(h,1) + 2 max(h-1,0)) / 8 - x) / x     slope = (labour cost / M) x premium"},
 		Symbols: []Symbol{
 			{"slope", Text{ID: "tambahan biaya per hari yang dipotong dari satu aktivitas", EN: "extra cost per day cut from one activity"}},
-			{"premi", Text{ID: "0,75: premi lembur 50% ditambah 25% kehilangan efisiensi koordinasi (asumsi)", EN: "0.75: 50% overtime premium plus 25% coordination loss (assumed)"}},
+			{"x, h", Text{ID: "hari yang dipotong, dan jam lembur per hari saat pekerjaannya dibagi rata ke hari tersisa; h di atas 4 dilarang PP 35/2021", EN: "days cut, and overtime hours per day when the work is spread over the remaining days; h above 4 is prohibited by Government Regulation 35/2021"}},
+			{"premi", Text{ID: "upah lembur PP 35/2021: jam pertama 1,5x, jam berikutnya 2x upah sejam (1/173 upah sebulan)", EN: "overtime pay under Government Regulation 35/2021: first hour 1.5x, later hours 2x the hourly wage (1/173 of monthly pay)"}},
 		},
 		Meaning: Text{ID: "Membeli waktu dengan uang: aktivitas kritis termurah dipercepat lebih dulu, satu hari demi satu hari, sampai tidak ada lagi yang bisa dipotong.", EN: "Buying time with money: the cheapest critical activity is accelerated first, one day at a time, until nothing more can be cut."},
 		Reading: Text{ID: "Kurva waktu-biaya selalu melengkung ke atas. Hari-hari pertama murah; hari-hari terakhir mahal dan sering menuntut memotong dua jalur kritis paralel sekaligus.", EN: "The time-cost curve always bends upward. The first days are cheap; the last are expensive and often require cutting two parallel critical paths at once."},

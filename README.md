@@ -62,8 +62,8 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 2 | kritis | Cadangan kontinjensi jauh di bawah paparan risiko | Cadangan Rp 500.000 menutup 17,4% dari EMV residual Rp 2.880.000 |
 | 3 | kritis | Komitmen 17 minggu nyaris mustahil | Peluang selesai ≤ 85 hari kerja: 1,2%; P80 = 98 hari kerja |
 | 4 | kritis | Jadwal 85 hari hanya sah di atas kertas | Jadwal levelling optimal: **113 hari kerja**, selesai 10 April 2026 (+15 dari kapasitas, +13 dari UTS & UAS) |
-| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,0%; komitmen JCL 70% = **148 hari kerja (8 Juni 2026) & Rp 22.469.675** |
-| 6 | kritis | Dari tanggal data, P80 penyelesaian jauh melampaui prakiraan Earned Value | Prakiraan berjalan P80 **126 hari kerja** (29 April 2026) vs IEAC(t) 91,0 hari; komitmen JCL 70% berjalan 123 hari & Rp 21.250.227 |
+| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,0%; komitmen JCL 70% = **147 hari kerja (5 Juni 2026) & Rp 23.681.409** |
+| 6 | kritis | Dari tanggal data, P80 penyelesaian jauh melampaui prakiraan Earned Value | Prakiraan berjalan P80 **125 hari kerja** (28 April 2026) vs IEAC(t) 91,0 hari; komitmen JCL 70% berjalan 121 hari & Rp 21.819.542 |
 | 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
 | 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
 | 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
@@ -71,13 +71,13 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 11 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
 | 12 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
 | 13 | sedang | Pemeriksaan bisa gagal berulang (GERT) | Tambahan harapan 1,52 hari kerja dan Rp 121.690; P(regresi butuh ≥ 2 putaran tambahan) = 9% |
-| 14 | sedang | Realisasi selama UTS membantah asumsi kapasitas ujian 40% | Laju saat UTS 103,5% dari normal; faktor ujian diperbarui menjadi 64,7% |
+| 14 | sedang | Realisasi selama UTS membantah asumsi kapasitas ujian 40% | Laju saat UTS 103,5% dari normal; kredibilitas empiris 98,1%, faktor ujian diperbarui menjadi 98,8% |
 | 15 | baik | Jadwal levelling terbukti tidak bisa diperpendek dengan mengubah urutan | Jadwal terbaik 113 = batas bawah 113; aturan LST lama memberi 114 |
-| 16 | baik | Lima hari percepatan pertama hampir dibayar sendiri | Premi crash Rp 176.250, biaya bersih setelah sewa hanya **Rp 15.289** |
+| 16 | baik | Lima hari percepatan pertama hampir dibayar sendiri | Premi lembur PP 35/2021 Rp 195.000, biaya bersih setelah sewa hanya **Rp 44.789** (sewa menutup 77%) |
 
 Temuan tambahan dari halaman Piagam dan pencocokan kalender resmi: **tanggal selesai di Project Charter salah enam hari kerja.** Tujuh belas minggu kalender polos berakhir 13 Februari 2026; 85 hari kerja sesungguhnya berakhir **23 Februari 2026** setelah akhir pekan, empat libur nasional, dan dua cuti bersama dikeluarkan. Pencocokan dengan SKB 3 Menteri menemukan cuti bersama Imlek 16 Februari 2026 yang sebelumnya tidak ada di model.
 
-Temuan yang tidak terlihat dari SPI: rasio durasi aktual terhadap rerata PERT pada 16 aktivitas yang sudah selesai adalah **0,983** — tim bekerja sesuai sebaran estimasinya. SPI 0,915 lahir dari jadwal yang disusun memakai M (paling mungkin), bukan dari kinerja buruk.
+Temuan yang tidak terlihat dari SPI: rasio durasi aktual terhadap rerata PERT pada 16 aktivitas yang sudah selesai adalah **0,983** — penyimpangan itu masih di dalam derau estimasi beta-PERT (sd 4,2%), sehingga kredibilitas empirisnya nol: tidak ada bukti tim lebih lambat dari sebaran estimasinya. SPI 0,915 lahir dari jadwal yang disusun memakai M (paling mungkin), bukan dari kinerja buruk.
 
 ---
 
@@ -112,13 +112,14 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 
 - **Levelling sumber daya yang terbukti optimal**: CPM 85 → kapasitas nyata 100 → UTS dan UAS 113 hari kerja, selesai 10 April 2026.
 - **Bukti optimalitas**: enam aturan prioritas (LST, LFT, MSLK, GRPW, MTS, SPT), 300 daftar acak berbias, dan justifikasi maju-mundur mencari batas atas; batas bawah tiga lapis (CPM 85, solo 108, energetik 113) plus pembuktian destruktif. Batas atas = batas bawah = 113, jadi tidak ada urutan kerja yang bisa selesai lebih cepat.
-- **Audit levelling di dalam simulasi**: pada 40 iterasi teraudit, SGS cepat rata-rata 0,43 hari di atas optimum (paling jauh 4 hari); 85% iterasi sudah optimal.
+- **Levelling eksak di dalam simulasi**: **10.000 dari 10.000** iterasi lapisan kapasitas terbukti optimal — 8.077 langsung oleh SGS cepat (sama dengan batas bawahnya), 1.923 setelah `level.Search`, yang rata-rata menghemat 0,38 hari per iterasi dan paling banyak 10 hari. Hal yang sama berlaku untuk seluruh iterasi prakiraan berjalan.
 - **Kalender ketersediaan**: keempat periode ujian dari lampiran kalender akademik resmi Esa Unggul (SK Rektor No. 039/SK-R/UEU/III/2025) — UTS ganjil 3–15 Nov 2025, UAS ganjil 19–31 Jan 2026, UTS genap 18–30 Mei 2026, UAS genap 20 Jul–1 Agu 2026; DevOps paruh waktu (dari piagam).
 - **Gantt pembanding** CPM vs levelling, batang diwarnai menurut penyebab, jendela ujian diarsir.
 - **Histogram pembebanan setelah levelling** dengan garis kapasitas bertangga per hari — nol over-alokasi.
 - Hari menunggu per peran dan **peran kritis** (Backend Developer).
-- **Crashing serakah vs eksak**: kurva 85 → 63 hari; LP simpleks membuktikan serakah **tidak optimal** (kelebihan sampai Rp 3.750).
-- **Time-cost trade-off**: LP biaya total (premi crash + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 176.250 tetapi biaya bersihnya hanya Rp 15.289; grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
+- **Premi lembur dari PP 35/2021**, bukan asumsi: pekerjaan hari yang dipotong dibagi rata sebagai lembur ke hari tersisa; jam pertama 1,5×, jam berikutnya 2× upah sejam (1/173 upah sebulan), paling lama 4 jam sehari dan 18 jam seminggu. Premi per aktivitas 75%–87,5%; **lima aktivitas dua hari (A27, A29, A31, A34, A36) tidak boleh dipotong** karena butuh 8 jam lembur dalam sehari.
+- **Crashing serakah vs eksak**: kurva 85 → 68 hari; LP simpleks membuktikan serakah **tidak optimal** (kelebihan sampai Rp 4.063).
+- **Time-cost trade-off**: LP biaya total (premi lembur + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 195.000 tetapi biaya bersihnya hanya Rp 44.789; dengan premi sesuai aturan, tidak ada durasi yang lebih murah dari 85 hari. Grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
 - **Fast-tracking**: 23 kandidat diuji dengan tumpang tindih 50%; kandidat orang-sama **ditolak**; 11 kandidat layak; penerapan serentak memberi 66 hari.
 
 ### 3.5 PERT & Monte Carlo — `/pert/`
@@ -141,7 +142,7 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
   | L1 | + Korelasi peran (kopula Gauss, ρ 0,5) | 99 | Rp 16,34 jt | 3,45% |
   | L2 | + Risiko bergerombol (kopula faktor, λ 0,6) | 117 | Rp 20,94 jt | 0,45% |
   | L3 | + Putaran rework GERT | 119 | Rp 21,18 jt | 0,31% |
-  | L4 | + Kapasitas, UTS & UAS (levelling per iterasi) | 152 | Rp 22,03 jt | 0,00% |
+  | L4 | + Kapasitas, UTS & UAS (levelling eksak per iterasi) | 151 | Rp 22,02 jt | 0,00% |
 
   Biaya di setiap lapisan sudah memuat sewa server dan langganan yang ikut memanjang bersama jadwal.
 - **Tangga realisme** durasi dan biaya (P50–P90 dengan penanda P80 dan garis target piagam).
@@ -164,10 +165,13 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 ### 3.8 Prakiraan Berjalan — `/prakiraan/` *(baru)*
 
 - **Simulasi terpadu dari tanggal data** (19 Des 2025): 18 simpul selesai dikunci pada realisasinya, 3 aktivitas yang sedang berjalan (A17, A19, A21) memakai durasi bersyarat F(x | x > e), 19 sisanya dirilis pada tanggal data.
-- **Lima prakiraan berdampingan**: rencana CPM 85; Earned Value IEAC(t) 91,0 & EAC Rp 16,16 jt; simulasi perencanaan P80 152; prakiraan berjalan tanpa belajar P80 129; **prakiraan berjalan terkalibrasi P80 126 & Rp 20,75 jt** — dengan kolom "buta terhadap" untuk tiap metode.
-- **Kredibilitas Bühlmann**: Z = 16/(16+10) = 61,5%; rasio aktual/rerata PERT 0,983 → faktor durasi 0,989; rasio biaya harian 1,057 → faktor biaya 1,035.
-- **Kalibrasi kapasitas ujian** dari realisasi selama UTS resmi: laju 103,5% dari normal, faktor untuk UAS diperbarui 40% → 64,7%.
-- Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (123 hari & Rp 21.250.227).
+- **Lima prakiraan berdampingan**: rencana CPM 85; Earned Value IEAC(t) 91,0 & EAC Rp 16,16 jt; simulasi perencanaan P80 151; prakiraan berjalan tanpa belajar P80 129; **prakiraan berjalan terkalibrasi P80 125 & Rp 20,83 jt** — dengan kolom "buta terhadap" untuk tiap metode.
+- **Kredibilitas Bühlmann empiris** — bobot tidak dipilih, tetapi diestimasi dengan metode momen: Var = derau estimasi, tau² = max(0, selisih² − Var), Z = tau² / (tau² + Var).
+  - Durasi: rasio aktual/rerata PERT 0,983, derau sd 4,2% → tau² = 0, **Z = 0**, faktor 1.
+  - Biaya tenaga kerja harian: rasio 1,057, derau sd 2,2% (estimator sandwich) → **Z = 85,1%**, faktor 1,049.
+  - Kapasitas ujian: teramati 103,5% (dibatasi 100%), derau dari metode delta → **Z = 98,1%**.
+- **Kalibrasi kapasitas ujian** dari realisasi selama UTS resmi: laju 103,5% dari normal, faktor untuk UAS diperbarui 40% → 98,8%.
+- Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (121 hari & Rp 21.819.542).
 - **Panel WebAssembly**: pilih tanggal data lain dan prakirakan ulang — kalibrasi dihitung dari bukti yang tersedia saat itu.
 
 ### 3.9 Manajemen Risiko — `/risiko/`
@@ -235,12 +239,14 @@ Pemetaan dua arah indeks hari kerja ↔ tanggal, seluruh libur nasional dan cuti
 - Kapasitas per peran per hari dari `model.AvailabilityWindows`, dengan faktor ujian yang bisa diganti hasil kalibrasi.
 - Pemecahan keterlambatan per aktivitas: **terbawa**, **menunggu**, **memanjang**, beserta penyebab.
 - `Explain`: dekomposisi bertahap CPM → kapasitas → jendela, setiap tahap memakai `Optimize`.
+- **`Search`**: pencarian berbenih menuju batas bawah untuk levelling per iterasi — langkah lokal memindah satu aktivitas di daftar (CPM dihitung sekali), enam aturan dengan justifikasi, lalu sampel berbias; berhenti begitu batas bawah tercapai.
 
 ### `compress` — kompresi jadwal
 - **Crashing serakah** per hari dengan pencarian pasangan dan tiga aktivitas untuk jalur kritis paralel.
 - **Crashing eksak** (`Exact`): LP per tenggat; matriks jaringan unimodular total sehingga solusi simpleks berupa hari bulat, diverifikasi ulang dengan CPM; perbandingan titik demi titik dengan serakah.
 - **Time-cost trade-off**: LP biaya total dengan sewa `cost.Rental`, tanggal mulai proyek dikunci, titik biaya terendah, dan nilai impas per hari.
 - **Fast-tracking** dengan rework harapan dan penolakan kandidat orang-sama.
+- Slope setiap aktivitas dari `model.OvertimePremium` (PP 35/2021 Pasal 26, 31, 32).
 
 ### `lp` — pemrograman linear
 Simpleks dua fase dengan tableau padat dan **aturan Bland** (tidak pernah berputar pada masalah degeneratif — diuji dengan contoh klasik Beale).
@@ -259,8 +265,8 @@ PV/EV/AC dengan kemajuan linear dalam aktivitas; SV, CV, SPI, CPI; **Earned Sche
 - **Sampler bersama** lewat transformasi invers: beta-PERT baku (α = 1 + 4(M−O)/(P−O)), CDF dari **fungsi beta tak lengkap teregularisasi** (pecahan berlanjut Lentz) ditabulasi pada 2.049 titik; sebaran segitiga dengan invers tertutup.
 - **Kopula Gauss** per peran dominan: u = Φ(ρ·z_peran + √(1−ρ²)·ε); faktor laten peran bisa dibaca untuk kopula risiko.
 - Simulasi PERT: histogram, kuantil, peluang, sensitivitas Spearman, porsi kritis.
-- **Simulasi terpadu** lima lapisan: biaya per iterasi termasuk sewa bergantung waktu, **kopula faktor risiko** dengan phi terealisasi, **putaran rework GERT**, levelling per iterasi (LST + urutan optimal) dengan **audit terhadap `level.Optimize`**, Joint Confidence Level, frontier iso-JCL, histogram 2D.
-- **Prakiraan berjalan** (`PrepareInFlight`): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann** untuk durasi, biaya, dan kapasitas ujian.
+- **Simulasi terpadu** lima lapisan: biaya per iterasi termasuk sewa bergantung waktu, **kopula faktor risiko** dengan phi terealisasi, **putaran rework GERT**, levelling per iterasi yang **dibuktikan optimal** (SGS cepat → batas bawah → `level.Search`, anggaran dinaikkan 10× bila perlu) dan dijalankan paralel tanpa mengubah hasil, Joint Confidence Level, frontier iso-JCL, histogram 2D.
+- **Prakiraan berjalan** (`PrepareInFlight`): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann empiris** (estimator momen; derau dari varians beta-PERT, estimator sandwich, dan metode delta) untuk durasi, biaya, dan kapasitas ujian.
 
 ### `risk` — risiko kuantitatif
 Tingkat peluang dan dampak (relatif terhadap BAC), skor dan keparahan, matriks inheren dan residual, EMV, penurunan EMV per risiko, agregasi kategori, cakupan dan kekurangan cadangan, paparan jadwal harapan.
@@ -316,14 +322,14 @@ Isi halaman: 14 kartu fakta bersumber, linimasa 2018–2026, tabel metrik turuna
 
 ## 7. Interaktivitas lewat WebAssembly
 
-`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi di peramban: simulasi terpadu L4 10.000 iterasi memberi P80 152 dan biaya P80 Rp 22.027.408,66, dan prakiraan berjalan 10.000 iterasi memberi P80 126 dan biaya P80 Rp 20.751.399,17 — keduanya identik sampai digit terakhir dengan hasil server.
+`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi di peramban: simulasi terpadu L4 10.000 iterasi dengan levelling eksak memberi P80 151 dan biaya P80 Rp 22.024.480,52, dan prakiraan berjalan 10.000 iterasi memberi P80 125 dan biaya P80 Rp 20.830.528,00 — keduanya identik sampai digit terakhir dengan hasil server.
 
 | Halaman | Fungsi Go | Kendali |
 | --- | --- | --- |
 | Biaya | `mpplRecompute(tanggal)` | Geser tanggal data → SPI, CPI, SV(t), EV, AC, EAC, VAC, TCPI, % selesai |
 | PERT | `mpplSimulate(iterasi, benih, sebaran)` | Monte Carlo ulang + histogram |
-| Simulasi Terpadu | `mpplIntegrated(iterasi, benih, ρ, lapisan)` | Slider ρ, pilihan lapisan L0–L4 → JCL, peluang, P80, korelasi terealisasi, phi risiko, hari rework, biaya sewa + histogram |
-| Prakiraan Berjalan | `mpplForecast(tanggal, iterasi)` | Pilih tanggal data → status aktivitas, kredibilitas Z, faktor durasi, P50, P80, biaya P80 + histogram |
+| Simulasi Terpadu | `mpplIntegrated(iterasi, benih, ρ, lapisan, eksak)` | Slider ρ, pilihan lapisan L0–L4, levelling eksak → JCL, peluang, P80, korelasi terealisasi, phi risiko, hari rework, biaya sewa, porsi iterasi terbukti optimal + histogram |
+| Prakiraan Berjalan | `mpplForecast(tanggal, iterasi, eksak)` | Pilih tanggal data → status aktivitas, Z durasi / biaya / ujian, faktor durasi, P50, P80, biaya P80 + histogram |
 
 Bila WebAssembly gagal dimuat, panel tetap tersembunyi dan halaman menampilkan angka yang benar untuk tanggal data bawaan — seluruh isi dan grafik sudah dirender server.
 
@@ -425,7 +431,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**205 fungsi uji di 17 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**216 fungsi uji di 17 paket, cakupan pernyataan 94,3%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -442,6 +448,8 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - LP tidak pernah lebih mahal dari serakah; serakah terbukti tidak optimal pada jaringan proyek.
 - Simpleks: contoh buku teks, fase 1, tidak layak, tak terbatas, baris artifisial redundan, dan contoh degeneratif Beale.
 - Kandidat fast-tracking orang-sama tidak boleh dianggap layak.
+- **Premi lembur dihitung ulang menit demi menit** terhadap rumus tertutup; batas 4 jam sehari dan 18 jam seminggu ditolak; setiap aktivitas yang boleh di-crash lembur dalam batas, dan tepat lima melanggarnya.
+- `Search` mencapai batas bawah pada jaringan kecil dengan urutan buruk, berbenih deterministik, jujur melaporkan target yang mustahil, dan menolak jaringan bersiklus.
 
 **Simulasi**
 - Benih sama → hasil identik; benih berbeda → kesimpulan stabil.
@@ -455,7 +463,8 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Rerata putaran rework di simulasi cocok dengan bentuk tertutup GERT** p/(1−p); aljabar Mason cocok dengan rumus geometrik.
 - Biaya sewa pada jadwal rencana persis sama dengan anggaran; BAC tetap Rp 14.832.000.
 - **Prakiraan berjalan**: status per aktivitas pada tanggal data, AC sama dengan mesin EVM, rumus kredibilitas, risiko berstatus "terjadi" tidak disampel lagi, tidak ada prakiraan yang selesai sebelum realisasi atau berbiaya di bawah AC.
-- Urutan jadwal optimal tidak pernah memperpanjang levelling per iterasi; audit berjalan tepat pada iterasi yang diminta.
+- **Setiap iterasi lapisan kapasitas terbukti optimal** — 10.000 dari 10.000 di simulasi perencanaan dan prakiraan berjalan; hasilnya identik berapa pun jumlah pekerja paralel.
+- **Kredibilitas empiris** diuji pada titik hitung tangan (selisih di dalam derau → Z = 0, selisih² = 2 × derau → Z = 0,5, tanpa derau → Z = 1) dan monoton; varians beta-PERT cocok dengan integrasi numerik kuantil sampler; bobot paksa masih mengembalikan n/(n+k).
 - Nilai-nilai I_x(a,b) terhadap solusi tertutup; rerata beta-PERT sama dengan te; CDF(Q(u)) = u.
 
 **Anggaran, risiko, mutu**
@@ -468,6 +477,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Halaman Inggris tidak boleh memuat kata fungsi Indonesia** — uji ini merender HTML sungguhan lalu memindainya, dan menemukan bocoran nyata (label status, notasi rumus, nilai fakta, metrik temuan) yang lolos dari pemeriksaan kelengkapan kamus.
 - Tidak ada singkatan bulan Indonesia di dalam kalimat Inggris.
 - Angka kunci — termasuk angka halaman Optimasi, Simulasi Terpadu, dan Prakiraan Berjalan — harus benar-benar sampai ke HTML dalam kedua bahasa, diformat dari struct analisis, bukan diketik.
+- Rentang premi lembur, tautan PP 35/2021, dan ketiga Z empiris harus tampil di kedua bahasa, dan teks asumsi lama ("k = ", "premi (asumsi)") tidak boleh tersisa.
 - `metrik.json` harus JSON sah dengan seluruh blok baru; seluruh temuan penutup celah harus diturunkan.
 - Setiap fakta Coretax punya URL sumber yang tertaut di HTML dengan `rel="noopener"`.
 - Setiap SVG utuh, beraksesibilitas, bebas NaN, tanpa warna heksadesimal langsung.
@@ -494,13 +504,13 @@ Dua alur kerja GitHub Actions:
 | Kemajuan linear dalam aktivitas | Aturan 0/100 atau 50/50 memberi EV berbeda |
 | Data realisasi SIATS adalah skenario pelaksanaan yang wajar (proyek kuliah tidak dieksekusi) | Angka EV dan prakiraan berjalan berubah; rumus dan cara membaca tidak |
 | Korelasi peran ρ = 0,5 | P80 hanya bergeser satu hari; lebar sebaran yang berubah |
-| Kapasitas 40% selama empat periode ujian resmi | Tanpa jendela ujian levelling masih 100 hari kerja; realisasi UTS memperbarui faktornya menjadi 64,7% |
+| Kapasitas 40% selama empat periode ujian resmi | Tanpa jendela ujian levelling masih 100 hari kerja; realisasi UTS memperbarui faktornya menjadi 98,8% |
 | Laju mulai minimum 20% (satu hari kerja per minggu) | Ambang 25% memberi jadwal terbaik satu hari lebih panjang |
 | Lima penggerak risiko bersama, λ = 0,6 | Rerata biaya tidak berubah pada λ berapa pun; hanya ekor |
 | Peluang gagal GERT 30% (regresi) dan 25% (uji penetrasi) | Rerata putaran p/(1−p) tidak linear |
-| Bobot keyakinan awal k = 10 | Prakiraan tanpa belajar ditampilkan sebagai pembanding |
+| Kredibilitas dengan estimator momen satu kelompok | Satu selisih besar yang kebetulan bisa terbaca sistematis; prakiraan tanpa belajar ditampilkan sebagai pembanding |
 | Sewa & langganan sebanding dengan rentang pemakaian | Vendor bulanan membuat biaya naik bertahap, bukan halus |
-| Premi crash 75%, peluang rework fast-tracking 30% | Biaya berubah sebanding, urutan potongan tidak |
+| Crashing = lembur PP 35/2021 tanpa kehilangan efisiensi koordinasi; slope linear memakai premi potongan penuh; peluang rework fast-tracking 30% | Premi aturan adalah batas bawah — biaya crash sesungguhnya hanya bisa lebih tinggi |
 | Peluang gagal cutover Coretax 35% (skenario) | Titik impasnya 0,279% — kesimpulan bertahan |
 
 **Celah yang sudah ditutup** (lima celah versi sebelumnya):
@@ -511,14 +521,21 @@ Dua alur kerja GitHub Actions:
 4. **Simulasi berpandangan perencanaan** → halaman **Prakiraan Berjalan**: realisasi dikunci, durasi bersyarat, kredibilitas Bühlmann, kalibrasi kapasitas ujian.
 5. **Tidak ada pengulangan kerja (GERT)** → dua putaran rework direduksi dengan **aturan Mason** dan disimulasikan sebagai lapisan L3; analitik dan Monte Carlo saling cocok.
 
+**Celah putaran kedua** (sebelumnya tercantum sebagai batas yang tersisa):
+
+6. **Levelling di dalam simulasi hanya cepat** → setiap iterasi kini **dibuktikan optimal** terhadap batas bawahnya sendiri: 10.000 dari 10.000, dengan waktu build tetap wajar karena CPM di-cache dan iterasi dijalankan paralel.
+7. **Bobot kredibilitas k = 10 dipilih** → **estimator momen Bühlmann**: Z dihitung dari selisih dibanding derau estimasi. Hasilnya berbeda nyata dari k = 10: durasi Z 0 (bukan 61,5%), biaya Z 85%, ujian Z 98%.
+8. **Premi crash 75% diasumsikan** → **premi lembur PP 35/2021** per aktivitas (75%–87,5%), dan lima aktivitas dua hari ternyata tidak boleh dipotong secara hukum; durasi crash minimum naik dari 63 ke 68 hari.
+
 Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; keempat periode ujian diambil dari lampiran kalender akademik resmi, dan UAS ganjil ternyata 19–31 Januari 2026 — seminggu lebih lambat dari asumsi lama 12–23 Januari.
 
 **Batas yang tersisa** (bukan pekerjaan yang lupa, melainkan batas yang harus diketahui):
 
 1. **Optimalitas berlaku di dalam model isi pekerjaan** — laju pecahan tanpa biaya berpindah konteks; tim sungguhan bisa sedikit lebih lambat.
-2. **Levelling di dalam simulasi tetap cepat, bukan eksak** — rata-rata 0,43 hari di atas optimum menurut audit.
-3. **Parameter asumsi hanya sebagian terkalibrasi** — faktor ujian diperbarui dari realisasi; premi crash, peluang GERT, λ, dan k masih asumsi dengan uji kepekaan.
-4. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
+2. **Parameter tanpa data tetap asumsi** — kapasitas ujian dan bobot kredibilitas kini diestimasi dari realisasi, premi lembur dari PP 35/2021; peluang gagal GERT, λ risiko, dan peluang rework fast-tracking masih asumsi dengan uji kepekaan karena belum ada data untuk mengukurnya.
+3. **Premi lembur adalah batas bawah** — aturan tidak memuat kehilangan efisiensi koordinasi, dan slope linear memakai premi potongan penuh.
+4. **Estimator kredibilitas memakai satu kelompok data** — satu selisih besar yang kebetulan bisa terbaca sebagai penyimpangan sistematis; data lintas proyek akan menstabilkannya.
+5. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
 
 ---
 
@@ -528,9 +545,11 @@ Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optima
 
 **Kalender** — [Kalender Akademik Universitas Esa Unggul TA 2025/2026](https://www.esaunggul.ac.id/en/kalender-akademik-tahun-akademik-2025-2026/) (SK Rektor No. 039/SK-R/UEU/III/2025, lampiran halaman 1–2) untuk tanggal UTS dan UAS; [SKB 3 Menteri libur nasional dan cuti bersama 2026](https://setneg.go.id/baca/index/inilah_skb_3_menteri_libur_nasional_dan_cuti_bersama_2026) dan [SKB perubahan 2025](https://www.kompas.com/jawa-tengah/read/2025/12/09/104500088/apakah-tanggal-26-desember-2025-cuti-bersama-ini-jawabannya-sesuai) untuk hari libur.
 
+**Upah lembur** — [PP No. 35 Tahun 2021](https://learning.hukumonline.com/wp-content/uploads/2021/03/Peraturan-Pemerintah-Nomor-35-tahun-2021-Perjanjian-Kerja-Waktu-Tertentu-Alih-Daya-Waktu-Kerja-dan-Waktu-Istirahat-dan-Pemutusan-Hubungan-Kerja.pdf) Pasal 26 (lembur paling lama 4 jam sehari dan 18 jam seminggu), Pasal 31 (jam pertama 1,5×, jam berikutnya 2× upah sejam), dan Pasal 32 (upah sejam = 1/173 upah sebulan).
+
 **Studi kasus Coretax** — pemberitaan publik Kompas, Tempo, Hukumonline, DDTC News, Beritasatu, dan keterangan resmi Direktorat Jenderal Pajak; daftar lengkap dengan tanggal ada di [halaman studi kasus](https://xyb3rpunq.github.io/mppl-control-tower/coretax/).
 
-**Metode** — PMBOK; Kolisch (1996) dan Kolisch & Hartmann (1999) untuk SGS dan aturan prioritas; Valls, Ballestín & Quintanilla (2005) untuk justifikasi; Baptiste, Le Pape & Nuijten (2001) untuk penalaran energetik; Klein & Scholl (1999) untuk batas bawah destruktif; Kelley (1961) untuk crashing dengan LP; Pritsker (1966) untuk GERT; Bühlmann (1967) untuk kredibilitas; Lipke (2003) untuk Earned Schedule; Nelson (1984) untuk aturan peta kendali; Vose (2008) untuk beta-PERT; Numerical Recipes untuk fungsi beta tak lengkap; NASA Cost Estimating Handbook untuk JCL 70%.
+**Metode** — PMBOK; Kolisch (1996) dan Kolisch & Hartmann (1999) untuk SGS dan aturan prioritas; Valls, Ballestín & Quintanilla (2005) untuk justifikasi; Baptiste, Le Pape & Nuijten (2001) untuk penalaran energetik; Klein & Scholl (1999) untuk batas bawah destruktif; Kelley (1961) untuk crashing dengan LP; Pritsker (1966) untuk GERT; Bühlmann (1967) untuk kredibilitas dan Klugman, Panjer & Willmot (*Loss Models*) untuk estimasi parameter kredibilitas secara empiris; Lipke (2003) untuk Earned Schedule; Nelson (1984) untuk aturan peta kendali; Vose (2008) untuk beta-PERT; Numerical Recipes untuk fungsi beta tak lengkap; NASA Cost Estimating Handbook untuk JCL 70%.
 
 Situs ini tidak berafiliasi dengan Direktorat Jenderal Pajak maupun pihak mana pun yang disebut. Analisisnya adalah kerja akademik.
 

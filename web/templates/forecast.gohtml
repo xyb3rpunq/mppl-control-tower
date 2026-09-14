@@ -61,15 +61,15 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Apa yang dipelajari dari realisasi{{else}}What the actuals teach{{end}}</h2>
-  <p class="section-intro">{{if eq $l "id"}}Estimasi tiga titik adalah keyakinan awal. Realisasi adalah bukti. Bobot kredibilitas Bühlmann menggabungkan keduanya secara terbuka: Z = n / (n + k), dengan n jumlah aktivitas yang sudah selesai dan k = {{num $fl.PriorWeight 0 $l}} bobot keyakinan awal (asumsi). Bukti sedikit berarti rencana masih dominan; bukti banyak berarti data yang bicara.{{else}}Three-point estimates are prior belief. Actuals are evidence. Bühlmann credibility weighting combines the two openly: Z = n / (n + k), where n is the number of completed activities and k = {{num $fl.PriorWeight 0 $l}} is the prior weight (assumed). Little evidence leaves the plan dominant; plenty of evidence lets the data speak.{{end}}</p>
+  <p class="section-intro">{{if eq $l "id"}}Estimasi tiga titik adalah keyakinan awal. Realisasi adalah bukti. Kredibilitas Bühlmann menggabungkan keduanya tanpa bobot yang dipilih. Pertama dihitung seberapa jauh realisasi bisa menyimpang dari rencana hanya karena derau estimasi (Var). Selisih yang melampaui derau itu adalah penyimpangan sistematis (tau² = max(0, selisih² − Var)), dan Z = tau² / (tau² + Var). Selisih yang masih dalam derau memberi Z nol; selisih yang jauh di luarnya memberi Z mendekati satu.{{else}}Three-point estimates are prior belief. Actuals are evidence. Bühlmann credibility combines the two without a chosen weight. First it measures how far actuals could drift from plan through estimation noise alone (Var). Any gap beyond that noise is systematic deviation (tau² = max(0, gap² − Var)), and Z = tau² / (tau² + Var). A gap within the noise gives Z of zero; a gap far beyond it gives Z close to one.{{end}}</p>
   <div class="kpi-grid four">
-    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Kredibilitas Z{{else}}Credibility Z{{end}}</p><p class="kpi-value">{{pct $fl.Credibility 1 $l}}</p><p class="kpi-note">n = {{$fl.Evidence}}, k = {{num $fl.PriorWeight 0 $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Z durasi / biaya / ujian{{else}}Z duration / cost / exams{{end}}</p><p class="kpi-value">{{pct $fl.Credibility 0 $l}} / {{pct $fl.CostCredibility 0 $l}} / {{pct $fl.ExamCredibility 0 $l}}</p><p class="kpi-note">n = {{$fl.Evidence}}; {{if eq $l "id"}}derau durasi sd{{else}}duration noise sd{{end}} {{pct (sqrtf $fl.DurationVar) 1 $l}}</p></div>
     <div class="kpi {{if gt $fl.ObservedRatio 1.0}}bad{{else}}good{{end}}"><p class="kpi-label">{{if eq $l "id"}}Durasi aktual ÷ rerata PERT{{else}}Actual ÷ PERT mean duration{{end}}</p><p class="kpi-value">{{num $fl.ObservedRatio 3 $l}}</p><p class="kpi-note">{{if eq $l "id"}}faktor sisa pekerjaan{{else}}remaining-work factor{{end}} {{num $fl.DurationFactor 3 $l}}</p></div>
     <div class="kpi {{if gt $fl.ObservedCostRatio 1.0}}bad{{else}}good{{end}}"><p class="kpi-label">{{if eq $l "id"}}Biaya harian aktual ÷ tarif{{else}}Actual daily cost ÷ rate{{end}}</p><p class="kpi-value">{{num $fl.ObservedCostRatio 3 $l}}</p><p class="kpi-note">{{if eq $l "id"}}faktor biaya sisa{{else}}remaining-cost factor{{end}} {{num $fl.CostFactor 3 $l}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Kapasitas saat ujian{{else}}Capacity during exams{{end}}</p><p class="kpi-value">{{pct $fl.ExamFactor 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}asumsi{{else}}assumed{{end}} {{pct (examFactor) 0 $l}} → {{if eq $l "id"}}teramati{{else}}observed{{end}} {{pct $fl.ExamObserved 0 $l}}</p></div>
   </div>
   <div class="proof">
-    <p>{{if eq $l "id"}}<strong>Temuan yang tidak terlihat dari SPI.</strong> Rasio durasi aktual terhadap rerata PERT adalah {{num $fl.ObservedRatio 3 $l}}: tim bekerja hampir persis sesuai sebaran estimasinya. SPI {{idx $s.SPI $l}} tidak lahir dari kinerja buruk, melainkan dari jadwal rencana yang disusun memakai M (paling mungkin), padahal rerata beta-PERT hampir selalu di atas M. Keterlambatan itu sudah terkunci di rencana sejak hari pertama.{{else}}<strong>A finding SPI cannot show.</strong> The ratio of actual durations to PERT means is {{num $fl.ObservedRatio 3 $l}}: the team works almost exactly to its estimated distributions. The SPI of {{idx $s.SPI $l}} does not come from poor performance but from a plan built on M (most likely), while the beta-PERT mean almost always sits above M. The delay was locked into the plan from day one.{{end}}</p>
+    <p>{{if eq $l "id"}}<strong>Temuan yang tidak terlihat dari SPI.</strong> Rasio durasi aktual terhadap rerata PERT adalah {{num $fl.ObservedRatio 3 $l}}. Penyimpangan itu masih di dalam derau estimasi (sd {{pct (sqrtf $fl.DurationVar) 1 $l}}), sehingga Z durasi {{pct $fl.Credibility 0 $l}}: tidak ada bukti tim lebih cepat atau lebih lambat dari sebaran estimasinya. SPI {{idx $s.SPI $l}} tidak lahir dari kinerja buruk, melainkan dari jadwal rencana yang disusun memakai M (paling mungkin), padahal rerata beta-PERT hampir selalu di atas M. Keterlambatan itu sudah terkunci di rencana sejak hari pertama.{{else}}<strong>A finding SPI cannot show.</strong> The ratio of actual durations to PERT means is {{num $fl.ObservedRatio 3 $l}}. That deviation is within estimation noise (sd {{pct (sqrtf $fl.DurationVar) 1 $l}}), so the duration Z is {{pct $fl.Credibility 0 $l}}: there is no evidence the team is faster or slower than its estimated distributions. The SPI of {{idx $s.SPI $l}} does not come from poor performance but from a plan built on M (most likely), while the beta-PERT mean almost always sits above M. The delay was locked into the plan from day one.{{end}}</p>
   </div>
   <div class="two-col">
     <div class="table-wrap">
@@ -158,16 +158,18 @@
     </label>
     <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
       <select name="iterations">
-        <option value="1000">1.000</option>
-        <option value="2000" selected>2.000</option>
+        <option value="500">500</option>
+        <option value="1000" selected>1.000</option>
+        <option value="2000">2.000</option>
         <option value="5000">5.000</option>
       </select>
     </label>
+    <label class="check"><input type="checkbox" name="exact" checked> <span>{{if eq $l "id"}}Buktikan optimal per iterasi{{else}}Prove each iteration optimal{{end}}</span></label>
     <button type="submit">{{if eq $l "id"}}Prakirakan{{else}}Forecast{{end}}</button>
   </form>
   <div class="live-out sim-out">
     <div><span>{{if eq $l "id"}}Selesai / berjalan{{else}}Done / running{{end}}</span><strong data-fc="status">—</strong></div>
-    <div><span>Z</span><strong data-fc="z">—</strong></div>
+    <div><span>{{if eq $l "id"}}Z durasi / biaya / ujian{{else}}Z duration / cost / exams{{end}}</span><strong data-fc="z">—</strong></div>
     <div><span>{{if eq $l "id"}}Faktor durasi{{else}}Duration factor{{end}}</span><strong data-fc="factor">—</strong></div>
     <div><span>P50</span><strong data-fc="p50">—</strong></div>
     <div><span>P80</span><strong data-fc="p80">—</strong></div>

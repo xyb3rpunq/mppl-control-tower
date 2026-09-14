@@ -500,7 +500,7 @@ dl.mini dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
 .path-chain em { color: var(--ink-faint); font-style: normal; font-family: var(--mono); font-size: .75rem; }
 
 /* ------------------------------------------------------------ risk cards */
-.risk-list { display: grid; gap: 1rem; }
+.risk-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
 .risk-card { background: var(--bg-raised); border: 1px solid var(--rule); border-left: 4px solid var(--neutral); border-radius: var(--radius); padding: 1rem 1.2rem; box-shadow: var(--shadow); }
 .risk-card.sev-ekstrem { border-left-color: var(--bad); }
 .risk-card.sev-tinggi { border-left-color: var(--warn); }
@@ -647,6 +647,13 @@ dl.mini dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
   .sidenav-foot { display: none; }
   .formula-body { grid-template-columns: 1fr; gap: .9rem; }
 }
+/* Di layar sempit setiap tabel data menjadi wadah geser sendiri, supaya
+   halaman tidak pernah bergeser horizontal. Tabel di dalam .table-wrap sudah
+   punya wadah geser dan tetap berupa tabel biasa. */
+@media (max-width: 720px) {
+  table.data { display: block; max-width: 100%; min-width: 0; overflow-x: auto; }
+  .table-wrap table.data { display: table; max-width: none; overflow: visible; }
+}
 @media (max-width: 560px) {
   .brand-text small { display: none; }
   .kpi-value { font-size: 1.45rem; }
@@ -771,3 +778,5 @@ text.marker.plan-p80 { fill: var(--pv); }
 .proof { border-left: 4px solid var(--good); background: var(--good-soft); padding: .8rem 1rem; border-radius: var(--radius-sm); margin: 1rem 0; }
 .proof strong { color: var(--good); }
 .source-link { font-size: .78rem; color: var(--ink-faint); }
+.sim-form label.check { display: flex; align-items: center; gap: .45rem; flex-direction: row; }
+.sim-form label.check input { width: auto; accent-color: var(--accent); }

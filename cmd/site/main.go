@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -378,7 +379,6 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 		"reworkLoops":  func() []model.ReworkLoop { return model.ReworkLoops },
 		"riskLoading":  func() float64 { return model.RiskLoading },
 		"examFactor":   func() float64 { return model.ExamCapacityFactor },
-		"priorWeight":  func() float64 { return simulate.DefaultPriorWeight },
 		"minStartRate": func() float64 { return level.DefaultMinStartRate },
 		"calendarURL":  func() string { return model.AcademicCalendarURL },
 		"skbURL":       func() string { return workcal.SKB2026URL },
@@ -400,6 +400,7 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 			}
 			return out
 		},
+		"sqrtf": math.Sqrt,
 		"minf": func(x, y float64) float64 {
 			if x < y {
 				return x
@@ -430,9 +431,27 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 		"ruleName":     func(r level.Rule, lang string) string { return ruleName(r, lang) },
 		"availability": func() []model.AvailabilityWindow { return model.AvailabilityWindows },
 		"crashPlanOf":  func(act model.Activity) model.CrashPlan { return act.Crash(model.RateCard) },
-		"crashPremium": func() float64 { return model.CrashPremium },
-		"reworkProb":   func() float64 { return compress.ReworkProbability },
-		"defaultRho":   func() float64 { return simulate.DefaultRho },
+		"crashPremiumRange": func() [2]float64 {
+			lo, hi := 1.0, 0.0
+			for _, act := range model.Activities {
+				if p := act.Crash(model.RateCard); p.Allowed {
+					lo, hi = math.Min(lo, p.Premium), math.Max(hi, p.Premium)
+				}
+			}
+			return [2]float64{lo, hi}
+		},
+		"overtimeURL": func() string { return model.OvertimeRegulationURL },
+		"illegalCrashCount": func() int {
+			n := 0
+			for _, act := range model.Activities {
+				if p := act.Crash(model.RateCard); !p.Allowed && p.OvertimeHrs > model.OvertimeMaxDaily {
+					n++
+				}
+			}
+			return n
+		},
+		"reworkProb": func() float64 { return compress.ReworkProbability },
+		"defaultRho": func() float64 { return simulate.DefaultRho },
 		// frontierRows menipiskan tabel frontier, tetapi selalu dimulai dari
 		// titik layak PERTAMA - itulah komitmen JCL 70% dengan tenggat
 		// terpendek, dan tidak boleh sampai terlewat oleh penipisan.
@@ -778,7 +797,7 @@ func metricsJSON(a *site.Analysis) string {
 			"durasi_sgs_lst":    a.LevelOpt.Baseline.Duration,
 			"batas_bawah":       map[string]interface{}{"cpm": a.LevelOpt.Bound.CPM, "solo": a.LevelOpt.Bound.Solo, "energetik": a.LevelOpt.Bound.Energetic, "akhir": a.LevelOpt.Bound.Value},
 			"celah_optimalitas": a.LevelOpt.Gap, "terbukti_optimal": a.LevelOpt.Proven,
-			"audit_simulasi": map[string]interface{}{"iterasi_teraudit": fin.Audit.Audited, "rerata_selisih_sgs": fin.Audit.SGSGapMean, "maks_selisih_sgs": fin.Audit.SGSGapMax, "porsi_terbukti_optimal": fin.Audit.ProvenShare, "porsi_sgs_sudah_optimal": fin.Audit.SGSOptimalShare},
+			"bukti_levelling_simulasi": map[string]interface{}{"iterasi": fin.Proof.Iterations, "terbukti_sgs_cepat": fin.Proof.ByFastSGS, "terbukti_setelah_pencarian": fin.Proof.BySearch, "belum_terbukti": fin.Proof.Unproven, "porsi_terbukti_optimal": fin.Proof.ProvenShare(), "rerata_hari_dihemat_pencarian": fin.Proof.FastGapMean, "maks_hari_dihemat_pencarian": fin.Proof.FastGapMax},
 		}},
 		{"kompresi", map[string]interface{}{
 			"durasi_minimum_crash": a.Crash.MinDuration, "biaya_crash_5_hari": crashCost(a, 5), "biaya_crash_penuh": crashCost(a, len(a.Crash.Steps)),
@@ -799,7 +818,9 @@ func metricsJSON(a *site.Analysis) string {
 			val interface{}
 		}{"prakiraan_berjalan", map[string]interface{}{
 			"selesai": fl.Completed, "berjalan": fl.InProgress, "belum_mulai": len(fl.NotStarted),
-			"kredibilitas_z": fl.Credibility, "rasio_durasi_teramati": fl.ObservedRatio, "faktor_durasi": fl.DurationFactor,
+			"kredibilitas_empiris": fl.Empirical,
+			"kredibilitas_z":       fl.Credibility, "rasio_durasi_teramati": fl.ObservedRatio, "varians_penaksir_durasi": fl.DurationVar, "tau2_durasi": fl.DurationTau2, "faktor_durasi": fl.DurationFactor,
+			"kredibilitas_biaya_z": fl.CostCredibility, "varians_penaksir_biaya": fl.CostVar, "kredibilitas_ujian_z": fl.ExamCredibility, "varians_penaksir_ujian": fl.ExamVar,
 			"rasio_biaya_teramati": fl.ObservedCostRatio, "faktor_biaya": fl.CostFactor,
 			"faktor_ujian_teramati": fl.ExamObserved, "faktor_ujian_terkalibrasi": fl.ExamFactor,
 			"ac_sampai_tanggal_data": fl.ACToDate,

@@ -56,6 +56,7 @@ func baseConfig() (simulate.IntegratedConfig, error) {
 		Budget:      model.TotalAuthorised,
 		Deadline:    float64(plan.Duration),
 		LevelOrder:  levelOrder,
+		ExactLevel:  true,
 	}, nil
 }
 
@@ -199,7 +200,8 @@ func runSimulation(_ js.Value, args []js.Value) any {
 }
 
 // runIntegrated menjalankan simulasi terpadu sampai lapisan tertentu.
-// Argumen: iterasi, benih, rho, lapisan (0-4).
+// Argumen: iterasi, benih, rho, lapisan (0-4), eksak (bawaan true - sama
+// dengan server; false menukar bukti optimalitas dengan kecepatan).
 func runIntegrated(_ js.Value, args []js.Value) any {
 	cfg, err := baseConfig()
 	if err != nil {
@@ -223,6 +225,9 @@ func runIntegrated(_ js.Value, args []js.Value) any {
 			l = int(simulate.LayerResources)
 		}
 		cfg.Layer = simulate.Layer(l)
+	}
+	if len(args) > 4 && args[4].Type() == js.TypeBoolean {
+		cfg.ExactLevel = args[4].Bool()
 	}
 	if cfg.Iterations < 100 {
 		cfg.Iterations = 100
@@ -255,6 +260,9 @@ func runIntegrated(_ js.Value, args []js.Value) any {
 		"riskPhi":       res.RiskPhi,
 		"reworkDays":    res.ReworkDays,
 		"rentalCost":    res.TimeCost,
+		"exact":         res.Config.ExactLevel,
+		"proven":        res.Proof.ProvenShare(),
+		"searched":      res.Proof.BySearch,
 		"deterministic": plan.Duration,
 		"p50":           res.DurP50,
 		"p80":           res.DurP80,
@@ -296,7 +304,7 @@ func durationHistogram(durations []float64) []map[string]any {
 }
 
 // runForecast menjalankan prakiraan berjalan dari tanggal data pilihan.
-// Argumen: tanggal ISO, iterasi. Realisasi sampai tanggal itu dikunci dan
+// Argumen: tanggal ISO, iterasi, eksak. Realisasi sampai tanggal itu dikunci dan
 // kalibrasi dihitung ulang dari bukti yang tersedia saat itu.
 func runForecast(_ js.Value, args []js.Value) any {
 	if len(args) < 1 || args[0].Type() != js.TypeString {
@@ -315,6 +323,9 @@ func runForecast(_ js.Value, args []js.Value) any {
 	}
 	if cfg.Iterations > 20_000 {
 		cfg.Iterations = 20_000
+	}
+	if len(args) > 2 && args[2].Type() == js.TypeBoolean {
+		cfg.ExactLevel = args[2].Bool()
 	}
 	day := cal.FractionalIndexOf(args[0].String())
 	fl, err := simulate.PrepareInFlight(model.Activities, cal, day, 0, engine.ACAt)
@@ -340,6 +351,8 @@ func runForecast(_ js.Value, args []js.Value) any {
 		"inProgress":     len(fl.InProgress),
 		"notStarted":     len(fl.NotStarted),
 		"credibility":    fl.Credibility,
+		"costCred":       fl.CostCredibility,
+		"examCred":       fl.ExamCredibility,
 		"observedRatio":  fl.ObservedRatio,
 		"durationFactor": fl.DurationFactor,
 		"examFactor":     fl.ExamFactor,
@@ -352,6 +365,7 @@ func runForecast(_ js.Value, args []js.Value) any {
 		"deterministic":  plan.Duration,
 		"p80Date":        cal.ISOAt(int(res.DurP80) - 1),
 		"histogram":      durationHistogram(res.Durations),
+		"proven":         res.Proof.ProvenShare(),
 	})
 }
 

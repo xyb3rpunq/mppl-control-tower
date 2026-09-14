@@ -124,6 +124,17 @@ func (s *Sampler) CDF(i int, x float64) float64 {
 	return RegIncBeta(alpha, beta, (x-o)/(p-o))
 }
 
+// PERTVar mengembalikan varians beta-PERT aktivitas i: (mu - O)(P - mu) / 7,
+// varians eksak sebaran Beta dengan parameter bentuk alpha + beta = 6.
+func (s *Sampler) PERTVar(i int) float64 {
+	a := s.acts[i]
+	if a.Milestone || a.Pessimistic <= a.Optimistic {
+		return 0
+	}
+	mu := s.PERTMean(i)
+	return (mu - float64(a.Optimistic)) * (float64(a.Pessimistic) - mu) / 7
+}
+
 // PERTMean mengembalikan rerata beta-PERT aktivitas i: (O + 4M + P) / 6.
 func (s *Sampler) PERTMean(i int) float64 {
 	a := s.acts[i]

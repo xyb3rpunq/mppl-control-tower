@@ -49,9 +49,10 @@ func upgradeExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 		five := a.Crash.Steps[4]
 		last := a.Crash.Steps[len(a.Crash.Steps)-1]
 		ex["crash"] = WorkedExample{
-			Substitution: fmt.Sprintf("%s: M = %d, O = %d  →  d_crash = %d;  slope = (%s / %d) x %s = %s",
+			Substitution: fmt.Sprintf("%s: M = %d, O = %d  →  d_crash = %d;  %s %s %s/%s;  slope = (%s / %d) x %s = %s",
 				act.ID, act.Duration, act.Optimistic, plan.CrashDur,
-				rp(act.LabourCost(model.RateCard)), act.Duration, n(model.CrashPremium, 2), rp(plan.SlopePerDay)),
+				tr2(lang, "lembur", "overtime"), n(plan.OvertimeHrs, 2), tr2(lang, "jam", "h"), tr2(lang, "hari", "day"),
+				rp(act.LabourCost(model.RateCard)), act.Duration, n(plan.Premium, 4), rp(plan.SlopePerDay)),
 			Result: fmt.Sprintf("%s = %s, %s %d → %d = %s",
 				tr2(lang, "5 hari pertama", "first 5 days"), rp(five.TotalCost),
 				tr2(lang, "penuh", "full"), a.Crash.NormalDuration, a.Crash.MinDuration, rp(last.TotalCost)),

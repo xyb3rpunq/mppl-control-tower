@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -90,8 +91,12 @@ func TestLevelledScheduleIsTheProvenOne(t *testing.T) {
 		t.Errorf("durasi levelling = %d, README dan memori menyebut 113", a.Level.Duration)
 	}
 	fin := a.Final()
-	if fin.Audit.Audited == 0 {
-		t.Error("audit levelling di dalam simulasi tidak berjalan")
+	pr := fin.Proof
+	if pr.Iterations != fin.Config.Iterations || pr.ProvenShare() != 1 {
+		t.Errorf("tidak setiap iterasi lapisan kapasitas terbukti optimal: %+v", pr)
+	}
+	if a.Forecast.Proof.ProvenShare() != 1 {
+		t.Errorf("tidak setiap iterasi prakiraan berjalan terbukti optimal: %+v", a.Forecast.Proof)
 	}
 }
 
@@ -104,6 +109,61 @@ func TestGERTAnalyticMatchesSimulation(t *testing.T) {
 		if !g.CheckActive {
 			t.Errorf("%s: pemeriksaannya belum lewat pada tanggal data, harus aktif", g.Loop.ID)
 		}
+	}
+}
+
+// TestCalibratedParametersReachThePages memastikan premi lembur PP 35/2021 dan
+// kredibilitas empiris benar-benar tampil, dan sisa teks asumsi lama hilang.
+func TestCalibratedParametersReachThePages(t *testing.T) {
+	a := analysisFor(t)
+	pages := renderAll(t)
+	lo, hi := 1.0, 0.0
+	illegal := 0
+	for _, act := range model.Activities {
+		p := act.Crash(model.RateCard)
+		if p.Allowed {
+			lo, hi = math.Min(lo, p.Premium), math.Max(hi, p.Premium)
+		} else if p.OvertimeHrs > model.OvertimeMaxDaily {
+			illegal++
+		}
+	}
+	fl := a.InFlight
+	for _, lang := range i18n.Langs {
+		opt := pages[lang+" /optimasi/"]
+		for _, want := range []string{
+			model.OvertimeRegulationURL,
+			render.Pct(lo, 0, lang) + "–" + render.Pct(hi, 1, lang),
+			strconv.Itoa(illegal) + map[string]string{"id": " aktivitas melebihi batas 4 jam", "en": " activities exceed the 4-hour limit"}[lang],
+		} {
+			if !strings.Contains(opt, want) {
+				t.Errorf("/optimasi/ (%s) tidak memuat %q", lang, want)
+			}
+		}
+		fc := pages[lang+" /prakiraan/"]
+		for _, want := range []string{
+			render.Pct(fl.Credibility, 0, lang) + " / " + render.Pct(fl.CostCredibility, 0, lang) + " / " + render.Pct(fl.ExamCredibility, 0, lang),
+			render.Pct(math.Sqrt(fl.DurationVar), 1, lang),
+			"tau² / (tau² + Var)",
+		} {
+			if !strings.Contains(fc, want) {
+				t.Errorf("/prakiraan/ (%s) tidak memuat %q", lang, want)
+			}
+		}
+		for route, bad := range map[string]string{
+			"/prakiraan/": "k = ", "/metode/": "k = ", "/optimasi/": map[string]string{"id": "(asumsi)", "en": "(assumed)"}[lang],
+		} {
+			if strings.Contains(pages[lang+" "+route], bad) {
+				t.Errorf("%s (%s) masih memuat teks asumsi lama %q", route, lang, bad)
+			}
+		}
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(metricsJSON(a)), &doc); err != nil {
+		t.Fatal(err)
+	}
+	pb := doc["prakiraan_berjalan"].(map[string]any)
+	if pb["kredibilitas_empiris"] != true || pb["varians_penaksir_durasi"] == nil || pb["kredibilitas_ujian_z"] == nil {
+		t.Error("metrik.json harus melaporkan kredibilitas empiris beserta varians penaksirnya")
 	}
 }
 

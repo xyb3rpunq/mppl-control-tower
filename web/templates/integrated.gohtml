@@ -16,7 +16,7 @@
         {{if eq $i 1}}{{if eq $l "id"}}Aktivitas yang dikerjakan peran yang sama bergerak bersama lewat faktor kinerja laten (rho {{num (defaultRho) 2 $l}}).{{else}}Activities done by the same role move together through a latent performance factor (rho {{num (defaultRho) 2 $l}}).{{end}}{{end}}
         {{if eq $i 2}}{{if eq $l "id"}}Risiko register terjadi dengan peluang residualnya, tetapi risiko yang berbagi sebab cenderung datang bersamaan (kopula faktor, lambda {{num (riskLoading) 1 $l}}).{{else}}Register risks fire at their residual probability, but risks sharing a cause tend to arrive together (factor copula, lambda {{num (riskLoading) 1 $l}}).{{end}}{{end}}
         {{if eq $i 3}}{{if eq $l "id"}}Regresi pasca perbaikan bug dan uji penetrasi bisa gagal lalu diulang - putaran GERT dengan jumlah ulangan geometrik.{{else}}Regression after bug fixing and the penetration test can fail and be repeated - GERT loops with a geometric number of repeats.{{end}}{{end}}
-        {{if eq $i 4}}{{if eq $l "id"}}Setiap iterasi dijadwalkan ulang dengan levelling: kapasitas peran, DevOps paruh waktu, dan periode ujian dihormati.{{else}}Every iteration is rescheduled with levelling: role capacity, half-time DevOps, and the exam periods are respected.{{end}}{{end}}
+        {{if eq $i 4}}{{if eq $l "id"}}Setiap iterasi dijadwalkan ulang dengan levelling yang dibuktikan optimal lewat batas bawah: kapasitas peran, DevOps paruh waktu, dan periode ujian dihormati.{{else}}Every iteration is rescheduled with levelling proven optimal by a lower bound: role capacity, half-time DevOps, and the exam periods are respected.{{end}}{{end}}
       </p>
       <dl>
         <dt>P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</dt><dd>{{num $r.DurP80 0 $l}}</dd>
@@ -131,11 +131,13 @@
     </label>
     <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
       <select name="iterations">
-        <option value="1000">1.000</option>
-        <option value="3000" selected>3.000</option>
+        <option value="500">500</option>
+        <option value="1000" selected>1.000</option>
+        <option value="3000">3.000</option>
         <option value="5000">5.000</option>
       </select>
     </label>
+    <label class="check"><input type="checkbox" name="exact" checked> <span>{{if eq $l "id"}}Buktikan optimal per iterasi (lebih lambat, sama dengan server){{else}}Prove each iteration optimal (slower, matches the server){{end}}</span></label>
     <button type="submit">{{if eq $l "id"}}Jalankan{{else}}Run{{end}}</button>
   </form>
   <div class="live-out sim-out">
@@ -145,6 +147,7 @@
     <div><span>P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</span><strong data-int="durP80">—</strong></div>
     <div><span>P80 {{if eq $l "id"}}biaya{{else}}cost{{end}}</span><strong data-int="costP80">—</strong></div>
     <div><span>{{if eq $l "id"}}Korelasi terealisasi{{else}}Realised correlation{{end}}</span><strong data-int="realised">—</strong></div>
+    <div><span>{{if eq $l "id"}}Terbukti optimal{{else}}Proven optimal{{end}}</span><strong data-int="proven">—</strong></div>
     <div><span>{{if eq $l "id"}}Waktu hitung{{else}}Compute time{{end}}</span><strong data-int="elapsed">—</strong></div>
   </div>
   <div class="figure-body scrollable" data-int-chart></div>

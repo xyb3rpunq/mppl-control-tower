@@ -264,6 +264,8 @@
       var iterations = parseInt(form.querySelector('[name="iterations"]').value, 10) || 3000;
       var layer = parseInt(form.querySelector('[name="layer"]').value, 10);
       var r = parseFloat(rho.value);
+      var exactBox = form.querySelector('[name="exact"]');
+      var exact = exactBox ? exactBox.checked : true;
       var btn = form.querySelector('button[type="submit"]');
       var original = btn.textContent;
       btn.disabled = true;
@@ -271,7 +273,7 @@
 
       setTimeout(function () {
           var t0 = performance.now();
-          var res = window.mpplIntegrated(iterations, 20210801, r, isNaN(layer) ? 4 : layer);
+          var res = window.mpplIntegrated(iterations, 20210801, r, isNaN(layer) ? 4 : layer, exact);
           var ms = performance.now() - t0;
           btn.disabled = false;
           btn.textContent = original;
@@ -282,6 +284,7 @@
           setText('[data-int="durP80"]', fmt(res.durP80, 0));
           setText('[data-int="costP80"]', rp(res.costP80));
           setText('[data-int="realised"]', fmt(res.realised, 3));
+          setText('[data-int="proven"]', res.layer >= 4 && res.exact ? pct(res.proven, 2) : '—');
           setText('[data-int="elapsed"]', fmt(ms, 0) + ' ms');
           drawHistogram(res, '[data-int-chart]');
       }, 30);
@@ -296,7 +299,9 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var date = form.querySelector('[name="date"]').value;
-      var iterations = parseInt(form.querySelector('[name="iterations"]').value, 10) || 2000;
+      var iterations = parseInt(form.querySelector('[name="iterations"]').value, 10) || 1000;
+      var exactBox = form.querySelector('[name="exact"]');
+      var exact = exactBox ? exactBox.checked : true;
       var btn = form.querySelector('button[type="submit"]');
       var original = btn.textContent;
       btn.disabled = true;
@@ -304,13 +309,13 @@
 
       setTimeout(function () {
           var t0 = performance.now();
-          var res = window.mpplForecast(date, iterations);
+          var res = window.mpplForecast(date, iterations, exact);
           var ms = performance.now() - t0;
           btn.disabled = false;
           btn.textContent = original;
           if (!res || !res.ok) return;
           setText('[data-fc="status"]', res.completed + ' / ' + res.inProgress);
-          setText('[data-fc="z"]', pct(res.credibility, 1));
+          setText('[data-fc="z"]', pct(res.credibility, 0) + ' / ' + pct(res.costCred, 0) + ' / ' + pct(res.examCred, 0));
           setText('[data-fc="factor"]', fmt(res.durationFactor, 3));
           setText('[data-fc="p50"]', fmt(res.p50, 0));
           setText('[data-fc="p80"]', fmt(res.p80, 0));

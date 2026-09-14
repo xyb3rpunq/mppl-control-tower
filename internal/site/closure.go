@@ -71,11 +71,6 @@ func runSimulations(a *Analysis) error {
 	for i, l := range simulate.Layers {
 		i, c := i, base
 		c.Layer = l
-		if l == simulate.LayerResources {
-			// Audit: setiap iterasi ke-250 levelling cepat dibandingkan dengan
-			// Optimize dan batas bawah pada durasi yang sama persis.
-			c.AuditEvery, c.AuditSamples = 250, 60
-		}
 		jobs = append(jobs, func() (err error) { ladder[i], err = simulate.RunIntegrated(model.Activities, c); return })
 	}
 	for i, rho := range rhos {
@@ -316,7 +311,9 @@ func closureFindings(a *Analysis) []Finding {
 		})
 	}
 
-	if len(a.Exact.Points) > 5 {
+	// "Hampir impas" hanya sah bila sewa yang dihemat menutup lebih dari
+	// separuh premi lima hari pertama.
+	if len(a.Exact.Points) > 5 && a.TradeOffNet(5) < a.Exact.Points[5].CrashCost/2 {
 		net5 := a.TradeOffNet(5)
 		crash5 := a.Exact.Points[5].CrashCost
 		out = append(out, Finding{
@@ -329,7 +326,7 @@ func closureFindings(a *Analysis) []Finding {
 				ID: "Crashing lima hari menelan premi " + fmtRp(crash5) + ", tetapi setiap hari proyek lebih pendek juga menghemat sewa server dan langganan sampai " + fmtRp(a.RentalDaily()) + ". Menurut pemrograman linear biaya total, biaya bersihnya hanya " + fmtRp(net5) + ". Kurva crashing serakah sebelumnya melebihi optimum eksak sampai " + fmtRp(a.Exact.MaxGreedyExcess) + " pada satu titik.",
 				EN: "Crashing five days costs " + fmtRp(crash5) + " in premiums, but every day shorter also saves up to " + fmtRp(a.RentalDaily()) + " in server rental and subscriptions. Per the total-cost linear program, the net cost is only " + fmtRp(net5) + ". The earlier greedy crashing curve exceeded the exact optimum by up to " + fmtRp(a.Exact.MaxGreedyExcess) + " at one point.",
 			},
-			Metric: model.Text{ID: "LP biaya total = premi crash + tarif sewa x rentang sewa", EN: "total-cost LP = crash premium + rental rate x rental span"},
+			Metric: model.Text{ID: "LP biaya total = premi lembur PP 35/2021 + tarif sewa x rentang sewa", EN: "total-cost LP = overtime premium under Government Regulation 35/2021 + rental rate x rental span"},
 			Action: model.Text{
 				ID: "Ajukan percepatan lima hari ke sponsor sebagai biaya bersih " + fmtRp(net5) + ", bukan " + fmtRp(crash5) + ". Angka premi saja membuat keputusan yang murah tampak mahal.",
 				EN: "Put the five-day acceleration to the sponsor as a net " + fmtRp(net5) + ", not " + fmtRp(crash5) + ". The premium figure alone makes a cheap decision look expensive.",
@@ -427,7 +424,7 @@ func closureFindings(a *Analysis) []Finding {
 					ID: fmtInt(float64(fl.ExamEvidence)) + " aktivitas beririsan dengan UTS resmi 3-15 November 2025. Laju kerjanya " + fmtPct(fl.ExamObserved) + " dari laju di luar ujian. Dengan bobot kredibilitas " + fmtPct(fl.ExamCredibility) + ", faktor kapasitas ujian diperbarui dari " + fmtPct(model.ExamCapacityFactor) + " menjadi " + fmtPct(fl.ExamFactor) + " untuk UAS mendatang.",
 					EN: fmtInt(float64(fl.ExamEvidence)) + " activities overlapped the official midterms of 3-15 November 2025. Their work rate was " + fmtPct(fl.ExamObserved) + " of the rate outside exams. At a credibility weight of " + fmtPct(fl.ExamCredibility) + ", the exam capacity factor is updated from " + fmtPct(model.ExamCapacityFactor) + " to " + fmtPct(fl.ExamFactor) + " for the upcoming finals.",
 				},
-				Metric: model.Text{ID: "faktor = Z x teramati + (1 - Z) x asumsi, Z = n / (n + k)", EN: "factor = Z x observed + (1 - Z) x assumed, Z = n / (n + k)"},
+				Metric: model.Text{ID: "faktor = Z x teramati + (1 - Z) x asumsi, Z = tau2 / (tau2 + Var)", EN: "factor = Z x observed + (1 - Z) x assumed, Z = tau2 / (tau2 + Var)"},
 				Action: model.Text{
 					ID: "Jangan menambah buffer ujian berdasarkan asumsi lama. Kumpulkan data kehadiran nyata saat UAS; bila tim tetap produktif, jadwal perencanaan terlalu pesimistis di periode ujian.",
 					EN: "Do not add exam buffer from the old assumption. Collect real attendance during the finals; if the team stays productive, the planning schedule is too pessimistic around exams.",
