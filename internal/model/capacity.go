@@ -37,7 +37,10 @@ var StudentRoles = []Role{RolePM, RoleBA, RoleSA, RoleTL, RoleBE, RoleFE, RoleDB
 const ExamCapacityFactor = 0.4
 
 // AcademicCalendarURL adalah kalender akademik resmi Universitas Esa Unggul
-// TA 2025/2026 (SK Rektor No. 039/SK-R/UEU/III/2025, 24 Maret 2025).
+// TA 2025/2026 (SK Rektor No. 039/SK-R/UEU/III/2025, 24 Maret 2025). Seluruh
+// tanggal ujian di bawah dibaca dari lampiran PDF halaman 1 (UTS) dan
+// halaman 2 (UAS). UTS dan UAS susulan tidak dimodelkan: hanya diikuti
+// mahasiswa yang berhalangan, bukan seluruh tim.
 const AcademicCalendarURL = "https://www.esaunggul.ac.id/en/kalender-akademik-tahun-akademik-2025-2026/"
 
 // AvailabilityWindows adalah kalender ketersediaan tim, terurut menurut tanggal.
@@ -51,11 +54,11 @@ var AvailabilityWindows = []AvailabilityWindow{
 		},
 	},
 	{
-		Key: "uas-ganjil", From: "2026-01-12", To: "2026-01-23", Roles: StudentRoles, Factor: ExamCapacityFactor,
-		Asumsi: true, RiskID: "R08",
+		Key: "uas-ganjil", From: "2026-01-19", To: "2026-01-31", Roles: StudentRoles, Factor: ExamCapacityFactor,
+		Source: AcademicCalendarURL, RiskID: "R08",
 		Label: Text{
-			ID: "Ujian Akhir Semester ganjil - tanggal belum terbaca dari halaman 2 kalender resmi",
-			EN: "Odd-semester final exams - dates not yet read from page 2 of the official calendar",
+			ID: "Ujian Akhir Semester ganjil (kalender akademik resmi)",
+			EN: "Odd-semester final exams (official academic calendar)",
 		},
 	},
 	{
@@ -64,6 +67,14 @@ var AvailabilityWindows = []AvailabilityWindow{
 		Label: Text{
 			ID: "Ujian Tengah Semester genap (kalender akademik resmi) - hanya tersentuh ekor simulasi",
 			EN: "Even-semester midterm exams (official academic calendar) - reached only by the simulation tail",
+		},
+	},
+	{
+		Key: "uas-genap", From: "2026-07-20", To: "2026-08-01", Roles: StudentRoles, Factor: ExamCapacityFactor,
+		Source: AcademicCalendarURL, RiskID: "R08",
+		Label: Text{
+			ID: "Ujian Akhir Semester genap (kalender akademik resmi) - hanya tersentuh ekor simulasi",
+			EN: "Even-semester final exams (official academic calendar) - reached only by the simulation tail",
 		},
 	},
 }

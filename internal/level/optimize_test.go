@@ -122,7 +122,7 @@ func TestReleaseDateHoldsWorkBack(t *testing.T) {
 
 func TestCapacityGridWithOverridesExamFactor(t *testing.T) {
 	c := cal(t)
-	iso := "2026-01-15"
+	iso := "2026-01-21"
 	day := c.IndexOf(iso)
 	base := level.CapacityGrid(c, model.Capacity, true, 200)
 	over := level.CapacityGridWith(c, model.Capacity, true, 200, 0.9)

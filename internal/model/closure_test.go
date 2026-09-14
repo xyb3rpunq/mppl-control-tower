@@ -86,6 +86,24 @@ func TestAvailabilityWindowsAreOfficialOrFlagged(t *testing.T) {
 	if got := model.CapacityOnDateWith(model.RoleBA, "2025-12-05", model.Capacity, 0.7); got != 1 {
 		t.Errorf("faktor pengganti tidak boleh berlaku di luar jendela: %v", got)
 	}
+	// Lampiran kalender akademik resmi: keempat ujian semester, tanpa satu pun tanggal asumsi.
+	want := map[string][2]string{
+		"uts-ganjil": {"2025-11-03", "2025-11-15"},
+		"uas-ganjil": {"2026-01-19", "2026-01-31"},
+		"uts-genap":  {"2026-05-18", "2026-05-30"},
+		"uas-genap":  {"2026-07-20", "2026-08-01"},
+	}
+	for _, w := range model.AvailabilityWindows {
+		if w.Asumsi {
+			t.Errorf("jendela %s masih berstatus asumsi", w.Key)
+		}
+		if d, ok := want[w.Key]; !ok || d[0] != w.From || d[1] != w.To {
+			t.Errorf("jendela %s = %s..%s tidak sesuai kalender resmi", w.Key, w.From, w.To)
+		}
+	}
+	if len(model.AvailabilityWindows) != len(want) {
+		t.Errorf("jendela ujian %d, mau %d", len(model.AvailabilityWindows), len(want))
+	}
 }
 
 // TestTimeBasedExtrasKeepBAC: menandai biaya sebagai sewa mengubah perilakunya

@@ -62,8 +62,8 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | 2 | kritis | Cadangan kontinjensi jauh di bawah paparan risiko | Cadangan Rp 500.000 menutup 17,4% dari EMV residual Rp 2.880.000 |
 | 3 | kritis | Komitmen 17 minggu nyaris mustahil | Peluang selesai ≤ 85 hari kerja: 1,2%; P80 = 98 hari kerja |
 | 4 | kritis | Jadwal 85 hari hanya sah di atas kertas | Jadwal levelling optimal: **113 hari kerja**, selesai 10 April 2026 (+15 dari kapasitas, +13 dari UTS & UAS) |
-| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,0%; komitmen JCL 70% = **147 hari kerja (5 Juni 2026) & Rp 25.603.643** |
-| 6 | kritis | Dari tanggal data, P80 penyelesaian jauh melampaui prakiraan Earned Value | Prakiraan berjalan P80 **126 hari kerja** (29 April 2026) vs IEAC(t) 91,0 hari; komitmen JCL 70% berjalan 123 hari & Rp 20.971.766 |
+| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,0%; komitmen JCL 70% = **148 hari kerja (8 Juni 2026) & Rp 22.469.675** |
+| 6 | kritis | Dari tanggal data, P80 penyelesaian jauh melampaui prakiraan Earned Value | Prakiraan berjalan P80 **126 hari kerja** (29 April 2026) vs IEAC(t) 91,0 hari; komitmen JCL 70% berjalan 123 hari & Rp 21.250.227 |
 | 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
 | 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
 | 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
@@ -111,9 +111,9 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 ### 3.4 Levelling & Kompresi — `/optimasi/`
 
 - **Levelling sumber daya yang terbukti optimal**: CPM 85 → kapasitas nyata 100 → UTS dan UAS 113 hari kerja, selesai 10 April 2026.
-- **Bukti optimalitas**: enam aturan prioritas (LST, LFT, MSLK, GRPW, MTS, SPT), 300 daftar acak berbias, dan justifikasi maju-mundur mencari batas atas; batas bawah tiga lapis (CPM 85, solo 107, energetik 113) plus pembuktian destruktif. Batas atas = batas bawah = 113, jadi tidak ada urutan kerja yang bisa selesai lebih cepat.
+- **Bukti optimalitas**: enam aturan prioritas (LST, LFT, MSLK, GRPW, MTS, SPT), 300 daftar acak berbias, dan justifikasi maju-mundur mencari batas atas; batas bawah tiga lapis (CPM 85, solo 108, energetik 113) plus pembuktian destruktif. Batas atas = batas bawah = 113, jadi tidak ada urutan kerja yang bisa selesai lebih cepat.
 - **Audit levelling di dalam simulasi**: pada 40 iterasi teraudit, SGS cepat rata-rata 0,43 hari di atas optimum (paling jauh 4 hari); 85% iterasi sudah optimal.
-- **Kalender ketersediaan**: UTS ganjil 3–15 Nov 2025 dan UTS genap 18–30 Mei 2026 dari kalender akademik resmi Esa Unggul; UAS ganjil 12–23 Jan 2026 masih bertanda asumsi; DevOps paruh waktu (dari piagam).
+- **Kalender ketersediaan**: keempat periode ujian dari lampiran kalender akademik resmi Esa Unggul (SK Rektor No. 039/SK-R/UEU/III/2025) — UTS ganjil 3–15 Nov 2025, UAS ganjil 19–31 Jan 2026, UTS genap 18–30 Mei 2026, UAS genap 20 Jul–1 Agu 2026; DevOps paruh waktu (dari piagam).
 - **Gantt pembanding** CPM vs levelling, batang diwarnai menurut penyebab, jendela ujian diarsir.
 - **Histogram pembebanan setelah levelling** dengan garis kapasitas bertangga per hari — nol over-alokasi.
 - Hari menunggu per peran dan **peran kritis** (Backend Developer).
@@ -141,7 +141,7 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
   | L1 | + Korelasi peran (kopula Gauss, ρ 0,5) | 99 | Rp 16,34 jt | 3,45% |
   | L2 | + Risiko bergerombol (kopula faktor, λ 0,6) | 117 | Rp 20,94 jt | 0,45% |
   | L3 | + Putaran rework GERT | 119 | Rp 21,18 jt | 0,31% |
-  | L4 | + Kapasitas, UTS & UAS (levelling per iterasi) | 151 | Rp 22,02 jt | 0,00% |
+  | L4 | + Kapasitas, UTS & UAS (levelling per iterasi) | 152 | Rp 22,03 jt | 0,00% |
 
   Biaya di setiap lapisan sudah memuat sewa server dan langganan yang ikut memanjang bersama jadwal.
 - **Tangga realisme** durasi dan biaya (P50–P90 dengan penanda P80 dan garis target piagam).
@@ -164,10 +164,10 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 ### 3.8 Prakiraan Berjalan — `/prakiraan/` *(baru)*
 
 - **Simulasi terpadu dari tanggal data** (19 Des 2025): 18 simpul selesai dikunci pada realisasinya, 3 aktivitas yang sedang berjalan (A17, A19, A21) memakai durasi bersyarat F(x | x > e), 19 sisanya dirilis pada tanggal data.
-- **Lima prakiraan berdampingan**: rencana CPM 85; Earned Value IEAC(t) 91,0 & EAC Rp 16,16 jt; simulasi perencanaan P80 151; prakiraan berjalan tanpa belajar P80 129; **prakiraan berjalan terkalibrasi P80 126 & Rp 20,75 jt** — dengan kolom "buta terhadap" untuk tiap metode.
+- **Lima prakiraan berdampingan**: rencana CPM 85; Earned Value IEAC(t) 91,0 & EAC Rp 16,16 jt; simulasi perencanaan P80 152; prakiraan berjalan tanpa belajar P80 129; **prakiraan berjalan terkalibrasi P80 126 & Rp 20,75 jt** — dengan kolom "buta terhadap" untuk tiap metode.
 - **Kredibilitas Bühlmann**: Z = 16/(16+10) = 61,5%; rasio aktual/rerata PERT 0,983 → faktor durasi 0,989; rasio biaya harian 1,057 → faktor biaya 1,035.
 - **Kalibrasi kapasitas ujian** dari realisasi selama UTS resmi: laju 103,5% dari normal, faktor untuk UAS diperbarui 40% → 64,7%.
-- Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (123 hari & Rp 20.971.766).
+- Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (123 hari & Rp 21.250.227).
 - **Panel WebAssembly**: pilih tanggal data lain dan prakirakan ulang — kalibrasi dihitung dari bukti yang tersedia saat itu.
 
 ### 3.9 Manajemen Risiko — `/risiko/`
@@ -316,7 +316,7 @@ Isi halaman: 14 kartu fakta bersumber, linimasa 2018–2026, tabel metrik turuna
 
 ## 7. Interaktivitas lewat WebAssembly
 
-`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi di peramban: simulasi terpadu L4 10.000 iterasi memberi P80 151 dan biaya P80 Rp 22.023.287,01, dan prakiraan berjalan 10.000 iterasi memberi P80 126 dan biaya P80 Rp 20.747.668,75 — keduanya identik sampai digit terakhir dengan hasil server.
+`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi di peramban: simulasi terpadu L4 10.000 iterasi memberi P80 152 dan biaya P80 Rp 22.027.408,66, dan prakiraan berjalan 10.000 iterasi memberi P80 126 dan biaya P80 Rp 20.751.399,17 — keduanya identik sampai digit terakhir dengan hasil server.
 
 | Halaman | Fungsi Go | Kendali |
 | --- | --- | --- |
@@ -494,7 +494,7 @@ Dua alur kerja GitHub Actions:
 | Kemajuan linear dalam aktivitas | Aturan 0/100 atau 50/50 memberi EV berbeda |
 | Data realisasi SIATS adalah skenario pelaksanaan yang wajar (proyek kuliah tidak dieksekusi) | Angka EV dan prakiraan berjalan berubah; rumus dan cara membaca tidak |
 | Korelasi peran ρ = 0,5 | P80 hanya bergeser satu hari; lebar sebaran yang berubah |
-| Kapasitas 40% saat ujian; tanggal UAS ganjil 12–23 Jan 2026 | Tanpa jendela ujian levelling masih 100 hari kerja; realisasi UTS memperbarui faktornya menjadi 64,7% |
+| Kapasitas 40% selama empat periode ujian resmi | Tanpa jendela ujian levelling masih 100 hari kerja; realisasi UTS memperbarui faktornya menjadi 64,7% |
 | Laju mulai minimum 20% (satu hari kerja per minggu) | Ambang 25% memberi jadwal terbaik satu hari lebih panjang |
 | Lima penggerak risiko bersama, λ = 0,6 | Rerata biaya tidak berubah pada λ berapa pun; hanya ekor |
 | Peluang gagal GERT 30% (regresi) dan 25% (uji penetrasi) | Rerata putaran p/(1−p) tidak linear |
@@ -511,15 +511,14 @@ Dua alur kerja GitHub Actions:
 4. **Simulasi berpandangan perencanaan** → halaman **Prakiraan Berjalan**: realisasi dikunci, durasi bersyarat, kredibilitas Bühlmann, kalibrasi kapasitas ujian.
 5. **Tidak ada pengulangan kerja (GERT)** → dua putaran rework direduksi dengan **aturan Mason** dan disimulasikan sebagai lapisan L3; analitik dan Monte Carlo saling cocok.
 
-Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; UTS diambil dari kalender akademik resmi.
+Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; keempat periode ujian diambil dari lampiran kalender akademik resmi, dan UAS ganjil ternyata 19–31 Januari 2026 — seminggu lebih lambat dari asumsi lama 12–23 Januari.
 
 **Batas yang tersisa** (bukan pekerjaan yang lupa, melainkan batas yang harus diketahui):
 
 1. **Optimalitas berlaku di dalam model isi pekerjaan** — laju pecahan tanpa biaya berpindah konteks; tim sungguhan bisa sedikit lebih lambat.
 2. **Levelling di dalam simulasi tetap cepat, bukan eksak** — rata-rata 0,43 hari di atas optimum menurut audit.
-3. **Tanggal UAS ganjil belum resmi** — ada di halaman kedua PDF kalender akademik Esa Unggul yang belum terbaca; cukup ubah satu baris di `internal/model/capacity.go`.
-4. **Parameter asumsi hanya sebagian terkalibrasi** — faktor ujian diperbarui dari realisasi; premi crash, peluang GERT, λ, dan k masih asumsi dengan uji kepekaan.
-5. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
+3. **Parameter asumsi hanya sebagian terkalibrasi** — faktor ujian diperbarui dari realisasi; premi crash, peluang GERT, λ, dan k masih asumsi dengan uji kepekaan.
+4. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
 
 ---
 
@@ -527,7 +526,7 @@ Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optima
 
 **Proyek SIATS** — tugas mata kuliah Manajemen Proyek Perangkat Lunak, Universitas Esa Unggul: Tugas 2 (9 area pengetahuan), Tugas 3 (siklus hidup), Tugas 5 (uraian peran), Tugas 6 (Project Charter & WBS), Tugas 10 (bagan organisasi & RACI); serta materi Modul 2, Modul 4, Pertemuan 3, Pertemuan 7 (MS Project), dan Pertemuan 9 (manajemen mutu, Schwalbe bab 8).
 
-**Kalender** — [Kalender Akademik Universitas Esa Unggul TA 2025/2026](https://www.esaunggul.ac.id/en/kalender-akademik-tahun-akademik-2025-2026/) (SK Rektor No. 039/SK-R/UEU/III/2025) untuk tanggal UTS; [SKB 3 Menteri libur nasional dan cuti bersama 2026](https://setneg.go.id/baca/index/inilah_skb_3_menteri_libur_nasional_dan_cuti_bersama_2026) dan [SKB perubahan 2025](https://www.kompas.com/jawa-tengah/read/2025/12/09/104500088/apakah-tanggal-26-desember-2025-cuti-bersama-ini-jawabannya-sesuai) untuk hari libur.
+**Kalender** — [Kalender Akademik Universitas Esa Unggul TA 2025/2026](https://www.esaunggul.ac.id/en/kalender-akademik-tahun-akademik-2025-2026/) (SK Rektor No. 039/SK-R/UEU/III/2025, lampiran halaman 1–2) untuk tanggal UTS dan UAS; [SKB 3 Menteri libur nasional dan cuti bersama 2026](https://setneg.go.id/baca/index/inilah_skb_3_menteri_libur_nasional_dan_cuti_bersama_2026) dan [SKB perubahan 2025](https://www.kompas.com/jawa-tengah/read/2025/12/09/104500088/apakah-tanggal-26-desember-2025-cuti-bersama-ini-jawabannya-sesuai) untuk hari libur.
 
 **Studi kasus Coretax** — pemberitaan publik Kompas, Tempo, Hukumonline, DDTC News, Beritasatu, dan keterangan resmi Direktorat Jenderal Pajak; daftar lengkap dengan tanggal ada di [halaman studi kasus](https://xyb3rpunq.github.io/mppl-control-tower/coretax/).
 

@@ -216,7 +216,8 @@ func TestInvalidOptionsAreRejected(t *testing.T) {
 }
 
 func TestCapacityOnDateAppliesExamWindow(t *testing.T) {
-	inside := model.CapacityOnDate(model.RoleBE, "2026-01-15", model.Capacity)
+	// UAS ganjil resmi: 19-31 Januari 2026.
+	inside := model.CapacityOnDate(model.RoleBE, "2026-01-21", model.Capacity)
 	outside := model.CapacityOnDate(model.RoleBE, "2026-02-02", model.Capacity)
 	if math.Abs(inside-0.4) > 1e-9 {
 		t.Errorf("kapasitas saat ujian = %v, mau 0,4", inside)
@@ -224,7 +225,11 @@ func TestCapacityOnDateAppliesExamWindow(t *testing.T) {
 	if outside != 1 {
 		t.Errorf("kapasitas di luar ujian = %v, mau 1", outside)
 	}
-	if got := model.CapacityOnDate(model.RoleOPS, "2026-01-15", model.Capacity); math.Abs(got-0.2) > 1e-9 {
+	if got := model.CapacityOnDate(model.RoleOPS, "2026-01-21", model.Capacity); math.Abs(got-0.2) > 1e-9 {
 		t.Errorf("DevOps paruh waktu saat ujian = %v, mau 0,2 (0,5 x 0,4)", got)
+	}
+	// 15 Januari masih masa kuliah; asumsi lama 12-23 Januari sudah diganti tanggal resmi.
+	if got := model.CapacityOnDate(model.RoleBE, "2026-01-15", model.Capacity); got != 1 {
+		t.Errorf("kapasitas BE 15 Jan 2026 = %v, mau 1 (sebelum UAS resmi)", got)
 	}
 }
