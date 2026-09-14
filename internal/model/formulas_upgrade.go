@@ -21,6 +21,7 @@ func init() {
 			Text{ID: "Menggabungkan ketidakpastian durasi, korelasi, kejadian risiko, dan kapasitas untuk menjawab peluang tepat waktu dan tepat anggaran sekaligus.", EN: "Combining duration uncertainty, correlation, risk events, and capacity to answer the odds of on time and on budget at once."}},
 	)
 	Formulas = append(Formulas, upgradeFormulas...)
+	applyClosureFormulas()
 }
 
 var upgradeFormulas = []Formula{

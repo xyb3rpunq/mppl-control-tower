@@ -16,19 +16,60 @@ type Holiday struct {
 	Date   string // YYYY-MM-DD
 	NameID string
 	NameEN string
-	// Asumsi menandai tanggal yang belum ditetapkan lewat SKB resmi saat
-	// dokumen proyek disusun. Ditampilkan apa adanya di UI supaya pembaca
-	// bisa mengoreksi tanpa menyentuh kode penjadwalan.
+	// Asumsi menandai tanggal yang tidak diambil dari keputusan resmi.
+	// Ditampilkan apa adanya di UI supaya pembaca bisa mengoreksi tanpa
+	// menyentuh kode penjadwalan. Sejak kalender ini dicocokkan dengan SKB 3
+	// Menteri, tidak ada lagi tanggal yang berstatus asumsi.
 	Asumsi bool
+	// CutiBersama membedakan cuti bersama dari libur nasional. Keduanya
+	// diperlakukan sebagai hari tidak bekerja: tim proyek adalah mahasiswa,
+	// dan kalender kampus mengikuti SKB.
+	CutiBersama bool
+	// Source adalah dasar hukum tanggal ini.
+	Source string
 }
 
-// Holidays adalah kalender libur yang diasumsikan untuk Okt 2025 - Mar 2026.
+// Dasar hukum kalender libur.
+const (
+	SKB2025 = "SKB Menag, Menaker, MenPAN-RB No. 933, 1, 3 Tahun 2025 (perubahan SKB No. 1017, 2, 2 Tahun 2024)"
+	SKB2026 = "SKB Menag, Menaker, MenPAN-RB No. 1497, 2, 5 Tahun 2025 (ditetapkan 19 September 2025)"
+
+	// SKB2026URL adalah salinan resmi pengumuman SKB 2026 di Sekretariat Negara.
+	SKB2026URL = "https://setneg.go.id/baca/index/inilah_skb_3_menteri_libur_nasional_dan_cuti_bersama_2026"
+	// SKB2025URL adalah pemberitaan yang mengutip SKB perubahan 2025 untuk cuti bersama Natal.
+	SKB2025URL = "https://www.kompas.com/jawa-tengah/read/2025/12/09/104500088/apakah-tanggal-26-desember-2025-cuti-bersama-ini-jawabannya-sesuai"
+)
+
+// Holidays adalah seluruh libur nasional dan cuti bersama yang jatuh pada hari
+// kerja dari awal proyek sampai akhir 2026. Rentang ini sengaja jauh melewati
+// jadwal 85 hari: ekor kanan simulasi Monte Carlo menjangkau pertengahan 2026,
+// dan libur yang hilang di sana membuat P80 tampak lebih cepat dari
+// kenyataan. Libur yang jatuh pada Sabtu atau Minggu tidak dicantumkan karena
+// tidak mengubah hitungan hari kerja.
 var Holidays = []Holiday{
-	{Date: "2025-12-25", NameID: "Hari Raya Natal", NameEN: "Christmas Day"},
-	{Date: "2025-12-26", NameID: "Cuti Bersama Natal", NameEN: "Christmas collective leave", Asumsi: true},
-	{Date: "2026-01-01", NameID: "Tahun Baru Masehi", NameEN: "New Year's Day"},
-	{Date: "2026-01-16", NameID: "Isra Mikraj 1447 H", NameEN: "Isra Mi'raj 1447 H", Asumsi: true},
-	{Date: "2026-02-17", NameID: "Tahun Baru Imlek 2577", NameEN: "Lunar New Year 2577", Asumsi: true},
+	{Date: "2025-12-25", NameID: "Hari Raya Natal", NameEN: "Christmas Day", Source: SKB2025},
+	{Date: "2025-12-26", NameID: "Cuti Bersama Natal", NameEN: "Christmas collective leave", CutiBersama: true, Source: SKB2025},
+	{Date: "2026-01-01", NameID: "Tahun Baru Masehi", NameEN: "New Year's Day", Source: SKB2026},
+	{Date: "2026-01-16", NameID: "Isra Mikraj Nabi Muhammad SAW", NameEN: "Isra Mi'raj", Source: SKB2026},
+	{Date: "2026-02-16", NameID: "Cuti Bersama Tahun Baru Imlek", NameEN: "Lunar New Year collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-02-17", NameID: "Tahun Baru Imlek 2577 Kongzili", NameEN: "Lunar New Year 2577", Source: SKB2026},
+	{Date: "2026-03-18", NameID: "Cuti Bersama Hari Suci Nyepi", NameEN: "Nyepi collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-03-19", NameID: "Hari Suci Nyepi", NameEN: "Nyepi (Day of Silence)", Source: SKB2026},
+	{Date: "2026-03-20", NameID: "Cuti Bersama Idul Fitri", NameEN: "Eid al-Fitr collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-03-23", NameID: "Cuti Bersama Idul Fitri", NameEN: "Eid al-Fitr collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-03-24", NameID: "Cuti Bersama Idul Fitri", NameEN: "Eid al-Fitr collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-04-03", NameID: "Wafat Yesus Kristus", NameEN: "Good Friday", Source: SKB2026},
+	{Date: "2026-05-01", NameID: "Hari Buruh Internasional", NameEN: "International Labour Day", Source: SKB2026},
+	{Date: "2026-05-14", NameID: "Kenaikan Yesus Kristus", NameEN: "Ascension Day", Source: SKB2026},
+	{Date: "2026-05-15", NameID: "Cuti Bersama Kenaikan Yesus Kristus", NameEN: "Ascension Day collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-05-27", NameID: "Idul Adha", NameEN: "Eid al-Adha", Source: SKB2026},
+	{Date: "2026-05-28", NameID: "Cuti Bersama Idul Adha", NameEN: "Eid al-Adha collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-06-01", NameID: "Hari Lahir Pancasila", NameEN: "Pancasila Day", Source: SKB2026},
+	{Date: "2026-06-16", NameID: "Tahun Baru Islam", NameEN: "Islamic New Year", Source: SKB2026},
+	{Date: "2026-08-17", NameID: "Hari Kemerdekaan RI", NameEN: "Independence Day", Source: SKB2026},
+	{Date: "2026-08-25", NameID: "Maulid Nabi Muhammad SAW", NameEN: "Prophet Muhammad's Birthday", Source: SKB2026},
+	{Date: "2026-12-24", NameID: "Cuti Bersama Natal", NameEN: "Christmas collective leave", CutiBersama: true, Source: SKB2026},
+	{Date: "2026-12-25", NameID: "Hari Raya Natal", NameEN: "Christmas Day", Source: SKB2026},
 }
 
 // Calendar memetakan indeks hari kerja ke tanggal dan sebaliknya.

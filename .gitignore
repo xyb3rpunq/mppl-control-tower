@@ -8,3 +8,4 @@ cover.out
 # saja hampir 5 MB dan berubah setiap kali kode hitung disentuh.
 web/static/js/mppl.wasm
 web/static/js/wasm_exec.js
+*.exe

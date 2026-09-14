@@ -71,7 +71,7 @@ var Activities = []Activity{
 		ID: "A10", WBS: "2.2", Duration: 4, Optimistic: 3, Pessimistic: 6, Pred: []Predecessor{FS("M1")},
 		Name:   Text{ID: "Wireframe & pemetaan alur pengguna alumni/admin", EN: "Wireframes & alumni/admin user-flow mapping"},
 		Team:   []TeamSlot{{RoleUX, 1}},
-		Extras: []Extra{{Key: "tools", Amount: 300_000, Label: Text{ID: "Lisensi tool desain", EN: "Design tool licence"}}},
+		Extras: []Extra{{Key: "tools", Amount: 300_000, TimeBased: true, Label: Text{ID: "Langganan tool desain", EN: "Design tool subscription"}}},
 		Actual: Actual{Started: true, Start: 16, Duration: 4, Cost: 520_000},
 	},
 	{
@@ -104,8 +104,8 @@ var Activities = []Activity{
 		Name: Text{ID: "Setup environment, repositori & pipeline CI/CD", EN: "Environment, repository & CI/CD pipeline setup"},
 		Team: []TeamSlot{{RoleOPS, 1}},
 		Extras: []Extra{
-			{Key: "server", Amount: 500_000, Label: Text{ID: "Server pengembangan", EN: "Development server"}},
-			{Key: "tools", Amount: 900_000, Label: Text{ID: "Lisensi tools & framework pendukung", EN: "Supporting tool & framework licences"}},
+			{Key: "server", Amount: 500_000, TimeBased: true, Label: Text{ID: "Sewa server pengembangan", EN: "Development server rental"}},
+			{Key: "tools", Amount: 900_000, TimeBased: true, Label: Text{ID: "Langganan tools & framework pendukung", EN: "Supporting tool & framework subscriptions"}},
 		},
 		Actual: Actual{Started: true, Start: 32, Duration: 3, Cost: 1_630_000},
 	},
@@ -191,7 +191,7 @@ var Activities = []Activity{
 		ID: "A28", WBS: "4.1", Duration: 3, Optimistic: 2, Pessimistic: 5, Pred: []Predecessor{FS("M3")},
 		Name:   Text{ID: "Unit testing & integration testing otomatis", EN: "Automated unit & integration testing"},
 		Team:   []TeamSlot{{RoleQA, 1}},
-		Extras: []Extra{{Key: "tools", Amount: 300_000, Label: Text{ID: "Tools pengujian & pemantauan", EN: "Testing & monitoring tools"}}},
+		Extras: []Extra{{Key: "tools", Amount: 300_000, TimeBased: true, Label: Text{ID: "Langganan tools pengujian & pemantauan", EN: "Testing & monitoring tool subscriptions"}}},
 	},
 	{
 		ID: "A29", WBS: "4.1", Duration: 2, Optimistic: 1, Pessimistic: 4, Pred: []Predecessor{FS("A28")},

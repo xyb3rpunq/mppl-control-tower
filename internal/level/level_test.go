@@ -139,13 +139,15 @@ func TestRealProjectLevellingInvariants(t *testing.T) {
 	if r.Duration < r.CPMDuration {
 		t.Errorf("levelling %d lebih pendek dari CPM %d", r.Duration, r.CPMDuration)
 	}
-	if r.Duration != 108 {
-		t.Errorf("durasi levelling = %d hari kerja, situs menampilkan 108 - perbarui teksnya bila model berubah", r.Duration)
+	// SGS polos dengan aturan LST: satu hari di atas optimum (lihat
+	// TestRealProjectIsProvenOptimal).
+	if r.Duration != 114 {
+		t.Errorf("durasi levelling LST = %d hari kerja, mau 114 - perbarui teks situs bila model berubah", r.Duration)
 	}
 }
 
 func TestBreakdownIsMonotonic(t *testing.T) {
-	b, err := level.Explain(model.Activities, level.Options{Calendar: cal(t), Capacity: model.Capacity})
+	b, err := level.Explain(model.Activities, level.OptimizeOptions{Options: level.Options{Calendar: cal(t), Capacity: model.Capacity}, Samples: 60})
 	if err != nil {
 		t.Fatalf("Explain: %v", err)
 	}
@@ -154,6 +156,9 @@ func TestBreakdownIsMonotonic(t *testing.T) {
 	}
 	if b.WithWindows == b.CapacityOnly {
 		t.Error("jendela ujian tidak berpengaruh sama sekali; periksa tanggal jendela terhadap jadwal")
+	}
+	if b.Stage[0].Best.Duration != b.CapacityOnly || b.Stage[1].Best.Duration != b.WithWindows {
+		t.Error("Breakdown harus memakai jadwal terbaik dari Optimize pada kedua tahap")
 	}
 }
 

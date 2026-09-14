@@ -200,7 +200,7 @@ func TestKeyNumbersAppearOnTheirPages(t *testing.T) {
 		{"/risiko/", "2.880.000", "EMV residual harus tampil di halaman risiko"},
 		{"/coretax/", "47,8x", "rasio paparan harus tampil di studi kasus"},
 		{"/coretax/", "1.228", "nilai kontrak harus tampil di studi kasus"},
-		{"/piagam/", "20 Feb 2026", "tanggal selesai kalender kerja harus tampil di piagam"},
+		{"/piagam/", "23 Feb 2026", "tanggal selesai kalender kerja harus tampil di piagam"},
 		{"/jadwal/", "A17", "kode aktivitas harus tampil di tabel CPM"},
 	}
 	for _, c := range checks {

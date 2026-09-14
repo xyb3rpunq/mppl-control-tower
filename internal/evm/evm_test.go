@@ -197,3 +197,10 @@ func TestZeroProgressAtProjectStart(t *testing.T) {
 		}
 	}
 }
+
+func TestEnginePlanDays(t *testing.T) {
+	plan := schedule.MustCompute(model.Activities, schedule.Options{})
+	if got := evm.New(model.Activities, plan, model.RateCard).PlanDays(); got != plan.Duration {
+		t.Errorf("PlanDays = %d, mau %d", got, plan.Duration)
+	}
+}

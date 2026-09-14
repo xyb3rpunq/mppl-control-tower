@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -16,12 +17,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/coretax"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/i18n"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/risk"
@@ -312,7 +315,109 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 				{Value: fin.CostP80, Label: "P80", Class: "p80"},
 			}, true, lang)
 		},
-		"ladderNames":  func() []model.Text { return site.LadderNames },
+		"ladderNames":   func() []model.Text { return site.LadderNames },
+		"tradeOffChart": func(lang string) template.HTML { return render.TradeOffChart(a.Exact, lang) },
+		"boundChart":    func(lang string) template.HTML { return render.BoundChart(a.LevelOpt, lang) },
+		"riskCountBars": func(lang string) template.HTML {
+			if len(a.RiskSweep) == 0 {
+				return ""
+			}
+			def := a.RiskSweep[0]
+			for _, p := range a.RiskSweep {
+				if p.Loading == model.RiskLoading {
+					def = p
+				}
+			}
+			return render.CountBars(a.RiskSweep[0].Count, def.Count,
+				map[bool]string{true: "saling bebas (lambda 0)", false: "independent (lambda 0)"}[lang == "id"],
+				map[bool]string{true: "bergerombol (lambda " + render.Num(model.RiskLoading, 1, lang) + ")", false: "clustered (lambda " + render.Num(model.RiskLoading, 1, lang) + ")"}[lang == "id"],
+				8, lang)
+		},
+		"forecastHistogram": func(lang string) template.HTML {
+			fc := a.Forecast
+			return render.ValueHistogram(fc.Durations, 30, []render.Marker{
+				{Value: float64(a.Plan.Duration), Label: map[bool]string{true: "rencana", false: "plan"}[lang == "id"], Class: "plan"},
+				{Value: a.IEACt, Label: "IEAC(t)", Class: "ieac"},
+				{Value: fc.DurP50, Label: "P50", Class: "p50"},
+				{Value: fc.DurP80, Label: "P80", Class: "p80"},
+				{Value: a.Final().DurP80, Label: map[bool]string{true: "P80 perencanaan", false: "planning P80"}[lang == "id"], Class: "plan-p80"},
+			}, false, lang)
+		},
+		"forecastFrontierRows": func(step int) []simulate.FrontierPoint {
+			return thinFrontier(a.ForecastFrontier, step)
+		},
+		"exposedActivity": func(id string) string {
+			if a.InFlight == nil {
+				return ""
+			}
+			if i, ok := a.InFlight.Exposed[id]; ok && i < len(model.Activities) {
+				return model.Activities[i].ID
+			}
+			return ""
+		},
+		"openRiskCount": func() int {
+			n := 0
+			for _, r := range model.Risks {
+				if a.InFlight == nil || !a.InFlight.ClosedRisk[r.ID] {
+					n++
+				}
+			}
+			return n
+		},
+		"riskDrivers":  func() []model.RiskDriver { return model.RiskDrivers },
+		"reworkLoops":  func() []model.ReworkLoop { return model.ReworkLoops },
+		"riskLoading":  func() float64 { return model.RiskLoading },
+		"examFactor":   func() float64 { return model.ExamCapacityFactor },
+		"priorWeight":  func() float64 { return simulate.DefaultPriorWeight },
+		"minStartRate": func() float64 { return level.DefaultMinStartRate },
+		"calendarURL":  func() string { return model.AcademicCalendarURL },
+		"skbURL":       func() string { return workcal.SKB2026URL },
+		"skb2025URL":   func() string { return workcal.SKB2025URL },
+		"manyRisks":    func() int { return site.ManyRiskThreshold },
+		"driverOf":     func(r model.Risk) string { return r.DriverOf() },
+		"driverLabel": func(key, lang string) string {
+			if d, ok := model.DriverByKey(key); ok {
+				return d.Label.Get(lang)
+			}
+			return ""
+		},
+		"risksOfDriver": func(key string) []string {
+			var out []string
+			for _, r := range model.Risks {
+				if r.DriverOf() == key {
+					out = append(out, r.ID)
+				}
+			}
+			return out
+		},
+		"minf": func(x, y float64) float64 {
+			if x < y {
+				return x
+			}
+			return y
+		},
+		"netCrash": func(days int) float64 { return a.TradeOffNet(days) },
+		"exactAt": func(d int) compress.ExactPoint {
+			p, _ := a.Exact.PointAt(d)
+			return p
+		},
+		"cutsText": func(m map[string]int) string {
+			keys := make([]string, 0, len(m))
+			for k := range m {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			var parts []string
+			for _, k := range keys {
+				if m[k] > 1 {
+					parts = append(parts, fmt.Sprintf("%s×%d", k, m[k]))
+				} else {
+					parts = append(parts, k)
+				}
+			}
+			return strings.Join(parts, ", ")
+		},
+		"ruleName":     func(r level.Rule, lang string) string { return ruleName(r, lang) },
 		"availability": func() []model.AvailabilityWindow { return model.AvailabilityWindows },
 		"crashPlanOf":  func(act model.Activity) model.CrashPlan { return act.Crash(model.RateCard) },
 		"crashPremium": func() float64 { return model.CrashPremium },
@@ -322,18 +427,7 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 		// titik layak PERTAMA - itulah komitmen JCL 70% dengan tenggat
 		// terpendek, dan tidak boleh sampai terlewat oleh penipisan.
 		"frontierRows": func(step int) []simulate.FrontierPoint {
-			var out []simulate.FrontierPoint
-			k := 0
-			for _, p := range a.Frontier {
-				if !p.Feasible {
-					continue
-				}
-				if k%step == 0 {
-					out = append(out, p)
-				}
-				k++
-			}
-			return out
+			return thinFrontier(a.Frontier, step)
 		},
 		"riskByID": func(id string) model.Risk {
 			for _, r := range model.Risks {
@@ -525,72 +619,202 @@ func risksCSV(a *site.Analysis) string {
 	return sb.String()
 }
 
+// metricsJSON menulis seluruh metrik utama sebagai JSON terstruktur. Urutan
+// kunci mengikuti urutan field struct, sehingga berkasnya stabil antar-build.
 func metricsJSON(a *site.Analysis) string {
 	s := a.Snapshot
-	return fmt.Sprintf(`{
-  "proyek": %q,
-  "tanggal_data": %q,
-  "hari_kerja_berjalan": %.2f,
-  "durasi_rencana_hari_kerja": %d,
-  "tanggal_selesai_rencana": %q,
-  "earned_value": {
-    "pv": %.0f, "ev": %.0f, "ac": %.0f, "bac": %.0f,
-    "sv": %.0f, "cv": %.0f, "spi": %.6f, "cpi": %.6f,
-    "es": %.4f, "sv_waktu_hari": %.4f, "spi_waktu": %.6f,
-    "eac_optimistis": %.0f, "eac_tipikal": %.0f, "eac_pesimistis": %.0f,
-    "etc": %.0f, "vac": %.0f, "tcpi": %.6f
-  },
-  "anggaran": {
-    "bac": %.0f, "cadangan_kontinjensi": %.0f, "cost_baseline": %.0f,
-    "cadangan_manajemen": %.0f, "pagu_total": %.0f
-  },
-  "simulasi": {
-    "iterasi": %d, "rerata": %.4f, "simpangan_baku": %.4f,
-    "p50": %.0f, "p80": %.0f, "p90": %.0f, "peluang_tepat_waktu": %.6f
-  },
-  "risiko": {
-    "emv_inheren": %.0f, "emv_residual": %.0f,
-    "cakupan_cadangan": %.6f, "kekurangan_cadangan": %.0f,
-    "paparan_jadwal_hari": %.4f
-  },
-  "mutu": {
-    "terkendali": %t, "pelanggaran_aturan": %d, "cpk": %.4f,
-    "coq_kesesuaian": %.0f, "coq_ketidaksesuaian": %.0f, "coq_rasio": %.4f
-  },
-  "levelling": {
-    "durasi_cpm": %d, "durasi_kapasitas_saja": %d, "durasi_dengan_ujian": %d,
-    "tanggal_selesai": %q, "peran_kritis": %q
-  },
-  "kompresi": {
-    "durasi_minimum_crash": %d, "biaya_crash_5_hari": %.0f, "biaya_crash_penuh": %.0f,
-    "kandidat_fast_track_layak": %d, "durasi_semua_fast_track": %d
-  },
-  "simulasi_terpadu": {
-    "rho": %.2f, "iterasi": %d,
-    "p80_durasi_per_lapisan": [%.0f, %.0f, %.0f, %.0f],
-    "p80_biaya_per_lapisan": [%.0f, %.0f, %.0f, %.0f],
-    "jcl_target_piagam": %.6f, "peluang_bersama_di_p80": %.6f,
-    "jcl70_tenggat": %.0f, "jcl70_anggaran": %.0f
-  }
+	type ev struct {
+		PV     float64 `json:"pv"`
+		EV     float64 `json:"ev"`
+		AC     float64 `json:"ac"`
+		BAC    float64 `json:"bac"`
+		SV     float64 `json:"sv"`
+		CV     float64 `json:"cv"`
+		SPI    float64 `json:"spi"`
+		CPI    float64 `json:"cpi"`
+		ES     float64 `json:"es"`
+		SVt    float64 `json:"sv_waktu_hari"`
+		SPIt   float64 `json:"spi_waktu"`
+		EACOpt float64 `json:"eac_optimistis"`
+		EACTyp float64 `json:"eac_tipikal"`
+		EACPes float64 `json:"eac_pesimistis"`
+		ETC    float64 `json:"etc"`
+		VAC    float64 `json:"vac"`
+		TCPI   float64 `json:"tcpi"`
+		IEACt  float64 `json:"ieac_t_hari"`
+	}
+	type layer struct {
+		Name       string    `json:"lapisan"`
+		DurP50     float64   `json:"p50_durasi"`
+		DurP80     float64   `json:"p80_durasi"`
+		DurP95     float64   `json:"p95_durasi"`
+		CostP80    float64   `json:"p80_biaya"`
+		CostP95    float64   `json:"p95_biaya"`
+		CostMean   float64   `json:"rerata_biaya"`
+		JCL        float64   `json:"jcl_target_piagam"`
+		JointAtP80 float64   `json:"peluang_bersama_di_p80"`
+		RiskPhi    float64   `json:"phi_risiko_terealisasi"`
+		Rework     float64   `json:"rerata_hari_rework"`
+		TimeCost   float64   `json:"rerata_biaya_sewa"`
+		RiskCount  []float64 `json:"sebaran_jumlah_risiko,omitempty"`
+	}
+	var ladder []layer
+	for i, r := range a.Ladder {
+		ladder = append(ladder, layer{
+			Name: site.LadderNames[i].ID, DurP50: r.DurP50, DurP80: r.DurP80, DurP95: r.DurP95,
+			CostP80: r.CostP80, CostP95: r.CostP95, CostMean: r.CostMean, JCL: r.JCL, JointAtP80: r.JointAtP80,
+			RiskPhi: r.RiskPhi, Rework: r.ReworkDays, TimeCost: r.TimeCost,
+		})
+	}
+	type rule struct {
+		Rule      level.Rule `json:"aturan"`
+		Duration  int        `json:"durasi"`
+		Justified int        `json:"setelah_justifikasi"`
+	}
+	var rules []rule
+	for _, r := range a.LevelOpt.Rules {
+		rules = append(rules, rule{r.Rule, r.Duration, r.Justified})
+	}
+	type exact struct {
+		Duration  int     `json:"durasi"`
+		CrashCost float64 `json:"biaya_crash_eksak"`
+		Greedy    float64 `json:"biaya_crash_serakah"`
+		Rental    float64 `json:"biaya_sewa"`
+		Total     float64 `json:"biaya_total"`
+	}
+	var curve []exact
+	for _, p := range a.Exact.Points {
+		curve = append(curve, exact{p.Duration, p.CrashCost, p.Greedy, p.Rental, p.Total})
+	}
+	type gertRow struct {
+		ID       string  `json:"id"`
+		Check    string  `json:"pemeriksaan"`
+		P        float64 `json:"peluang_gagal"`
+		Rework   float64 `json:"hari_per_putaran"`
+		Cycles   float64 `json:"rerata_putaran_analitik"`
+		MC       float64 `json:"rerata_putaran_simulasi"`
+		MeanAdd  float64 `json:"rerata_hari_tambahan"`
+		SDAdd    float64 `json:"simpangan_baku_hari_tambahan"`
+		AtLeast2 float64 `json:"peluang_dua_putaran_atau_lebih"`
+	}
+	var gerts []gertRow
+	for _, g := range a.GERT {
+		gerts = append(gerts, gertRow{g.Loop.ID, g.Loop.Check, g.Loop.FailProb, g.ReworkDays, g.Cycles, g.MCCycles, g.Reduced.Mean(), g.Reduced.SD(), g.AtLeastTwo})
+	}
+	fin := a.Final()
+	fl := a.InFlight
+	fc := a.Forecast
+	ordered := []struct {
+		key string
+		val interface{}
+	}{
+		{"proyek", model.ProjectCharter.Name.ID},
+		{"tanggal_data", a.StatusDate},
+		{"hari_kerja_berjalan", s.AtDay},
+		{"durasi_rencana_hari_kerja", a.Plan.Duration},
+		{"tanggal_selesai_rencana", a.FinishDatePlan()},
+		{"earned_value", ev{s.PV, s.EV, s.AC, s.BAC, s.SV, s.CV, s.SPI, s.CPI, s.ES, s.SVt, s.SPIt, s.EACOptimistic, s.EACTypical, s.EACPessimistic, s.ETC, s.VAC, s.TCPI, a.IEACt}},
+		{"anggaran", map[string]float64{"bac": a.BAC, "cadangan_kontinjensi": model.ContingencyReserve, "cost_baseline": a.Baseline, "cadangan_manajemen": a.MgmtReserve, "pagu_total": model.TotalAuthorised, "tarif_sewa_harian": a.RentalDaily()}},
+		{"simulasi", map[string]interface{}{"iterasi": a.Sim.Iterations, "rerata": a.Sim.Mean, "simpangan_baku": a.Sim.StdDev, "p50": a.Sim.P50, "p80": a.Sim.P80, "p90": a.Sim.P90, "peluang_tepat_waktu": a.Sim.OnTimeProb}},
+		{"risiko", map[string]interface{}{"emv_inheren": a.Risk.TotalEMV, "emv_residual": a.Risk.TotalResidualEMV, "cakupan_cadangan": a.Risk.ReserveCoverage, "kekurangan_cadangan": a.Risk.ReserveGap, "paparan_jadwal_hari": a.Risk.ScheduleExposure}},
+		{"mutu", map[string]interface{}{"terkendali": a.Control.InControl, "pelanggaran_aturan": len(a.Control.Violations), "cpk": a.Control.Cpk, "coq_kesesuaian": a.COQ.Conformance, "coq_ketidaksesuaian": a.COQ.Nonconformance, "coq_rasio": a.COQ.Ratio}},
+		{"levelling", map[string]interface{}{
+			"durasi_cpm": a.LevelWhy.CPM, "durasi_kapasitas_saja": a.LevelWhy.CapacityOnly, "durasi_dengan_ujian": a.LevelWhy.WithWindows,
+			"tanggal_selesai": a.FinishISO(a.Level.Duration), "peran_kritis": string(a.CriticalRole),
+			"laju_mulai_minimum": level.DefaultMinStartRate,
+			"aturan_prioritas":   rules, "sampel_acak": a.LevelOpt.Samples, "sumber_jadwal_terbaik": a.LevelOpt.Source,
+			"durasi_sgs_lst":    a.LevelOpt.Baseline.Duration,
+			"batas_bawah":       map[string]interface{}{"cpm": a.LevelOpt.Bound.CPM, "solo": a.LevelOpt.Bound.Solo, "energetik": a.LevelOpt.Bound.Energetic, "akhir": a.LevelOpt.Bound.Value},
+			"celah_optimalitas": a.LevelOpt.Gap, "terbukti_optimal": a.LevelOpt.Proven,
+			"audit_simulasi": map[string]interface{}{"iterasi_teraudit": fin.Audit.Audited, "rerata_selisih_sgs": fin.Audit.SGSGapMean, "maks_selisih_sgs": fin.Audit.SGSGapMax, "porsi_terbukti_optimal": fin.Audit.ProvenShare, "porsi_sgs_sudah_optimal": fin.Audit.SGSOptimalShare},
+		}},
+		{"kompresi", map[string]interface{}{
+			"durasi_minimum_crash": a.Crash.MinDuration, "biaya_crash_5_hari": crashCost(a, 5), "biaya_crash_penuh": crashCost(a, len(a.Crash.Steps)),
+			"serakah_optimal": a.Exact.GreedyOptimal, "kelebihan_serakah_maks": a.Exact.MaxGreedyExcess,
+			"biaya_bersih_5_hari": a.TradeOffNet(5), "durasi_biaya_total_terendah": a.Exact.Optimum.Duration,
+			"kurva_eksak":               curve,
+			"kandidat_fast_track_layak": len(a.FastViable), "durasi_semua_fast_track": a.FastAllDur,
+		}},
+		{"simulasi_terpadu", map[string]interface{}{
+			"rho": simulate.DefaultRho, "lambda_risiko": model.RiskLoading, "iterasi": fin.Config.Iterations,
+			"lapisan": ladder, "jcl70_tenggat": a.JCL70.Duration, "jcl70_anggaran": a.JCL70.Budget,
+			"putaran_gert": gerts,
+		}},
+	}
+	if fl != nil {
+		ordered = append(ordered, struct {
+			key string
+			val interface{}
+		}{"prakiraan_berjalan", map[string]interface{}{
+			"selesai": fl.Completed, "berjalan": fl.InProgress, "belum_mulai": len(fl.NotStarted),
+			"kredibilitas_z": fl.Credibility, "rasio_durasi_teramati": fl.ObservedRatio, "faktor_durasi": fl.DurationFactor,
+			"rasio_biaya_teramati": fl.ObservedCostRatio, "faktor_biaya": fl.CostFactor,
+			"faktor_ujian_teramati": fl.ExamObserved, "faktor_ujian_terkalibrasi": fl.ExamFactor,
+			"ac_sampai_tanggal_data": fl.ACToDate,
+			"p50_durasi":             fc.DurP50, "p80_durasi": fc.DurP80, "p80_biaya": fc.CostP80, "jcl_target_piagam": fc.JCL,
+			"p80_durasi_tanpa_belajar": a.ForecastPrior.DurP80,
+			"jcl70_tenggat":            a.ForecastJCL70.Duration, "jcl70_anggaran": a.ForecastJCL70.Budget,
+		}})
+	}
+	// encoding/json mengurutkan kunci map; urutan dokumen dijaga dengan
+	// menulis objek terluar secara manual.
+	var sb strings.Builder
+	sb.WriteString("{\n")
+	for i, kv := range ordered {
+		b, err := json.MarshalIndent(kv.val, "  ", "  ")
+		if err != nil {
+			b = []byte("null")
+		}
+		k, _ := json.Marshal(kv.key)
+		sb.WriteString("  " + string(k) + ": " + string(b))
+		if i < len(ordered)-1 {
+			sb.WriteString(",")
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString("}\n")
+	return sb.String()
 }
-`,
-		model.ProjectCharter.Name.ID, a.StatusDate, s.AtDay, a.Plan.Duration, a.FinishDatePlan(),
-		s.PV, s.EV, s.AC, s.BAC, s.SV, s.CV, s.SPI, s.CPI,
-		s.ES, s.SVt, s.SPIt, s.EACOptimistic, s.EACTypical, s.EACPessimistic,
-		s.ETC, s.VAC, s.TCPI,
-		a.BAC, model.ContingencyReserve, a.Baseline, a.MgmtReserve, model.TotalAuthorised,
-		a.Sim.Iterations, a.Sim.Mean, a.Sim.StdDev, a.Sim.P50, a.Sim.P80, a.Sim.P90, a.Sim.OnTimeProb,
-		a.Risk.TotalEMV, a.Risk.TotalResidualEMV, a.Risk.ReserveCoverage, a.Risk.ReserveGap, a.Risk.ScheduleExposure,
-		a.Control.InControl, len(a.Control.Violations), a.Control.Cpk,
-		a.COQ.Conformance, a.COQ.Nonconformance, a.COQ.Ratio,
-		a.LevelWhy.CPM, a.LevelWhy.CapacityOnly, a.LevelWhy.WithWindows,
-		a.FinishISO(a.Level.Duration), string(a.CriticalRole),
-		a.Crash.MinDuration, crashCost(a, 5), crashCost(a, len(a.Crash.Steps)),
-		len(a.FastViable), a.FastAllDur,
-		simulate.DefaultRho, a.Final().Config.Iterations,
-		a.Ladder[0].DurP80, a.Ladder[1].DurP80, a.Ladder[2].DurP80, a.Ladder[3].DurP80,
-		a.Ladder[0].CostP80, a.Ladder[1].CostP80, a.Ladder[2].CostP80, a.Ladder[3].CostP80,
-		a.Final().JCL, a.Final().JointAtP80, a.JCL70.Duration, a.JCL70.Budget)
+
+// thinFrontier menipiskan tabel frontier, tetapi selalu dimulai dari titik
+// layak PERTAMA - itulah komitmen JCL 70% dengan tenggat terpendek, dan tidak
+// boleh sampai terlewat oleh penipisan.
+func thinFrontier(fr []simulate.FrontierPoint, step int) []simulate.FrontierPoint {
+	if step < 1 {
+		step = 1
+	}
+	var out []simulate.FrontierPoint
+	k := 0
+	for _, p := range fr {
+		if !p.Feasible {
+			continue
+		}
+		if k%step == 0 {
+			out = append(out, p)
+		}
+		k++
+	}
+	return out
+}
+
+// ruleName memberi nama aturan prioritas yang bisa dibaca manusia.
+func ruleName(r level.Rule, lang string) string {
+	names := map[level.Rule][2]string{
+		level.RuleLST:  {"latest start terkecil", "smallest latest start"},
+		level.RuleLFT:  {"latest finish terkecil", "smallest latest finish"},
+		level.RuleMSLK: {"total float terkecil", "smallest total float"},
+		level.RuleGRPW: {"bobot posisi terbesar", "greatest positional weight"},
+		level.RuleMTS:  {"penerus terbanyak", "most total successors"},
+		level.RuleSPT:  {"durasi terpendek", "shortest duration"},
+	}
+	n, ok := names[r]
+	if !ok {
+		return string(r)
+	}
+	if lang == "en" {
+		return n[1]
+	}
+	return n[0]
 }
 
 func crashCost(a *site.Analysis, days int) float64 {

@@ -6,12 +6,13 @@
 // pada 26 hari-peran. Paket ini menjawab pertanyaan berikutnya: kalau
 // kapasitas dihormati, kapan proyeknya selesai?
 //
-// Metodenya Serial Schedule Generation Scheme (SGS) dengan aturan prioritas
-// minimum latest start - heuristik baku untuk RCPSP. Heuristik, bukan optimum:
-// masalah penjadwalan berbatas sumber daya adalah NP-hard, dan jaringan
-// berukuran nyata tidak diselesaikan dengan pencarian eksak. Konsekuensinya
-// dinyatakan terbuka: durasi yang dihasilkan adalah batas atas yang bisa
-// dicapai, bukan jaminan tidak ada jadwal yang lebih pendek.
+// Metodenya Serial Schedule Generation Scheme (SGS). Run menjalankan satu
+// kali SGS dengan satu aturan prioritas atau satu daftar aktivitas. Optimize
+// (optimize.go) mencari jadwal terbaik dari banyak aturan, sampel acak
+// berbias, dan justifikasi maju-mundur; LowerBound (bound.go) menghitung batas
+// bawah yang TIDAK mungkin dikalahkan jadwal mana pun. Selisih keduanya adalah
+// celah optimalitas: bila nol, jadwal terbaik terbukti optimal untuk model
+// kerja ini, walaupun RCPSP secara umum NP-hard.
 //
 // Model kerjanya berbasis isi pekerjaan, bukan kalender: sebuah aktivitas
 // berdurasi d hari dengan alokasi a butuh a x d hari-orang. Pada hari ketika
@@ -34,6 +35,13 @@ import (
 
 const eps = 1e-9
 
+// DefaultMinStartRate adalah 0,2: sebuah aktivitas baru dianggap dimulai bila
+// hari pertamanya setara paling sedikit satu hari kerja per minggu (1/5).
+// Ambang ini bukan angka bebas - ia satuan kerja terkecil yang lazim dipakai
+// saat merencanakan pekerjaan paruh waktu mahasiswa, dan sama dengan
+// kapasitas DevOps paruh waktu selama ujian (0,5 x 0,4).
+const DefaultMinStartRate = 0.2
+
 // Options mengatur satu kali levelling.
 type Options struct {
 	Calendar *workcal.Calendar
@@ -43,6 +51,7 @@ type Options struct {
 	// MinStartRate adalah laju kerja minimum pada hari pertama. Tanpa ambang
 	// ini, aktivitas bisa "dimulai" dengan satu persen kapasitas lalu tertahan
 	// berhari-hari, yang di atas kertas tampak mulai tepat waktu padahal belum.
+	// Bawaannya DefaultMinStartRate.
 	MinStartRate float64
 	// DurationOf memungkinkan simulasi menyuntikkan durasi acak.
 	DurationOf func(model.Activity) int
@@ -56,10 +65,42 @@ type Options struct {
 	// sebelumnya lewat CapacityGrid. Simulasi yang memanggil levelling ribuan
 	// kali mengisinya sekali saja; grid ini hanya dibaca, tidak pernah diubah.
 	CapGrid map[model.Role][]float64
+	// ExamFactor mengganti faktor kapasitas jendela ketersediaan bila > 0.
+	ExamFactor float64
+	// ReleaseOf memberi hari paling awal aktivitas boleh dimulai.
+	ReleaseOf func(model.Activity) int
+	// Rule adalah aturan prioritas SGS; kosong berarti RuleLST.
+	Rule Rule
+	// Order, bila diisi, menggantikan Rule: SGS selalu memilih aktivitas layak
+	// yang paling awal muncul di daftar ini. Aktivitas yang tidak tercantum
+	// diletakkan di belakang menurut aturan LST.
+	Order []string
 }
+
+// Rule adalah aturan prioritas pemilihan aktivitas pada SGS.
+type Rule string
+
+// Aturan prioritas baku RCPSP (Kolisch & Hartmann, 1999). Semuanya statis:
+// dihitung sekali dari CPM, bukan dari keadaan jadwal parsial.
+const (
+	RuleLST  Rule = "LST"  // latest start terkecil
+	RuleLFT  Rule = "LFT"  // latest finish terkecil
+	RuleMSLK Rule = "MSLK" // total float terkecil
+	RuleGRPW Rule = "GRPW" // bobot posisi terbesar: durasi + durasi penerus langsung
+	RuleMTS  Rule = "MTS"  // jumlah penerus (langsung dan tidak langsung) terbanyak
+	RuleSPT  Rule = "SPT"  // durasi terpendek
+)
+
+// Rules adalah seluruh aturan prioritas yang dicoba Optimize.
+var Rules = []Rule{RuleLST, RuleLFT, RuleMSLK, RuleGRPW, RuleMTS, RuleSPT}
 
 // CapacityGrid menghitung kapasitas setiap peran pada setiap hari kerja.
 func CapacityGrid(cal *workcal.Calendar, capacity map[model.Role]float64, useWindows bool, horizon int) map[model.Role][]float64 {
+	return CapacityGridWith(cal, capacity, useWindows, horizon, 0)
+}
+
+// CapacityGridWith sama dengan CapacityGrid dengan faktor jendela pengganti.
+func CapacityGridWith(cal *workcal.Calendar, capacity map[model.Role]float64, useWindows bool, horizon int, examFactor float64) map[model.Role][]float64 {
 	if horizon > cal.Len() {
 		horizon = cal.Len()
 	}
@@ -72,7 +113,7 @@ func CapacityGrid(cal *workcal.Calendar, capacity map[model.Role]float64, useWin
 		row := make([]float64, horizon)
 		for k := 0; k < horizon; k++ {
 			if useWindows {
-				row[k] = model.CapacityOnDate(r, iso[k], capacity)
+				row[k] = model.CapacityOnDateWith(r, iso[k], capacity, examFactor)
 			} else {
 				row[k] = base
 			}
@@ -128,7 +169,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 		return Result{}, fmt.Errorf("level: kapasitas wajib diisi")
 	}
 	if opts.MinStartRate <= 0 {
-		opts.MinStartRate = 0.25
+		opts.MinStartRate = DefaultMinStartRate
 	}
 	if opts.Horizon <= 0 {
 		opts.Horizon = 300
@@ -141,10 +182,11 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 		durationOf = func(a model.Activity) int { return a.Duration }
 	}
 
-	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: durationOf})
+	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: durationOf, ReleaseOf: opts.ReleaseOf})
 	if err != nil {
 		return Result{}, err
 	}
+	key := priorityKeys(acts, plan, opts, durationOf)
 	byID := make(map[string]model.Activity, len(acts))
 	for _, a := range acts {
 		byID[a.ID] = a
@@ -174,7 +216,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 	}
 	grid := opts.CapGrid
 	if grid == nil {
-		grid = CapacityGrid(opts.Calendar, opts.Capacity, opts.UseWindows, H)
+		grid = CapacityGridWith(opts.Calendar, opts.Capacity, opts.UseWindows, H, opts.ExamFactor)
 	}
 	for _, r := range roles {
 		res.Usage[r] = make([]float64, H)
@@ -190,7 +232,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 
 	scheduled := make(map[string]bool, len(acts))
 	for len(scheduled) < len(acts) {
-		// Pilih aktivitas yang layak dengan latest start CPM terkecil.
+		// Pilih aktivitas layak dengan kunci prioritas terkecil.
 		var pick string
 		for _, a := range acts {
 			if scheduled[a.ID] {
@@ -206,7 +248,7 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 			if !ready {
 				continue
 			}
-			if pick == "" || better(plan.Task(a.ID), plan.Task(pick)) {
+			if pick == "" || key.less(a.ID, pick) {
 				pick = a.ID
 			}
 		}
@@ -219,6 +261,11 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 		cpmTask := plan.Task(pick)
 
 		ready := 0
+		if opts.ReleaseOf != nil {
+			if r := opts.ReleaseOf(a); r > ready {
+				ready = r
+			}
+		}
 		for _, p := range a.Pred {
 			pt := res.Tasks[p.ID]
 			typ := p.Type
@@ -301,16 +348,100 @@ func Run(acts []model.Activity, opts Options) (Result, error) {
 	return res, nil
 }
 
-// better menentukan prioritas SGS: latest start terkecil, lalu early start
-// terkecil, lalu kode aktivitas agar urutannya deterministik.
-func better(a, b schedule.Task) bool {
-	if a.LS != b.LS {
-		return a.LS < b.LS
+// keys adalah kunci prioritas setiap aktivitas untuk satu kali SGS.
+type keys struct {
+	primary   map[string]float64
+	secondary map[string]float64
+}
+
+// less membandingkan dua aktivitas: kunci utama, lalu kunci kedua (early
+// start CPM), lalu kode aktivitas agar urutannya deterministik.
+func (k keys) less(a, b string) bool {
+	if k.primary[a] != k.primary[b] {
+		return k.primary[a] < k.primary[b]
 	}
-	if a.ES != b.ES {
-		return a.ES < b.ES
+	if k.secondary[a] != k.secondary[b] {
+		return k.secondary[a] < k.secondary[b]
 	}
-	return a.ID < b.ID
+	return a < b
+}
+
+// priorityKeys menurunkan kunci prioritas dari aturan atau daftar aktivitas.
+func priorityKeys(acts []model.Activity, plan schedule.Result, opts Options, durationOf func(model.Activity) int) keys {
+	k := keys{primary: make(map[string]float64, len(acts)), secondary: make(map[string]float64, len(acts))}
+	for _, a := range acts {
+		k.secondary[a.ID] = float64(plan.Task(a.ID).ES)
+	}
+	if len(opts.Order) > 0 {
+		pos := make(map[string]int, len(opts.Order))
+		for i, id := range opts.Order {
+			if _, seen := pos[id]; !seen {
+				pos[id] = i
+			}
+		}
+		// Aktivitas di luar daftar menyusul di belakang, diurutkan LST.
+		for _, a := range acts {
+			if i, ok := pos[a.ID]; ok {
+				k.primary[a.ID] = float64(i)
+			} else {
+				k.primary[a.ID] = float64(len(opts.Order)) + float64(plan.Task(a.ID).LS)/1e6
+			}
+		}
+		return k
+	}
+	rule := opts.Rule
+	if rule == "" {
+		rule = RuleLST
+	}
+	var succCount map[string]int
+	if rule == RuleMTS {
+		succCount = transitiveSuccessors(plan)
+	}
+	for _, a := range acts {
+		t := plan.Task(a.ID)
+		var v float64
+		switch rule {
+		case RuleLFT:
+			v = float64(t.LateFinishX)
+		case RuleMSLK:
+			v = float64(t.TotalFloat)
+		case RuleGRPW:
+			w := durationOf(a)
+			for _, s := range t.Successors {
+				w += plan.Task(s).Duration
+			}
+			v = -float64(w)
+		case RuleMTS:
+			v = -float64(succCount[a.ID])
+		case RuleSPT:
+			v = float64(durationOf(a))
+		default:
+			v = float64(t.LS)
+		}
+		k.primary[a.ID] = v
+	}
+	return k
+}
+
+// transitiveSuccessors menghitung jumlah penerus langsung dan tidak langsung.
+func transitiveSuccessors(plan schedule.Result) map[string]int {
+	reach := make(map[string]map[string]bool, len(plan.Order))
+	for i := len(plan.Order) - 1; i >= 0; i-- {
+		id := plan.Order[i]
+		set := map[string]bool{}
+		for _, s := range plan.Task(id).Successors {
+			set[s] = true
+			for x := range reach[s] {
+				set[x] = true
+			}
+		}
+		reach[id] = set
+	}
+	out := make(map[string]int, len(reach))
+	for id, set := range reach {
+		out[id] = len(set)
+	}
+	return out
 }
 
 // rateAt menghitung laju kerja aktivitas pada hari k: porsi hari penuh yang
@@ -410,7 +541,7 @@ func (r Result) Moved() []Task {
 	return out
 }
 
-// Breakdown memecah tambahan durasi proyek menjadi tiga penyebab dengan
+// Breakdown memecah tambahan durasi proyek menjadi dua penyebab dengan
 // menjalankan ulang levelling secara bertahap:
 //
 //  1. kapasitas normal saja, tanpa jendela ketersediaan
@@ -418,29 +549,33 @@ func (r Result) Moved() []Task {
 //
 // Selisih antar-tahap adalah kontribusi masing-masing penyebab. Pemecahan
 // bertahap bergantung pada urutan, dan urutan di sini sengaja dimulai dari
-// yang struktural (kapasitas) ke yang musiman (ujian).
+// yang struktural (kapasitas) ke yang musiman (ujian). Setiap tahap memakai
+// jadwal terbaik dari Optimize, bukan SGS polos, supaya selisihnya tidak
+// tercemar kelemahan satu aturan prioritas.
 type Breakdown struct {
 	CPM          int
 	CapacityOnly int
 	WithWindows  int
+	// Stage adalah hasil Optimize setiap tahap: [0] kapasitas, [1] + jendela.
+	Stage [2]Optimized
 }
 
-// Explain menjalankan dua tahap levelling untuk Breakdown.
-func Explain(acts []model.Activity, opts Options) (Breakdown, error) {
-	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: opts.DurationOf})
+// Explain menjalankan Optimize untuk kedua tahap Breakdown.
+func Explain(acts []model.Activity, o OptimizeOptions) (Breakdown, error) {
+	plan, err := schedule.Compute(acts, schedule.Options{DurationOf: o.DurationOf, ReleaseOf: o.ReleaseOf})
 	if err != nil {
 		return Breakdown{}, err
 	}
-	o := opts
-	o.UseWindows = false
-	capOnly, err := Run(acts, o)
-	if err != nil {
-		return Breakdown{}, err
+	b := Breakdown{CPM: plan.Duration}
+	for i, win := range []bool{false, true} {
+		c := o
+		c.UseWindows = win
+		c.CapGrid = nil
+		if b.Stage[i], err = Optimize(acts, c); err != nil {
+			return Breakdown{}, err
+		}
 	}
-	o.UseWindows = true
-	withWin, err := Run(acts, o)
-	if err != nil {
-		return Breakdown{}, err
-	}
-	return Breakdown{CPM: plan.Duration, CapacityOnly: capOnly.Duration, WithWindows: withWin.Duration}, nil
+	b.CapacityOnly = b.Stage[0].Best.Duration
+	b.WithWindows = b.Stage[1].Best.Duration
+	return b, nil
 }

@@ -32,7 +32,7 @@
 
   <div class="note-box warn">
     <h4>{{if eq $l "id"}}Catatan pemeriksaan: tanggal selesai pada piagam tidak konsisten dengan kalender kerja{{else}}Verification note: the charter finish date is inconsistent with the working calendar{{end}}</h4>
-    <p>{{if eq $l "id"}}Piagam menyebut target Februari 2026 dengan durasi 17 minggu dari {{date $c.StartDate $l}}. Tujuh belas minggu kalender polos berakhir {{date $c.TargetFinish $l}}. Tetapi 85 hari kerja - setelah akhir pekan dan {{len $a.HolidaysInPlan}} hari libur dikeluarkan - baru berakhir <strong>{{date $a.FinishDatePlan $l}}</strong>. Selisihnya lima hari kerja, dan seluruhnya jatuh setelah jalur kritis tidak lagi punya float.{{else}}The charter targets February 2026 with 17 weeks from {{date $c.StartDate $l}}. Seventeen plain calendar weeks end on {{date $c.TargetFinish $l}}. But 85 working days - once weekends and {{len $a.HolidaysInPlan}} holidays are removed - only end on <strong>{{date $a.FinishDatePlan $l}}</strong>. The gap is five working days, all of them falling after the critical path has run out of float.{{end}}</p>
+    <p>{{if eq $l "id"}}Piagam menyebut target Februari 2026 dengan durasi 17 minggu dari {{date $c.StartDate $l}}. Tujuh belas minggu kalender polos berakhir {{date $c.TargetFinish $l}}. Tetapi 85 hari kerja - setelah akhir pekan dan {{len $a.HolidaysInPlan}} hari libur dikeluarkan - baru berakhir <strong>{{date $a.FinishDatePlan $l}}</strong>. Selisihnya {{len $a.HolidaysInPlan}} hari kerja - satu untuk setiap hari libur - dan seluruhnya jatuh setelah jalur kritis tidak lagi punya float. Kalender libur dicocokkan dengan <a href="{{skbURL}}" rel="noopener">SKB 3 Menteri 2026</a> dan <a href="{{skb2025URL}}" rel="noopener">SKB perubahan 2025</a>; cuti bersama ikut dihitung karena kalender kampus mengikutinya.{{else}}The charter targets February 2026 with 17 weeks from {{date $c.StartDate $l}}. Seventeen plain calendar weeks end on {{date $c.TargetFinish $l}}. But 85 working days - once weekends and {{len $a.HolidaysInPlan}} holidays are removed - only end on <strong>{{date $a.FinishDatePlan $l}}</strong>. The gap is {{len $a.HolidaysInPlan}} working days - one per holiday - all of them falling after the critical path has run out of float. The holiday calendar is checked against the <a href="{{skbURL}}" rel="noopener">2026 joint ministerial decree</a> and the <a href="{{skb2025URL}}" rel="noopener">amended 2025 decree</a>; collective leave days count because the campus calendar follows them.{{end}}</p>
     <table class="data compact">
       <thead><tr><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th>{{if eq $l "id"}}Hari libur{{else}}Holiday{{end}}</th><th>{{if eq $l "id"}}Status{{else}}Status{{end}}</th></tr></thead>
       <tbody>
@@ -40,7 +40,7 @@
         <tr>
           <td>{{date .Date $l}}</td>
           <td>{{if eq $l "id"}}{{.NameID}}{{else}}{{.NameEN}}{{end}}</td>
-          <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}asumsi{{else}}assumed{{end}}</span>{{else}}<span class="pill ok">{{if eq $l "id"}}tetap{{else}}fixed{{end}}</span>{{end}}</td>
+          <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}asumsi{{else}}assumed{{end}}</span>{{else}}<span class="pill ok">{{if .CutiBersama}}{{if eq $l "id"}}cuti bersama (SKB){{else}}collective leave (decree){{end}}{{else}}{{if eq $l "id"}}libur nasional (SKB){{else}}national holiday (decree){{end}}{{end}}</span>{{end}}</td>
         </tr>
         {{end}}
       </tbody>

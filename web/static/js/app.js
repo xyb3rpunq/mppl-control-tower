@@ -95,6 +95,7 @@
     wireDataDate();
     wireSimulation();
     wireIntegrated();
+    wireForecast();
   };
 
   // -------------------------------------------------- kendali tanggal data
@@ -265,7 +266,7 @@
 
       setTimeout(function () {
           var t0 = performance.now();
-          var res = window.mpplIntegrated(iterations, 20210801, r, isNaN(layer) ? 3 : layer);
+          var res = window.mpplIntegrated(iterations, 20210801, r, isNaN(layer) ? 4 : layer);
           var ms = performance.now() - t0;
           btn.disabled = false;
           btn.textContent = original;
@@ -278,6 +279,39 @@
           setText('[data-int="realised"]', fmt(res.realised, 3));
           setText('[data-int="elapsed"]', fmt(ms, 0) + ' ms');
           drawHistogram(res, '[data-int-chart]');
+      }, 30);
+    });
+  }
+
+  // ------------------------------------------------ prakiraan berjalan
+  function wireForecast() {
+    var form = document.querySelector('[data-forecast-form]');
+    if (!form || typeof window.mpplForecast !== 'function') return;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var date = form.querySelector('[name="date"]').value;
+      var iterations = parseInt(form.querySelector('[name="iterations"]').value, 10) || 2000;
+      var btn = form.querySelector('button[type="submit"]');
+      var original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      setTimeout(function () {
+          var t0 = performance.now();
+          var res = window.mpplForecast(date, iterations);
+          var ms = performance.now() - t0;
+          btn.disabled = false;
+          btn.textContent = original;
+          if (!res || !res.ok) return;
+          setText('[data-fc="status"]', res.completed + ' / ' + res.inProgress);
+          setText('[data-fc="z"]', pct(res.credibility, 1));
+          setText('[data-fc="factor"]', fmt(res.durationFactor, 3));
+          setText('[data-fc="p50"]', fmt(res.p50, 0));
+          setText('[data-fc="p80"]', fmt(res.p80, 0));
+          setText('[data-fc="costP80"]', rp(res.costP80));
+          setText('[data-fc="elapsed"]', fmt(ms, 0) + ' ms');
+          drawHistogram(res, '[data-fc-chart]');
       }, 30);
     });
   }

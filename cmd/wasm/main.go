@@ -17,6 +17,7 @@ import (
 	"syscall/js"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/evm"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/schedule"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/simulate"
@@ -27,7 +28,36 @@ var (
 	cal    *workcal.Calendar
 	plan   schedule.Result
 	engine *evm.Engine
+	// levelOrder adalah urutan jadwal levelling terbaik, dihitung sekali saat
+	// simulasi terpadu pertama kali diminta. Server memakai urutan yang sama,
+	// sehingga hasil di peramban identik dengan angka di halaman.
+	levelOrder []string
 )
+
+// baseConfig meniru site.(*Analysis).baseSimConfig persis.
+func baseConfig() (simulate.IntegratedConfig, error) {
+	if levelOrder == nil {
+		opt, err := level.Optimize(model.Activities, level.OptimizeOptions{
+			Options: level.Options{Calendar: cal, Capacity: model.Capacity, UseWindows: true},
+		})
+		if err != nil {
+			return simulate.IntegratedConfig{}, err
+		}
+		levelOrder = opt.Best.Order
+	}
+	return simulate.IntegratedConfig{
+		Iterations:  3000,
+		Seed:        simulate.Defaults().Seed,
+		Rho:         simulate.DefaultRho,
+		RiskLoading: model.RiskLoading,
+		Layer:       simulate.LayerResources,
+		Calendar:    cal,
+		Capacity:    model.Capacity,
+		Budget:      model.TotalAuthorised,
+		Deadline:    float64(plan.Duration),
+		LevelOrder:  levelOrder,
+	}, nil
+}
 
 func main() {
 	cal = workcal.MustNew(model.ProjectCharter.StartDate, 400)
@@ -38,6 +68,7 @@ func main() {
 	js.Global().Set("mpplSimulate", js.FuncOf(runSimulation))
 	js.Global().Set("mpplBounds", js.FuncOf(bounds))
 	js.Global().Set("mpplIntegrated", js.FuncOf(runIntegrated))
+	js.Global().Set("mpplForecast", js.FuncOf(runForecast))
 
 	// Beri tahu halaman bahwa mesinnya siap; tanpa ini kendali interaktif
 	// tetap tersembunyi dan halaman berperilaku seperti halaman statis biasa.
@@ -168,17 +199,11 @@ func runSimulation(_ js.Value, args []js.Value) any {
 }
 
 // runIntegrated menjalankan simulasi terpadu sampai lapisan tertentu.
-// Argumen: iterasi, benih, rho, lapisan (0-3).
+// Argumen: iterasi, benih, rho, lapisan (0-4).
 func runIntegrated(_ js.Value, args []js.Value) any {
-	cfg := simulate.IntegratedConfig{
-		Iterations: 3000,
-		Seed:       simulate.Defaults().Seed,
-		Rho:        simulate.DefaultRho,
-		Layer:      simulate.LayerResources,
-		Calendar:   cal,
-		Capacity:   model.Capacity,
-		Budget:     model.TotalAuthorised,
-		Deadline:   float64(plan.Duration),
+	cfg, err := baseConfig()
+	if err != nil {
+		return errPayload(err.Error())
 	}
 	if len(args) > 0 && args[0].Type() == js.TypeNumber {
 		cfg.Iterations = args[0].Int()
@@ -210,32 +235,7 @@ func runIntegrated(_ js.Value, args []js.Value) any {
 	if err != nil {
 		return errPayload(err.Error())
 	}
-
-	// Histogram durasi disusun dengan bentuk yang sama seperti simulasi PERT,
-	// supaya halaman bisa memakai satu fungsi penggambar untuk keduanya.
-	const bins = 28
-	lo, hi := res.Durations[0], res.Durations[len(res.Durations)-1]
-	if hi == lo {
-		hi = lo + 1
-	}
-	width := (hi - lo) / bins
-	counts := make([]int, bins)
-	for _, d := range res.Durations {
-		i := int((d - lo) / width)
-		if i >= bins {
-			i = bins - 1
-		}
-		counts[i]++
-	}
-	hist := make([]map[string]any, 0, bins)
-	running := 0
-	for i, c := range counts {
-		running += c
-		hist = append(hist, map[string]any{
-			"from": lo + float64(i)*width, "to": lo + float64(i+1)*width,
-			"count": c, "cum": float64(running) / float64(len(res.Durations)),
-		})
-	}
+	hist := durationHistogram(res.Durations)
 
 	return toJS(map[string]any{
 		"ok":            true,
@@ -252,11 +252,106 @@ func runIntegrated(_ js.Value, args []js.Value) any {
 		"costP80":       res.CostP80,
 		"jointAtP80":    res.JointAtP80,
 		"realised":      res.RealisedSameRole,
+		"riskPhi":       res.RiskPhi,
+		"reworkDays":    res.ReworkDays,
+		"rentalCost":    res.TimeCost,
 		"deterministic": plan.Duration,
 		"p50":           res.DurP50,
 		"p80":           res.DurP80,
 		"p90":           res.DurP90,
 		"histogram":     hist,
+	})
+}
+
+// durationHistogram menyusun histogram durasi dengan bentuk yang sama seperti
+// simulasi PERT, supaya halaman bisa memakai satu fungsi penggambar.
+func durationHistogram(durations []float64) []map[string]any {
+	const bins = 28
+	if len(durations) == 0 {
+		return nil
+	}
+	lo, hi := durations[0], durations[len(durations)-1]
+	if hi == lo {
+		hi = lo + 1
+	}
+	width := (hi - lo) / bins
+	counts := make([]int, bins)
+	for _, d := range durations {
+		i := int((d - lo) / width)
+		if i >= bins {
+			i = bins - 1
+		}
+		counts[i]++
+	}
+	hist := make([]map[string]any, 0, bins)
+	running := 0
+	for i, c := range counts {
+		running += c
+		hist = append(hist, map[string]any{
+			"from": lo + float64(i)*width, "to": lo + float64(i+1)*width,
+			"count": c, "cum": float64(running) / float64(len(durations)),
+		})
+	}
+	return hist
+}
+
+// runForecast menjalankan prakiraan berjalan dari tanggal data pilihan.
+// Argumen: tanggal ISO, iterasi. Realisasi sampai tanggal itu dikunci dan
+// kalibrasi dihitung ulang dari bukti yang tersedia saat itu.
+func runForecast(_ js.Value, args []js.Value) any {
+	if len(args) < 1 || args[0].Type() != js.TypeString {
+		return errPayload("tanggal data tidak diberikan")
+	}
+	cfg, err := baseConfig()
+	if err != nil {
+		return errPayload(err.Error())
+	}
+	cfg.Iterations = 2000
+	if len(args) > 1 && args[1].Type() == js.TypeNumber {
+		cfg.Iterations = args[1].Int()
+	}
+	if cfg.Iterations < 100 {
+		cfg.Iterations = 100
+	}
+	if cfg.Iterations > 20_000 {
+		cfg.Iterations = 20_000
+	}
+	day := cal.FractionalIndexOf(args[0].String())
+	fl, err := simulate.PrepareInFlight(model.Activities, cal, day, 0, engine.ACAt)
+	if err != nil {
+		return errPayload(err.Error())
+	}
+	cfg.InFlight, cfg.ExamFactor = fl, fl.ExamFactor
+	res, err := simulate.RunIntegrated(model.Activities, cfg)
+	if err != nil {
+		return errPayload(err.Error())
+	}
+	s := engine.At(day)
+	ieac := 0.0
+	if s.SPIt > 0 {
+		ieac = s.AtDay + (float64(plan.Duration)-s.ES)/s.SPIt
+	}
+	return toJS(map[string]any{
+		"ok":             true,
+		"statusDate":     args[0].String(),
+		"day":            day,
+		"iterations":     res.Config.Iterations,
+		"completed":      len(fl.Completed),
+		"inProgress":     len(fl.InProgress),
+		"notStarted":     len(fl.NotStarted),
+		"credibility":    fl.Credibility,
+		"observedRatio":  fl.ObservedRatio,
+		"durationFactor": fl.DurationFactor,
+		"examFactor":     fl.ExamFactor,
+		"p50":            res.DurP50,
+		"p80":            res.DurP80,
+		"p90":            res.DurP90,
+		"costP80":        res.CostP80,
+		"jcl":            res.JCL,
+		"ieact":          ieac,
+		"deterministic":  plan.Duration,
+		"p80Date":        cal.ISOAt(int(res.DurP80) - 1),
+		"histogram":      durationHistogram(res.Durations),
 	})
 }
 

@@ -89,7 +89,7 @@ var CostOfQuality = []COQItem{
 	{Category: COQPrevention, Amount: 300_000, Actual: true, Label: Text{ID: "Penyusunan standar coding & templat code review", EN: "Coding standards & code review templates"}},
 	{Category: COQPrevention, Amount: 420_000, Actual: true, Label: Text{ID: "Pelatihan tim & penyusunan design system", EN: "Team training & design system"}},
 	{Category: COQPrevention, Amount: 250_000, Actual: false, Label: Text{ID: "Gerbang mutu otomatis di pipeline CI", EN: "Automated quality gate in the CI pipeline"}},
-	{Category: COQAppraisal, Amount: 300_000, Actual: true, Label: Text{ID: "Lisensi tools pengujian & pemantauan", EN: "Testing & monitoring tool licences"}},
+	{Category: COQAppraisal, Amount: 300_000, Actual: true, Label: Text{ID: "Langganan tools pengujian & pemantauan", EN: "Testing & monitoring tool subscriptions"}},
 	{Category: COQAppraisal, Amount: 480_000, Actual: false, Label: Text{ID: "Unit, integration, dan system testing", EN: "Unit, integration, and system testing"}},
 	{Category: COQAppraisal, Amount: 360_000, Actual: false, Label: Text{ID: "User Acceptance Testing bersama bagian akademik", EN: "User Acceptance Testing with the academic office"}},
 	{Category: COQAppraisal, Amount: 240_000, Actual: false, Label: Text{ID: "Uji penetrasi internal sebelum go-live", EN: "Internal penetration test before go-live"}},

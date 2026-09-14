@@ -39,6 +39,7 @@ var dict = Dict{
 	"nav.risksched":  {"PERT & Monte Carlo", "PERT & Monte Carlo"},
 	"nav.integrated": {"Simulasi Terpadu & JCL", "Integrated Simulation & JCL"},
 	"nav.cost":       {"Biaya & Earned Value", "Cost & Earned Value"},
+	"nav.forecast":   {"Prakiraan Berjalan", "In-flight Forecast"},
 	"nav.risk":       {"Manajemen Risiko", "Risk Management"},
 	"nav.org":        {"Organisasi & Sumber Daya", "Organisation & Resources"},
 	"nav.quality":    {"Manajemen Mutu", "Quality Management"},

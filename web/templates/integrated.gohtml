@@ -14,8 +14,9 @@
       <p>
         {{if eq $i 0}}{{if eq $l "id"}}Durasi setiap aktivitas diambil acak dari sebaran beta-PERT-nya sendiri-sendiri. Identik dengan halaman PERT.{{else}}Each activity duration is drawn from its own beta-PERT distribution. Identical to the PERT page.{{end}}{{end}}
         {{if eq $i 1}}{{if eq $l "id"}}Aktivitas yang dikerjakan peran yang sama bergerak bersama lewat faktor kinerja laten (rho {{num (defaultRho) 2 $l}}).{{else}}Activities done by the same role move together through a latent performance factor (rho {{num (defaultRho) 2 $l}}).{{end}}{{end}}
-        {{if eq $i 2}}{{if eq $l "id"}}Setiap risiko pada register terjadi dengan peluang residualnya, menambah biaya dan hari pada aktivitas yang terpapar.{{else}}Every register risk fires with its residual probability, adding cost and days to the exposed activity.{{end}}{{end}}
-        {{if eq $i 3}}{{if eq $l "id"}}Setiap iterasi dijadwalkan ulang dengan levelling: kapasitas peran, DevOps paruh waktu, dan periode ujian dihormati.{{else}}Every iteration is rescheduled with levelling: role capacity, half-time DevOps, and the exam period are respected.{{end}}{{end}}
+        {{if eq $i 2}}{{if eq $l "id"}}Risiko register terjadi dengan peluang residualnya, tetapi risiko yang berbagi sebab cenderung datang bersamaan (kopula faktor, lambda {{num (riskLoading) 1 $l}}).{{else}}Register risks fire at their residual probability, but risks sharing a cause tend to arrive together (factor copula, lambda {{num (riskLoading) 1 $l}}).{{end}}{{end}}
+        {{if eq $i 3}}{{if eq $l "id"}}Regresi pasca perbaikan bug dan uji penetrasi bisa gagal lalu diulang - putaran GERT dengan jumlah ulangan geometrik.{{else}}Regression after bug fixing and the penetration test can fail and be repeated - GERT loops with a geometric number of repeats.{{end}}{{end}}
+        {{if eq $i 4}}{{if eq $l "id"}}Setiap iterasi dijadwalkan ulang dengan levelling: kapasitas peran, DevOps paruh waktu, dan periode ujian dihormati.{{else}}Every iteration is rescheduled with levelling: role capacity, half-time DevOps, and the exam periods are respected.{{end}}{{end}}
       </p>
       <dl>
         <dt>P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</dt><dd>{{num $r.DurP80 0 $l}}</dd>
@@ -31,7 +32,7 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Tangga realisme{{else}}The realism ladder{{end}}</h2>
-  <p class="section-intro">{{if eq $l "id"}}Keempat lapisan dijalankan dengan benih acak yang sama, sehingga selisih antar-anak tangga murni akibat efek yang ditambahkan - bukan derau sampel. Batang merentang dari P50 sampai P90; garis tebal adalah P80.{{else}}All four layers run with the same random seed, so the difference between rungs comes purely from the added effect - not from sampling noise. Bars span P50 to P90; the heavy line is P80.{{end}}</p>
+  <p class="section-intro">{{if eq $l "id"}}Kelima lapisan dijalankan dengan benih acak yang sama, sehingga selisih antar-anak tangga murni akibat efek yang ditambahkan - bukan derau sampel. Batang merentang dari P50 sampai P90; garis tebal adalah P80.{{else}}All five layers run with the same random seed, so the difference between rungs comes purely from the added effect - not from sampling noise. Bars span P50 to P90; the heavy line is P80.{{end}}</p>
   <div class="two-col">
     <figure class="figure"><div class="figure-body scrollable">{{ladderChart "dur" $l}}</div></figure>
     <figure class="figure"><div class="figure-body scrollable">{{ladderChart "cost" $l}}</div></figure>
@@ -40,7 +41,7 @@
     <thead><tr><th>{{if eq $l "id"}}Lapisan{{else}}Layer{{end}}</th><th class="num">{{if eq $l "id"}}Rerata durasi{{else}}Mean duration{{end}}</th><th class="num">P50</th><th class="num">P80</th><th class="num">P90</th><th class="num">{{if eq $l "id"}}Rerata biaya{{else}}Mean cost{{end}}</th><th class="num">{{if eq $l "id"}}P80 biaya{{else}}P80 cost{{end}}</th><th class="num">JCL</th><th class="num">{{if eq $l "id"}}Bersama di P80×P80{{else}}Joint at P80×P80{{end}}</th></tr></thead>
     <tbody>
       {{range $i, $r := $lad}}
-      <tr class="{{if eq $i 3}}highlight{{end}}">
+      <tr class="{{if eq $i 4}}highlight{{end}}">
         <th>L{{$i}} {{tx (index $names $i) $l}}</th>
         <td class="num">{{num $r.DurMean 1 $l}}</td>
         <td class="num">{{num $r.DurP50 0 $l}}</td>
@@ -56,7 +57,7 @@
   </table>
   <div class="note-box warn">
     <h4>{{if eq $l "id"}}Mengapa biaya di lapisan independen pun sudah di atas BAC{{else}}Why cost already exceeds BAC even in the independent layer{{end}}</h4>
-    <p>{{if eq $l "id"}}BAC {{rp $a.BAC $l}} dihitung dari durasi paling mungkin (M). Tetapi estimasi tiga titik proyek ini condong ke kanan: rerata beta-PERT (O + 4M + P)/6 hampir selalu di atas M. Biaya tenaga kerja mengikuti durasi, jadi rerata biaya simulasi ({{rp (index $lad 0).CostMean $l}}) sudah di atas BAC sebelum satu risiko pun terjadi. Ini bukan kesalahan hitung - ini pengingat bahwa anggaran yang disusun dari angka "paling mungkin" secara sistematis terlalu rendah.{{else}}BAC of {{rp $a.BAC $l}} is built from most-likely durations (M). But this project's three-point estimates skew right: the beta-PERT mean (O + 4M + P)/6 almost always sits above M. Labour cost follows duration, so the simulated mean cost ({{rp (index $lad 0).CostMean $l}}) already exceeds BAC before a single risk fires. That is not an arithmetic error - it is a reminder that a budget built from "most likely" figures is systematically too low.{{end}}</p>
+    <p>{{if eq $l "id"}}BAC {{rp $a.BAC $l}} dihitung dari durasi paling mungkin (M). Tetapi estimasi tiga titik proyek ini condong ke kanan: rerata beta-PERT (O + 4M + P)/6 hampir selalu di atas M. Biaya tenaga kerja mengikuti durasi, jadi rerata biaya simulasi ({{rp (index $lad 0).CostMean $l}}) sudah di atas BAC sebelum satu risiko pun terjadi. Ini bukan kesalahan hitung - ini pengingat bahwa anggaran yang disusun dari angka "paling mungkin" secara sistematis terlalu rendah. Sewa server dan langganan tools menambah efek yang sama: setiap hari proyek melewati 85 hari, tagihannya ikut bertambah - rerata biaya sewa di L0 sudah {{rp (index $lad 0).TimeCost $l}} terhadap {{rp (index $lad 0).TimeCostPlan $l}} rencana.{{else}}BAC of {{rp $a.BAC $l}} is built from most-likely durations (M). But this project's three-point estimates skew right: the beta-PERT mean (O + 4M + P)/6 almost always sits above M. Labour cost follows duration, so the simulated mean cost ({{rp (index $lad 0).CostMean $l}}) already exceeds BAC before a single risk fires. That is not an arithmetic error - it is a reminder that a budget built from "most likely" figures is systematically too low. Server rental and tool subscriptions add the same effect: every day past 85, the bill grows - mean rental cost in L0 is already {{rp (index $lad 0).TimeCost $l}} against {{rp (index $lad 0).TimeCostPlan $l}} planned.{{end}}</p>
   </div>
 </section>
 
@@ -88,7 +89,7 @@
       </tbody>
     </table>
     <figure class="figure">
-      <figcaption><h3>{{if eq $l "id"}}Sebaran biaya akhir (L3){{else}}Final cost distribution (L3){{end}}</h3></figcaption>
+      <figcaption><h3>{{if eq $l "id"}}Sebaran biaya akhir (L4){{else}}Final cost distribution (L4){{end}}</h3></figcaption>
       <div class="figure-body scrollable">{{costHistogram $l}}</div>
     </figure>
   </div>
@@ -125,7 +126,7 @@
     </label>
     <label><span>{{if eq $l "id"}}Sampai lapisan{{else}}Up to layer{{end}}</span>
       <select name="layer">
-        {{range $i, $n := $names}}<option value="{{$i}}"{{if eq $i 3}} selected{{end}}>L{{$i}} {{tx $n $l}}</option>{{end}}
+        {{range $i, $n := $names}}<option value="{{$i}}"{{if eq $i 4}} selected{{end}}>L{{$i}} {{tx $n $l}}</option>{{end}}
       </select>
     </label>
     <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
@@ -150,19 +151,113 @@
 </section>
 
 <section class="band">
-  <h2>{{if eq $l "id"}}Bagaimana kejadian risiko dimasukkan{{else}}How risk events are fed in{{end}}</h2>
-  <p class="section-intro">{{if eq $l "id"}}Setiap iterasi melempar "koin" untuk setiap risiko dengan peluang residualnya. Bila terjadi, dampak rupiahnya ditambahkan ke biaya, dan dampak jadwalnya ditambahkan ke aktivitas terpanjang pada paket kerja risiko itu - atau ke aktivitas terakhir bila risikonya lintas fase. Frekuensi terjadinya di bawah bisa dicocokkan dengan peluang residual pada halaman Risiko.{{else}}Each iteration flips a "coin" for every risk at its residual probability. If it fires, its monetary impact is added to cost and its schedule impact is added to the longest activity in that risk's work package - or to the final activity for cross-phase risks. The hit frequencies below can be checked against the residual probabilities on the Risk page.{{end}}</p>
+  <h2>{{if eq $l "id"}}Risiko yang datang bergerombol{{else}}Risks that arrive together{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Versi sebelumnya melempar koin terpisah untuk setiap risiko. Padahal kolom "penyebab" pada register menunjukkan beberapa risiko lahir dari sebab yang sama. Setiap penggerak di bawah punya satu faktor laten per iterasi; risiko pada penggerak itu terjadi bila Φ(λ·Z + √(1−λ²)·ε) &gt; 1 − p. Peluang marginal setiap risiko tetap persis p - jadi EMV dan rerata biaya tidak berubah - tetapi skenario "semuanya salah bersamaan" menjadi sesering kenyataannya. Penggerak kinerja pengembang memakai faktor laten Backend Developer yang sama dengan sampler durasi, sehingga risiko R02 juga berkorelasi dengan lamanya API dikerjakan.{{else}}The previous version flipped a separate coin for every risk. Yet the register's "cause" column shows several risks stem from the same cause. Each driver below has one latent factor per iteration; a risk on that driver fires when Φ(λ·Z + √(1−λ²)·ε) &gt; 1 − p. Each risk's marginal probability stays exactly p - so EMV and mean cost do not change - but the "everything goes wrong together" scenario becomes as frequent as it really is. The development-performance driver uses the same Backend Developer latent factor as the duration sampler, so R02 also correlates with how long the APIs take.{{end}}</p>
+  <div class="table-wrap">
   <table class="data">
-    <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th class="num">{{if eq $l "id"}}Peluang residual{{else}}Residual probability{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di simulasi{{else}}Simulated frequency{{end}}</th><th class="num">{{if eq $l "id"}}Dampak biaya{{else}}Cost impact{{end}}</th><th class="num">{{if eq $l "id"}}Dampak jadwal{{else}}Schedule impact{{end}}</th></tr></thead>
+    <thead><tr><th>{{if eq $l "id"}}Penggerak bersama{{else}}Shared driver{{end}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risks{{end}}</th><th>{{if eq $l "id"}}Dasar pengelompokan{{else}}Grouping rationale{{end}}</th></tr></thead>
+    <tbody>
+      {{range riskDrivers}}
+      <tr>
+        <th>{{tx .Label $l}}{{if .Role}} <span class="pill neutral">{{if eq $l "id"}}faktor{{else}}factor{{end}} {{.Role}}</span>{{end}}</th>
+        <td>{{range $i, $id := risksOfDriver .Key}}{{if $i}}, {{end}}<code>{{$id}}</code>{{end}}</td>
+        <td class="small">{{tx .Why $l}}</td>
+      </tr>
+      {{end}}
+      <tr class="muted"><th>{{if eq $l "id"}}Tanpa penggerak{{else}}No driver{{end}}</th><td><code>R01</code></td><td class="small">{{if eq $l "id"}}Keengganan alumni mengisi kuesioner adalah perilaku pihak luar tanpa sebab bersama dengan risiko lain.{{else}}Alumni reluctance to answer is outside behaviour with no cause shared by other risks.{{end}}</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <caption>{{if eq $l "id"}}Kepekaan terhadap lambda (lapisan L2){{else}}Sensitivity to lambda (layer L2){{end}}</caption>
+      <thead><tr><th class="num">lambda</th><th class="num">{{if eq $l "id"}}phi terealisasi{{else}}realised phi{{end}}</th><th class="num">{{if eq $l "id"}}Rerata biaya{{else}}Mean cost{{end}}</th><th class="num">P95 {{if eq $l "id"}}biaya{{else}}cost{{end}}</th><th class="num">P95 {{if eq $l "id"}}durasi{{else}}duration{{end}}</th><th class="num">≥ {{manyRisks}} {{if eq $l "id"}}risiko{{else}}risks{{end}}</th></tr></thead>
+      <tbody>
+        {{range $a.RiskSweep}}
+        <tr class="{{if eq .Loading (riskLoading)}}highlight{{end}}">
+          <td class="num">{{num .Loading 1 $l}}</td>
+          <td class="num">{{num .Phi 3 $l}}</td>
+          <td class="num">{{rp .CostMean $l}}</td>
+          <td class="num"><strong>{{rp .CostP95 $l}}</strong></td>
+          <td class="num">{{num .DurP95 0 $l}}</td>
+          <td class="num">{{pct .ManyRisks 1 $l}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <figure class="figure"><div class="figure-body scrollable">{{riskCountBars $l}}</div></figure>
+  <div class="note-box">
+    <p>{{if eq $l "id"}}Perhatikan kolom rerata biaya: praktis sama di setiap baris. Kopula tidak menambah risiko, ia hanya menata ulang KAPAN risiko terjadi. Yang berubah adalah ekor - P95 biaya dan durasi - dan itulah angka yang menentukan apakah cadangan cukup pada tahun yang buruk.{{else}}Look at the mean cost column: practically identical in every row. The copula adds no risk; it only rearranges WHEN risks fire. What changes is the tail - P95 cost and duration - and that is the figure that decides whether the reserve survives a bad year.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Putaran rework: GERT{{else}}Rework loops: GERT{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Modul 4 menyebut GERT untuk kegiatan yang tidak berurutan lurus, "seperti loop (tes yang harus diulang lebih dari sekali)". Jaringan CPM wajib asiklis, jadi putaran tidak bisa digambar di sana. GERT memberi setiap cabang peluang: pemeriksaan lulus dengan peluang 1 − p, atau gagal dengan peluang p lalu kembali memperbaiki. Transmitansi W(s) = p·e^(st) direduksi dengan aturan Mason W_E = W_maju / (1 − W_putar), dan momen waktunya dibaca dari turunan fungsi pembangkit momen di s = 0. Bentuk tertutupnya: rerata tambahan p·r/(1−p), simpangan baku √p·r/(1−p). Kolom Monte Carlo adalah bukti silang dari lapisan L3.{{else}}Module 4 names GERT for activities that do not run in a straight line, "such as loops (tests that must be repeated more than once)". A CPM network must be acyclic, so loops cannot be drawn there. GERT gives every branch a probability: a check passes with probability 1 − p, or fails with probability p and returns to fixing. The transmittance W(s) = p·e^(st) is reduced with Mason's rule W_E = W_forward / (1 − W_loop), and the time moments are read from derivatives of the moment generating function at s = 0. Closed form: mean extra p·r/(1−p), standard deviation √p·r/(1−p). The Monte Carlo column is the cross-check from layer L3.{{end}}</p>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Putaran{{else}}Loop{{end}}</th><th class="num">p</th><th class="num">{{if eq $l "id"}}Hari per putaran{{else}}Days per loop{{end}}</th><th class="num">E[N] {{if eq $l "id"}}analitik{{else}}analytic{{end}}</th><th class="num">E[N] Monte Carlo</th><th class="num">{{if eq $l "id"}}Rerata tambahan{{else}}Mean extra{{end}}</th><th class="num">{{if eq $l "id"}}Simpangan baku{{else}}Std. deviation{{end}}</th><th class="num">P(N ≥ 2)</th><th class="num">N {{if eq $l "id"}}pada 90%{{else}}at 90%{{end}}</th></tr></thead>
+    <tbody>
+      {{range $a.GERT}}
+      <tr>
+        <th><code>{{.Loop.ID}}</code> {{tx .Loop.Label $l}} <span class="small muted">({{if eq $l "id"}}pemeriksaan{{else}}check{{end}} {{.Loop.Check}})</span></th>
+        <td class="num">{{pct .Loop.FailProb 0 $l}}</td>
+        <td class="num">{{num .ReworkDays 2 $l}}</td>
+        <td class="num">{{num .Cycles 3 $l}}</td>
+        <td class="num">{{num .MCCycles 3 $l}}</td>
+        <td class="num"><strong>{{num .Reduced.Mean 2 $l}}</strong></td>
+        <td class="num">{{num .Reduced.SD 2 $l}}</td>
+        <td class="num">{{pct .AtLeastTwo 1 $l}}</td>
+        <td class="num">{{.Q90}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  <div class="two-col">
+    {{range $a.GERT}}
+    <div class="note-box">
+      <h4><code>{{.Loop.ID}}</code> {{tx .Loop.Label $l}} <span class="pill warn">{{if eq $l "id"}}peluang asumsi{{else}}assumed probability{{end}}</span></h4>
+      <p class="small">{{tx .Loop.Why $l}}</p>
+    </div>
+    {{end}}
+  </div>
+  <p class="small muted">{{if eq $l "id"}}Rerata hari tambahan di simulasi ({{num (index $lad 3).ReworkDays 2 $l}} hari) sedikit di atas jumlah analitik karena simulasi memakai durasi sampel, yang reratanya (O + 4M + P)/6 di atas M yang dipakai bentuk tertutup.{{else}}The simulated mean extra days ({{num (index $lad 3).ReworkDays 2 $l}}) sit slightly above the analytic sum because the simulation uses sampled durations, whose mean (O + 4M + P)/6 exceeds the M used by the closed form.{{end}}</p>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Biaya yang bergantung waktu{{else}}Time-dependent cost{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Anggaran bottom-up memuat dua jenis biaya non-tenaga-kerja. Pembelian sekali - hosting produksi setahun, pelatihan - tidak peduli proyek selesai kapan. Sewa dan langganan berbeda: nilainya pada anggaran adalah nilai untuk rentang rencana, dan setiap hari proyek molor tagihannya bertambah. Pada jadwal CPM rencana biayanya persis sama dengan BAC; di setiap iterasi simulasi, rentangnya mengikuti jadwal iterasi itu.{{else}}The bottom-up budget holds two kinds of non-labour cost. One-off purchases - a year of production hosting, training - do not care when the project finishes. Rentals and subscriptions differ: their budget value covers the planned span, and every day the project slips the bill grows. On the planned CPM schedule the cost equals BAC exactly; in every simulation iteration the span follows that iteration's schedule.{{end}}</p>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Pos biaya{{else}}Cost item{{end}}</th><th>{{if eq $l "id"}}Dibeli pada{{else}}Bought at{{end}}</th><th class="num">{{if eq $l "id"}}Nilai rencana{{else}}Planned value{{end}}</th><th class="num">{{if eq $l "id"}}Rentang rencana{{else}}Planned span{{end}}</th><th class="num">{{if eq $l "id"}}Tarif per hari{{else}}Rate per day{{end}}</th></tr></thead>
+    <tbody>
+      {{range $a.Rentals}}
+      <tr><th>{{tx .Label $l}}</th><td><code>{{.Activity}}</code></td><td class="num">{{rp .Amount $l}}</td><td class="num">{{.PlanSpan}} {{t $l "t.days"}}</td><td class="num">{{rp .Rate $l}}</td></tr>
+      {{end}}
+      <tr class="highlight"><th colspan="4">{{if eq $l "id"}}Tambahan per hari keterlambatan{{else}}Extra per day of delay{{end}}</th><td class="num"><strong>{{rp $a.RentalDaily $l}}</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small">{{if eq $l "id"}}Rerata biaya sewa per lapisan: {{range $i, $r := $lad}}{{if $i}} → {{end}}L{{$i}} {{rpShort $r.TimeCost $l}}{{end}}. Lapisan kapasitas paling mahal karena jadwal yang menghormati kapasitas selalu lebih panjang - biaya itu tidak pernah terlihat di BAC.{{else}}Mean rental cost per layer: {{range $i, $r := $lad}}{{if $i}} → {{end}}L{{$i}} {{rpShort $r.TimeCost $l}}{{end}}. The capacity layer is the most expensive because a schedule that respects capacity is always longer - a cost BAC never shows.{{end}}</p>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Frekuensi kejadian risiko di simulasi{{else}}Risk event frequency in the simulation{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Bila terjadi, dampak rupiah risiko ditambahkan ke biaya, dan dampak jadwalnya ditambahkan ke aktivitas terpanjang pada paket kerja risiko itu - atau ke aktivitas terakhir bila risikonya lintas fase. Karena kopula menjaga peluang marginal, frekuensi di bawah tetap bisa dicocokkan dengan peluang residual pada halaman Risiko.{{else}}When a risk fires, its monetary impact is added to cost and its schedule impact to the longest activity in its work package - or to the final activity for cross-phase risks. Because the copula preserves marginal probabilities, the frequencies below still match the residual probabilities on the Risk page.{{end}}</p>
+  <table class="data">
+    <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th>{{if eq $l "id"}}Penggerak{{else}}Driver{{end}}</th><th class="num">{{if eq $l "id"}}Peluang residual{{else}}Residual probability{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di simulasi{{else}}Simulated frequency{{end}}</th><th class="num">{{if eq $l "id"}}Dampak biaya{{else}}Cost impact{{end}}</th><th class="num">{{if eq $l "id"}}Dampak jadwal{{else}}Schedule impact{{end}}</th></tr></thead>
     <tbody>
       {{range risks}}
       <tr>
         <td><code>{{.ID}}</code></td>
         <td>{{tx .Title $l}}</td>
+        <td class="small">{{with driverOf .}}{{driverLabel . $l}}{{else}}—{{end}}</td>
         <td class="num">{{pct .ResidualProb 0 $l}}</td>
         <td class="num">{{pct (div (iterf (index $fin.RiskHits .ID)) (iterf $fin.Config.Iterations)) 1 $l}}</td>
         <td class="num">{{rp .ResidualImpact $l}}</td>
-        <td class="num">{{if .ScheduleImpact}}+{{.ScheduleImpact}} {{if eq $l "id"}}hari{{else}}days{{end}}{{if eq .ID "R08"}} <span class="pill warn">{{if eq $l "id"}}di L3 via kalender{{else}}in L3 via calendar{{end}}</span>{{end}}{{else}}—{{end}}</td>
+        <td class="num">{{if .ScheduleImpact}}+{{.ScheduleImpact}} {{if eq $l "id"}}hari{{else}}days{{end}}{{if eq .ID "R08"}} <span class="pill warn">{{if eq $l "id"}}di L4 via kalender{{else}}in L4 via calendar{{end}}</span>{{end}}{{else}}—{{end}}</td>
       </tr>
       {{end}}
     </tbody>

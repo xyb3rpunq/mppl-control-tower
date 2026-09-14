@@ -101,7 +101,7 @@ func TestTriangularSamplesStayInRange(t *testing.T) {
 
 func baseConfig(iter int) simulate.IntegratedConfig {
 	return simulate.IntegratedConfig{
-		Iterations: iter, Seed: 20210801, Rho: simulate.DefaultRho,
+		Iterations: iter, Seed: 20210801, Rho: simulate.DefaultRho, RiskLoading: model.RiskLoading,
 		Calendar: workcal.MustNew(model.ProjectCharter.StartDate, 400),
 		Capacity: model.Capacity, Budget: model.TotalAuthorised, Deadline: 85,
 	}
@@ -160,8 +160,8 @@ func TestLadderIsCumulative(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ladder) != 4 {
-		t.Fatalf("tangga punya %d lapisan, mau 4", len(ladder))
+	if len(ladder) != 5 {
+		t.Fatalf("tangga punya %d lapisan, mau 5", len(ladder))
 	}
 	if ladder[2].DurP80 <= ladder[1].DurP80 {
 		t.Errorf("risiko tidak menaikkan P80 durasi: %v -> %v", ladder[1].DurP80, ladder[2].DurP80)
@@ -169,8 +169,14 @@ func TestLadderIsCumulative(t *testing.T) {
 	if ladder[2].CostP80 <= ladder[1].CostP80 {
 		t.Errorf("risiko tidak menaikkan P80 biaya: %v -> %v", ladder[1].CostP80, ladder[2].CostP80)
 	}
-	if ladder[3].DurP80 <= ladder[2].DurP80 {
-		t.Errorf("kapasitas tidak menaikkan P80 durasi: %v -> %v", ladder[2].DurP80, ladder[3].DurP80)
+	if ladder[3].CostMean <= ladder[2].CostMean || ladder[3].ReworkDays <= 0 {
+		t.Errorf("putaran rework tidak menambah biaya atau hari: %v -> %v, %v hari", ladder[2].CostMean, ladder[3].CostMean, ladder[3].ReworkDays)
+	}
+	if ladder[2].ReworkDays != 0 {
+		t.Error("lapisan risiko tidak boleh memuat rework")
+	}
+	if ladder[4].DurP80 <= ladder[3].DurP80 {
+		t.Errorf("kapasitas tidak menaikkan P80 durasi: %v -> %v", ladder[3].DurP80, ladder[4].DurP80)
 	}
 	for i, r := range ladder {
 		if r.JCL > r.OnTime+1e-12 || r.JCL > r.OnBudget+1e-12 {

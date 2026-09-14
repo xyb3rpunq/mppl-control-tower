@@ -63,6 +63,11 @@ type DurationFunc func(model.Activity) int
 type Options struct {
 	DurationOf   DurationFunc
 	ProjectStart int
+	// ReleaseOf memberi hari paling awal sebuah aktivitas boleh dimulai
+	// (batasan start-no-earlier-than). Prakiraan berjalan memakainya untuk
+	// menahan pekerjaan yang belum dimulai agar tidak dijadwalkan sebelum
+	// tanggal data. Nil berarti tanpa batasan.
+	ReleaseOf func(model.Activity) int
 }
 
 func normalise(p model.Predecessor) model.Predecessor {
@@ -149,6 +154,11 @@ func Compute(activities []model.Activity, opts Options) (Result, error) {
 		act := byID[id]
 		dur := durationOf(act)
 		earliest := opts.ProjectStart
+		if opts.ReleaseOf != nil {
+			if r := opts.ReleaseOf(act); r > earliest {
+				earliest = r
+			}
+		}
 		for _, raw := range act.Pred {
 			p := normalise(raw)
 			pAct := byID[p.ID]

@@ -52,12 +52,13 @@ func TestUpgradePagesCarryLiveNumbers(t *testing.T) {
 }
 
 // TestRiskLayerCostMatchesRegisterEMV adalah pemeriksaan silang antar-halaman:
-// kenaikan rerata biaya dari lapisan korelasi ke lapisan risiko harus mendekati
-// jumlah EMV residual pada halaman Risiko. Kalau berbeda jauh, simulasi dan
-// register sedang memakai angka yang berbeda.
+// kenaikan rerata biaya dari lapisan korelasi ke lapisan risiko - setelah
+// biaya sewa yang ikut memanjang dikeluarkan - harus mendekati jumlah EMV
+// residual pada halaman Risiko. Kalau berbeda jauh, simulasi dan register
+// sedang memakai angka yang berbeda.
 func TestRiskLayerCostMatchesRegisterEMV(t *testing.T) {
 	a := analysisFor(t)
-	delta := a.Ladder[2].CostMean - a.Ladder[1].CostMean
+	delta := site.RiskCostDelta(a)
 	emv := a.Risk.TotalResidualEMV
 	if math.Abs(delta-emv)/emv > 0.05 {
 		t.Errorf("kenaikan rerata biaya %.0f menyimpang lebih dari 5%% dari EMV residual %.0f", delta, emv)
@@ -122,14 +123,14 @@ func TestNoIndonesianMonthInEnglishFindings(t *testing.T) {
 }
 
 func TestNavigationOrderPlacesNewPages(t *testing.T) {
-	want := []string{"/", "/piagam/", "/jadwal/", "/optimasi/", "/pert/", "/simulasi-terpadu/", "/biaya/"}
+	want := []string{"/", "/piagam/", "/jadwal/", "/optimasi/", "/pert/", "/simulasi-terpadu/", "/biaya/", "/prakiraan/", "/risiko/"}
 	for i, route := range want {
 		if site.Pages[i].Route != route {
 			t.Errorf("urutan navigasi ke-%d = %s, mau %s", i, site.Pages[i].Route, route)
 		}
 	}
-	if len(site.Pages) != 14 {
-		t.Errorf("jumlah rute = %d, mau 14", len(site.Pages))
+	if len(site.Pages) != 15 {
+		t.Errorf("jumlah rute = %d, mau 15", len(site.Pages))
 	}
 }
 

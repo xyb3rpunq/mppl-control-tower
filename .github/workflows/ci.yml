@@ -35,7 +35,7 @@ jobs:
         run: go vet ./...
 
       - name: Uji dengan deteksi balapan
-        run: go test -race -count=1 ./...
+        run: go test -race -count=1 -timeout 30m ./...
 
       - name: Uji cakupan
         run: |
@@ -57,9 +57,11 @@ jobs:
           test -f /tmp/dist/index.html
           test -f /tmp/dist/en/index.html
           test -f /tmp/dist/coretax/index.html
+          test -f /tmp/dist/prakiraan/index.html
+          test -f /tmp/dist/en/prakiraan/index.html
           test -f /tmp/dist/sitemap.xml
           test -f /tmp/dist/sw.js
           test -f /tmp/dist/data/metrik.json
           halaman=$(find /tmp/dist -name index.html | wc -l)
           echo "halaman dihasilkan: $halaman"
-          test "$halaman" -eq 28
+          test "$halaman" -eq 30

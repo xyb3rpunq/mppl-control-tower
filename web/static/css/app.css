@@ -745,3 +745,29 @@ text.marker.budget { fill: var(--bad); }
 .layer-card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .int-form input[type="range"] { width: 12rem; accent-color: var(--accent); }
 .int-form output { font-family: var(--mono); font-weight: 700; min-width: 2.6rem; display: inline-block; }
+.layer-card.l4 { border-top-color: var(--critical); }
+.ladder-bar.step-4 { fill: var(--critical); opacity: .7; }
+
+/* -------------------------------------------------- penutupan celah */
+.series.rental { stroke: var(--forecast); stroke-width: 2; stroke-dasharray: 5 4; }
+.series.total { stroke: var(--good); stroke-width: 2.8; }
+.series-label.total { fill: var(--good); font-weight: 600; }
+.series-label.crash { fill: var(--accent); }
+.series-label.rental { fill: var(--forecast); }
+.point.greedy-excess { fill: var(--warn); stroke: var(--bg-raised); stroke-width: 1.5; }
+.point.optimum { fill: var(--good); stroke: var(--bg-raised); stroke-width: 2; }
+.bound-bar { rx: 4; }
+.bound-bar.bound { fill: var(--pv); opacity: .55; }
+.bound-bar.bound.final { fill: var(--good); opacity: .85; }
+.bound-bar.best { fill: var(--accent); }
+.bound-bar.baseline { fill: var(--ink-faint); opacity: .45; }
+.ref-line.best { stroke: var(--good); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.count-bar.a { fill: var(--pv); opacity: .6; }
+.count-bar.b { fill: var(--bad); opacity: .75; }
+.marker.ieac { stroke: var(--forecast); stroke-dasharray: 5 3; }
+text.marker.ieac { fill: var(--forecast); }
+.marker.plan-p80 { stroke: var(--pv); stroke-dasharray: 2 3; }
+text.marker.plan-p80 { fill: var(--pv); }
+.proof { border-left: 4px solid var(--good); background: var(--good-soft); padding: .8rem 1rem; border-radius: var(--radius-sm); margin: 1rem 0; }
+.proof strong { color: var(--good); }
+.source-link { font-size: .78rem; color: var(--ink-faint); }

@@ -71,6 +71,12 @@ type Extra struct {
 	Key    string
 	Amount float64
 	Label  Text
+	// TimeBased menandai biaya sewa atau langganan: Amount adalah nilainya
+	// untuk rentang RENCANA dari mulainya aktivitas ini sampai proyek
+	// selesai. Bila proyek molor, rentangnya memanjang dan biayanya ikut naik
+	// secara proporsional. Biaya yang dibeli sekali (hosting produksi setahun,
+	// pelatihan) tidak ditandai.
+	TimeBased bool
 }
 
 // Actual adalah realisasi pelaksanaan satu aktivitas sampai tanggal data.

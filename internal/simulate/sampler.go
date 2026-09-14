@@ -31,6 +31,8 @@ type Sampler struct {
 	roles []model.Role
 	dom   []int        // indeks peran dominan per aktivitas; -1 bila tanpa tim
 	quant []*betaTable // tabel kuantil beta-PERT per aktivitas; nil bila tetap
+	z     []float64    // faktor laten per peran dari Draw terakhir
+	u     []float64    // bilangan seragam per aktivitas dari Draw terakhir
 }
 
 // NewSampler menyiapkan tabel kuantil untuk seluruh aktivitas. Tabel yang
@@ -41,6 +43,7 @@ func NewSampler(acts []model.Activity) *Sampler {
 		index: make(map[string]int, len(acts)),
 		dom:   make([]int, len(acts)),
 		quant: make([]*betaTable, len(acts)),
+		u:     make([]float64, len(acts)),
 	}
 	roleIdx := map[model.Role]int{}
 	cache := map[[3]int]*betaTable{}
@@ -69,7 +72,68 @@ func NewSampler(acts []model.Activity) *Sampler {
 		}
 		s.quant[i] = tbl
 	}
+	s.z = make([]float64, len(s.roles))
 	return s
+}
+
+// Factor mengembalikan faktor kinerja laten sebuah peran pada Draw terakhir,
+// atau 0 bila peran itu tidak dikenal. Nilai positif berarti peran itu sedang
+// lambat pada iterasi ini. Kopula risiko memakainya agar risiko yang
+// bersumber dari peran itu ikut berkorelasi dengan durasi aktivitasnya.
+func (s *Sampler) Factor(r model.Role) float64 {
+	for i, role := range s.roles {
+		if role == r {
+			return s.z[i]
+		}
+	}
+	return 0
+}
+
+// U mengembalikan bilangan seragam aktivitas i pada Draw terakhir.
+func (s *Sampler) U(i int) float64 { return s.u[i] }
+
+// Value mengembalikan kuantil kontinu durasi aktivitas i untuk bilangan
+// seragam u, sebelum dibulatkan ke hari.
+func (s *Sampler) Value(i int, u float64, distribution string) float64 {
+	a := s.acts[i]
+	if a.Milestone {
+		return 0
+	}
+	if a.Pessimistic <= a.Optimistic {
+		return float64(a.Duration)
+	}
+	if distribution == "triangular" {
+		return triangularInverse(u, float64(a.Optimistic), float64(a.Duration), float64(a.Pessimistic))
+	}
+	return s.quant[i].quantile(u)
+}
+
+// CDF mengembalikan P(durasi aktivitas i <= x) menurut sebaran beta-PERT-nya.
+// Prakiraan berjalan memakainya untuk menarik durasi bersyarat: aktivitas
+// yang sudah berjalan e hari pasti tidak berdurasi kurang dari e.
+func (s *Sampler) CDF(i int, x float64) float64 {
+	a := s.acts[i]
+	o, p := float64(a.Optimistic), float64(a.Pessimistic)
+	if a.Milestone || p <= o {
+		if x >= float64(a.Duration) {
+			return 1
+		}
+		return 0
+	}
+	alpha, beta := BetaPERTParams(o, float64(a.Duration), p)
+	return RegIncBeta(alpha, beta, (x-o)/(p-o))
+}
+
+// PERTMean mengembalikan rerata beta-PERT aktivitas i: (O + 4M + P) / 6.
+func (s *Sampler) PERTMean(i int) float64 {
+	a := s.acts[i]
+	if a.Milestone {
+		return 0
+	}
+	if a.Pessimistic <= a.Optimistic {
+		return float64(a.Duration)
+	}
+	return (float64(a.Optimistic) + 4*float64(a.Duration) + float64(a.Pessimistic)) / 6
 }
 
 // Index mengembalikan indeks aktivitas.
@@ -99,7 +163,7 @@ func (s *Sampler) Draw(rng *PRNG, rho float64, distribution string, out []int) {
 	if rho > 0.999 {
 		rho = 0.999
 	}
-	z := make([]float64, len(s.roles))
+	z := s.z
 	for i := range z {
 		z[i] = NormalSample(rng)
 	}
@@ -107,10 +171,12 @@ func (s *Sampler) Draw(rng *PRNG, rho float64, distribution string, out []int) {
 	for i, a := range s.acts {
 		if a.Milestone {
 			out[i] = 0
+			s.u[i] = 0
 			continue
 		}
 		if a.Pessimistic <= a.Optimistic {
 			out[i] = a.Duration
+			s.u[i] = 0.5
 			continue
 		}
 		latent := NormalSample(rng) * idio
@@ -118,12 +184,8 @@ func (s *Sampler) Draw(rng *PRNG, rho float64, distribution string, out []int) {
 			latent += rho * z[s.dom[i]]
 		}
 		u := stdNormalCDF(latent)
-		var v float64
-		if distribution == "triangular" {
-			v = triangularInverse(u, float64(a.Optimistic), float64(a.Duration), float64(a.Pessimistic))
-		} else {
-			v = s.quant[i].quantile(u)
-		}
+		s.u[i] = u
+		v := s.Value(i, u, distribution)
 		d := int(math.Round(v))
 		if d < 1 {
 			d = 1

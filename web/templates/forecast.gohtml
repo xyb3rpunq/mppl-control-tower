@@ -1,0 +1,179 @@
+{{define "forecast"}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$fl := .Analysis.InFlight}}{{$fc := .Analysis.Forecast}}{{$pr := .Analysis.ForecastPrior}}{{$fin := .Analysis.Final}}{{$s := .Analysis.Snapshot}}
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Setelah proyek berjalan, pertanyaannya berubah{{else}}Once the project is running, the question changes{{end}}</h2>
+  <p class="section-intro">
+    {{if eq $l "id"}}Simulasi terpadu menjawab "kalau proyek ini dimulai, bagaimana hasilnya?". Pada tanggal data {{date $a.StatusDate $l}} proyek sudah berjalan {{num $s.AtDay 0 $l}} hari kerja, dan pertanyaan yang relevan bagi sponsor adalah "dengan apa yang sudah terjadi, bagaimana sisanya?". Modul 4 menyebut pengawasan jadwal sebagai proses memutuskan apakah variasi jadwal membutuhkan tindakan korektif - dan keputusan itu butuh prakiraan yang berangkat dari realisasi, bukan dari rencana awal. Halaman ini menjalankan simulasi terpadu yang sama, tetapi dari tanggal data: realisasi dikunci, estimasi belajar dari realisasi, dan risiko yang sudah terjadi ditutup.{{else}}The integrated simulation answers "if this project starts, how does it turn out?". On the data date of {{date $a.StatusDate $l}} the project has run {{num $s.AtDay 0 $l}} working days, and the question that matters to the sponsor is "given what has happened, how does the rest go?". Module 4 describes schedule control as deciding whether a schedule variance needs corrective action - and that decision needs a forecast grounded in actuals, not in the original plan. This page runs the same integrated simulation, but from the data date: actuals are locked, estimates learn from actuals, and risks that already happened are closed.{{end}}
+  </p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Status pada tanggal data{{else}}Status at the data date{{end}}</p><p class="kpi-value">{{len $fl.Completed}} / {{len $fl.InProgress}} / {{len $fl.NotStarted}}</p><p class="kpi-note">{{if eq $l "id"}}selesai / berjalan / belum mulai{{else}}done / running / not started{{end}}</p></div>
+    <div class="kpi bad"><p class="kpi-label">P80 {{if eq $l "id"}}dari tanggal data{{else}}from the data date{{end}}</p><p class="kpi-value">{{num $fc.DurP80 0 $l}}</p><p class="kpi-note">{{t $l "t.days"}}; {{date ($a.FinishISO (int $fc.DurP80)) $l}}</p></div>
+    <div class="kpi {{if $a.ForecastJCL70.Feasible}}good{{else}}bad{{end}}"><p class="kpi-label">{{if eq $l "id"}}Komitmen JCL 70% berjalan{{else}}In-flight JCL 70% commitment{{end}}</p><p class="kpi-value">{{if $a.ForecastJCL70.Feasible}}{{num $a.ForecastJCL70.Duration 0 $l}}{{else}}—{{end}}</p><p class="kpi-note">{{if $a.ForecastJCL70.Feasible}}{{t $l "t.days"}} & {{rpShort $a.ForecastJCL70.Budget $l}}{{else}}{{if eq $l "id"}}tidak tercapai{{else}}not reached{{end}}{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">IEAC(t) Earned Schedule</p><p class="kpi-value">{{num $a.IEACt 1 $l}}</p><p class="kpi-note">{{if eq $l "id"}}hari kerja; hanya tren SPI(t){{else}}working days; SPI(t) trend only{{end}}</p></div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Lima prakiraan untuk satu proyek yang sama{{else}}Five forecasts for the same project{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Setiap baris memakai metode berbeda atas data yang sama. Bedanya bukan kebetulan: setiap metode buta terhadap sesuatu yang dilihat metode di bawahnya.{{else}}Each row applies a different method to the same data. The differences are not noise: each method is blind to something the method below it sees.{{end}}</p>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>{{if eq $l "id"}}Metode{{else}}Method{{end}}</th><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th class="num">{{if eq $l "id"}}Biaya akhir{{else}}Cost at completion{{end}}</th><th>{{if eq $l "id"}}Buta terhadap{{else}}Blind to{{end}}</th></tr></thead>
+    <tbody>
+      <tr>
+        <th>{{if eq $l "id"}}Rencana CPM{{else}}CPM plan{{end}}</th>
+        <td class="num">{{$a.Plan.Duration}}</td><td class="small">{{date $a.FinishDatePlan $l}}</td><td class="num">{{rp $a.BAC $l}}</td>
+        <td class="small">{{if eq $l "id"}}ketidakpastian, kapasitas, risiko, realisasi{{else}}uncertainty, capacity, risk, actuals{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Earned Value: IEAC(t) & EAC tipikal{{else}}Earned Value: IEAC(t) & typical EAC{{end}}</th>
+        <td class="num">{{num $a.IEACt 1 $l}}</td><td class="small">{{date ($a.FinishISO (int $a.IEACt)) $l}}</td><td class="num">{{rp $s.EACTypical $l}}</td>
+        <td class="small">{{if eq $l "id"}}kapasitas, ujian, risiko yang belum terjadi, rework{{else}}capacity, exams, risks yet to fire, rework{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Simulasi perencanaan (L4, dari hari pertama){{else}}Planning simulation (L4, from day one){{end}}</th>
+        <td class="num">P80 {{num $fin.DurP80 0 $l}}</td><td class="small">{{date ($a.FinishISO (int $fin.DurP80)) $l}}</td><td class="num">P80 {{rp $fin.CostP80 $l}}</td>
+        <td class="small">{{if eq $l "id"}}apa yang sudah terjadi{{else}}what has already happened{{end}}</td>
+      </tr>
+      <tr>
+        <th>{{if eq $l "id"}}Prakiraan berjalan tanpa belajar{{else}}In-flight forecast without learning{{end}}</th>
+        <td class="num">P80 {{num $pr.DurP80 0 $l}}</td><td class="small">{{date ($a.FinishISO (int $pr.DurP80)) $l}}</td><td class="num">P80 {{rp $pr.CostP80 $l}}</td>
+        <td class="small">{{if eq $l "id"}}apa yang realisasi ajarkan tentang kinerja tim{{else}}what actuals teach about team performance{{end}}</td>
+      </tr>
+      <tr class="highlight">
+        <th>{{if eq $l "id"}}Prakiraan berjalan terkalibrasi{{else}}Calibrated in-flight forecast{{end}}</th>
+        <td class="num"><strong>P80 {{num $fc.DurP80 0 $l}}</strong></td><td class="small">{{date ($a.FinishISO (int $fc.DurP80)) $l}}</td><td class="num"><strong>P80 {{rp $fc.CostP80 $l}}</strong></td>
+        <td class="small">{{if eq $l "id"}}hal yang belum ada di model - lihat halaman Metode{{else}}whatever is not in the model - see the Method page{{end}}</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Sebaran durasi dari tanggal data{{else}}Duration distribution from the data date{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{forecastHistogram $l}}</div>
+  </figure>
+  <div class="note-box warn">
+    <h4>{{if eq $l "id"}}Mengapa IEAC(t) jauh lebih optimistis{{else}}Why IEAC(t) is far more optimistic{{end}}</h4>
+    <p>{{if eq $l "id"}}IEAC(t) = AT + (PD − ES) / SPI(t) = {{num $s.AtDay 1 $l}} + ({{$a.Plan.Duration}} − {{num $s.ES 2 $l}}) / {{idx $s.SPIt $l}} = {{num $a.IEACt 1 $l}} hari kerja. Rumus itu hanya memperpanjang tren kinerja jadwal sampai hari ini ke sisa pekerjaan. Ia tidak tahu bahwa sisa jaringan menumpuk API pada satu Backend Developer, bahwa UAS jatuh di tengah fase pengembangan, bahwa {{openRiskCount}} risiko masih terbuka, atau bahwa regresi bisa gagal berulang. Earned Value adalah alarm yang baik; ia bukan prakiraan yang baik untuk proyek dengan kendala sumber daya.{{else}}IEAC(t) = AT + (PD − ES) / SPI(t) = {{num $s.AtDay 1 $l}} + ({{$a.Plan.Duration}} − {{num $s.ES 2 $l}}) / {{idx $s.SPIt $l}} = {{num $a.IEACt 1 $l}} working days. The formula only extends today's schedule-performance trend over the remaining work. It does not know that the remaining network stacks APIs on one Backend Developer, that the finals fall mid-development, that {{openRiskCount}} risks are still open, or that regression can fail repeatedly. Earned Value is a good alarm; it is not a good forecast for a resource-constrained project.{{end}}</p>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Apa yang dipelajari dari realisasi{{else}}What the actuals teach{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Estimasi tiga titik adalah keyakinan awal. Realisasi adalah bukti. Bobot kredibilitas Bühlmann menggabungkan keduanya secara terbuka: Z = n / (n + k), dengan n jumlah aktivitas yang sudah selesai dan k = {{num $fl.PriorWeight 0 $l}} bobot keyakinan awal (asumsi). Bukti sedikit berarti rencana masih dominan; bukti banyak berarti data yang bicara.{{else}}Three-point estimates are prior belief. Actuals are evidence. Bühlmann credibility weighting combines the two openly: Z = n / (n + k), where n is the number of completed activities and k = {{num $fl.PriorWeight 0 $l}} is the prior weight (assumed). Little evidence leaves the plan dominant; plenty of evidence lets the data speak.{{end}}</p>
+  <div class="kpi-grid four">
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Kredibilitas Z{{else}}Credibility Z{{end}}</p><p class="kpi-value">{{pct $fl.Credibility 1 $l}}</p><p class="kpi-note">n = {{$fl.Evidence}}, k = {{num $fl.PriorWeight 0 $l}}</p></div>
+    <div class="kpi {{if gt $fl.ObservedRatio 1.0}}bad{{else}}good{{end}}"><p class="kpi-label">{{if eq $l "id"}}Durasi aktual ÷ rerata PERT{{else}}Actual ÷ PERT mean duration{{end}}</p><p class="kpi-value">{{num $fl.ObservedRatio 3 $l}}</p><p class="kpi-note">{{if eq $l "id"}}faktor sisa pekerjaan{{else}}remaining-work factor{{end}} {{num $fl.DurationFactor 3 $l}}</p></div>
+    <div class="kpi {{if gt $fl.ObservedCostRatio 1.0}}bad{{else}}good{{end}}"><p class="kpi-label">{{if eq $l "id"}}Biaya harian aktual ÷ tarif{{else}}Actual daily cost ÷ rate{{end}}</p><p class="kpi-value">{{num $fl.ObservedCostRatio 3 $l}}</p><p class="kpi-note">{{if eq $l "id"}}faktor biaya sisa{{else}}remaining-cost factor{{end}} {{num $fl.CostFactor 3 $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Kapasitas saat ujian{{else}}Capacity during exams{{end}}</p><p class="kpi-value">{{pct $fl.ExamFactor 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}asumsi{{else}}assumed{{end}} {{pct (examFactor) 0 $l}} → {{if eq $l "id"}}teramati{{else}}observed{{end}} {{pct $fl.ExamObserved 0 $l}}</p></div>
+  </div>
+  <div class="proof">
+    <p>{{if eq $l "id"}}<strong>Temuan yang tidak terlihat dari SPI.</strong> Rasio durasi aktual terhadap rerata PERT adalah {{num $fl.ObservedRatio 3 $l}}: tim bekerja hampir persis sesuai sebaran estimasinya. SPI {{idx $s.SPI $l}} tidak lahir dari kinerja buruk, melainkan dari jadwal rencana yang disusun memakai M (paling mungkin), padahal rerata beta-PERT hampir selalu di atas M. Keterlambatan itu sudah terkunci di rencana sejak hari pertama.{{else}}<strong>A finding SPI cannot show.</strong> The ratio of actual durations to PERT means is {{num $fl.ObservedRatio 3 $l}}: the team works almost exactly to its estimated distributions. The SPI of {{idx $s.SPI $l}} does not come from poor performance but from a plan built on M (most likely), while the beta-PERT mean almost always sits above M. The delay was locked into the plan from day one.{{end}}</p>
+  </div>
+  <div class="two-col">
+    <div class="table-wrap">
+    <table class="data compact">
+      <caption>{{if eq $l "id"}}Bukti: aktivitas yang sudah selesai{{else}}Evidence: completed activities{{end}}</caption>
+      <thead><tr><th>{{t $l "t.code"}}</th><th class="num">M</th><th class="num">{{if eq $l "id"}}Rerata PERT{{else}}PERT mean{{end}}</th><th class="num">{{if eq $l "id"}}Aktual{{else}}Actual{{end}}</th><th class="num">{{if eq $l "id"}}Rasio{{else}}Ratio{{end}}</th><th></th></tr></thead>
+      <tbody>
+        {{range $a.EvidenceRows}}
+        <tr>
+          <td><code>{{.ID}}</code></td><td class="num">{{.M}}</td><td class="num">{{num .PERTMean 2 $l}}</td><td class="num">{{.Actual}}</td>
+          <td class="num {{if gt .Ratio 1.05}}neg{{end}}">{{num .Ratio 2 $l}}</td>
+          <td>{{if .InExam}}<span class="pill warn">UTS</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    <div>
+      <div class="table-wrap">
+      <table class="data compact">
+        <caption>{{if eq $l "id"}}Aktivitas yang sedang berjalan: durasi bersyarat{{else}}Running activities: conditional duration{{end}}</caption>
+        <thead><tr><th>{{t $l "t.code"}}</th><th class="num">{{if eq $l "id"}}Sudah berjalan{{else}}Elapsed{{end}}</th><th class="num">{{if eq $l "id"}}Rerata PERT{{else}}PERT mean{{end}}</th><th class="num">E[d | d &gt; e]</th><th class="num">{{if eq $l "id"}}Sisa harapan{{else}}Expected remaining{{end}}</th></tr></thead>
+        <tbody>
+          {{range $a.RunningRows}}
+          <tr><td><code>{{.ID}}</code></td><td class="num">{{num .Elapsed 1 $l}}</td><td class="num">{{num .PriorMeans 2 $l}}</td><td class="num">{{num .CondMean 2 $l}}</td><td class="num">{{num .Remaining 2 $l}}</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted">{{if eq $l "id"}}Aktivitas yang sudah berjalan e hari tidak mungkin berdurasi kurang dari e. Durasinya diambil dari sebaran bersyarat: u' = F(e) + u × (1 − F(e)), lalu d = F⁻¹(u'). Karena itu E[d | d &gt; e] selalu di atas rerata PERT tanpa syarat untuk aktivitas yang sudah lama berjalan.{{else}}An activity that has run e days cannot last less than e. Its duration is drawn from the conditional distribution: u' = F(e) + u × (1 − F(e)), then d = F⁻¹(u'). That is why E[d | d &gt; e] sits above the unconditional PERT mean for activities already running long.{{end}}</p>
+      <div class="note-box">
+        <h4>{{if eq $l "id"}}Kalibrasi kapasitas ujian{{else}}Exam capacity calibration{{end}}</h4>
+        <p>{{if eq $l "id"}}{{$fl.ExamEvidence}} aktivitas selesai beririsan dengan UTS resmi. Laju kerjanya {{pct $fl.ExamObserved 0 $l}} dari laju di luar ujian. Dengan Z ujian {{pct $fl.ExamCredibility 1 $l}}: {{pct $fl.ExamCredibility 1 $l}} × {{pct (minf $fl.ExamObserved 1.0) 0 $l}} + {{pct (subf 1.0 $fl.ExamCredibility) 1 $l}} × {{pct (examFactor) 0 $l}} = <strong>{{pct $fl.ExamFactor 1 $l}}</strong>. Faktor inilah yang dipakai untuk UAS dan UTS genap pada prakiraan berjalan.{{else}}{{$fl.ExamEvidence}} completed activities overlapped the official midterms. Their work rate was {{pct $fl.ExamObserved 0 $l}} of the rate outside exams. At an exam Z of {{pct $fl.ExamCredibility 1 $l}}: {{pct $fl.ExamCredibility 1 $l}} × {{pct (minf $fl.ExamObserved 1.0) 0 $l}} + {{pct (subf 1.0 $fl.ExamCredibility) 1 $l}} × {{pct (examFactor) 0 $l}} = <strong>{{pct $fl.ExamFactor 1 $l}}</strong>. This factor is used for the finals and the even-semester midterms in the in-flight forecast.{{end}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Risiko dan putaran rework pada tanggal data{{else}}Risks and rework loops at the data date{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Status register adalah otoritasnya. Risiko berstatus "terjadi" sudah tercermin di realisasi dan tidak disampel lagi. Risiko yang masih terbuka tetap bisa terjadi walaupun paket kerja tempat sebabnya lahir sudah selesai; dampak jadwalnya dipindahkan ke pekerjaan pertama yang belum selesai pada paket kerja yang sama atau sesudahnya.{{else}}The register status is the authority. Risks marked "occurred" are already reflected in actuals and are not sampled again. Open risks can still fire even when the work package where their cause arose is finished; their schedule impact moves to the first unfinished work in the same or a later package.{{end}}</p>
+  <div class="table-wrap">
+  <table class="data compact">
+    <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th>{{t $l "t.status"}}</th><th>{{if eq $l "id"}}Dampak jadwal ditanggung{{else}}Schedule impact borne by{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di prakiraan{{else}}Forecast frequency{{end}}</th></tr></thead>
+    <tbody>
+      {{range risks}}
+      <tr class="{{if index $fl.ClosedRisk .ID}}muted{{end}}">
+        <td><code>{{.ID}}</code></td>
+        <td>{{tx .Title $l}}</td>
+        <td>{{if index $fl.ClosedRisk .ID}}<span class="pill neutral">{{if eq $l "id"}}ditutup ({{.Status}}){{else}}closed ({{.Status}}){{end}}</span>{{else}}<span class="pill warn">{{if eq $l "id"}}terbuka{{else}}open{{end}}</span>{{end}}</td>
+        <td class="small">{{if not (index $fl.ClosedRisk .ID)}}<code>{{exposedActivity .ID}}</code>{{else}}—{{end}}</td>
+        <td class="num">{{pct (div (iterf (index $fc.RiskHits .ID)) (iterf $fc.Config.Iterations)) 1 $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Frontier JCL 70% dari tanggal data{{else}}JCL 70% frontier from the data date{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Komitmen yang bisa diperbarui ke sponsor hari ini: untuk setiap tenggat, anggaran minimum agar peluang selesai tepat waktu dan tepat anggaran sekaligus mencapai 70%.{{else}}The commitment that can be updated with the sponsor today: for each deadline, the minimum budget that brings the odds of finishing on time and on budget together to 70%.{{end}}</p>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th class="num">{{if eq $l "id"}}Tenggat{{else}}Deadline{{end}}</th><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran minimum{{else}}Minimum budget{{end}}</th><th class="num">{{if eq $l "id"}}Terhadap pagu{{else}}Against the cap{{end}}</th></tr></thead>
+    <tbody>
+      {{range forecastFrontierRows 2}}
+      <tr>
+        <td class="num">{{num .Duration 0 $l}}</td>
+        <td class="small">{{date ($a.FinishISO (int .Duration)) $l}}</td>
+        <td class="num">{{rp .Budget $l}}</td>
+        <td class="num neg">{{signed (subf .Budget (totalBudget)) $l}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="band" data-wasm-panel hidden>
+  <h2>{{if eq $l "id"}}Geser tanggal data, prakirakan ulang{{else}}Move the data date, forecast again{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Mesin Go yang sama di peramban. Pilih tanggal data lain: realisasi sampai tanggal itu dikunci, kalibrasi dihitung ulang dari bukti yang tersedia saat itu, lalu simulasi dijalankan dari sana. Tanggal yang lebih awal berarti bukti lebih sedikit dan kredibilitas lebih rendah.{{else}}The same Go engine in your browser. Pick another data date: actuals up to that date are locked, calibration is recomputed from the evidence available then, and the simulation runs from there. An earlier date means less evidence and lower credibility.{{end}}</p>
+  <form class="sim-form" data-forecast-form>
+    <label><span>{{if eq $l "id"}}Tanggal data{{else}}Data date{{end}}</span>
+      <input type="date" name="date" value="{{$a.StatusDate}}" min="{{$a.Calendar.ISOAt 5}}" max="{{$a.Calendar.ISOAt 50}}">
+    </label>
+    <label><span>{{if eq $l "id"}}Iterasi{{else}}Iterations{{end}}</span>
+      <select name="iterations">
+        <option value="1000">1.000</option>
+        <option value="2000" selected>2.000</option>
+        <option value="5000">5.000</option>
+      </select>
+    </label>
+    <button type="submit">{{if eq $l "id"}}Prakirakan{{else}}Forecast{{end}}</button>
+  </form>
+  <div class="live-out sim-out">
+    <div><span>{{if eq $l "id"}}Selesai / berjalan{{else}}Done / running{{end}}</span><strong data-fc="status">—</strong></div>
+    <div><span>Z</span><strong data-fc="z">—</strong></div>
+    <div><span>{{if eq $l "id"}}Faktor durasi{{else}}Duration factor{{end}}</span><strong data-fc="factor">—</strong></div>
+    <div><span>P50</span><strong data-fc="p50">—</strong></div>
+    <div><span>P80</span><strong data-fc="p80">—</strong></div>
+    <div><span>P80 {{if eq $l "id"}}biaya{{else}}cost{{end}}</span><strong data-fc="costP80">—</strong></div>
+    <div><span>{{if eq $l "id"}}Waktu hitung{{else}}Compute time{{end}}</span><strong data-fc="elapsed">—</strong></div>
+  </div>
+  <div class="figure-body scrollable" data-fc-chart></div>
+</section>
+{{end}}

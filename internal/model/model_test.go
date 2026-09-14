@@ -360,3 +360,12 @@ func TestCoretaxFactsAllCarrySources(t *testing.T) {
 		}
 	}
 }
+
+func TestPackageNameFallsBackToCode(t *testing.T) {
+	if got := model.PackageName("3.2"); !strings.Contains(got.ID, "Backend") {
+		t.Errorf("paket 3.2 = %q", got.ID)
+	}
+	if got := model.PackageName("9.9"); got.ID != "9.9" || got.EN != "9.9" {
+		t.Errorf("kode tak dikenal harus dikembalikan apa adanya, dapat %+v", got)
+	}
+}

@@ -10,6 +10,7 @@ package site
 import (
 	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/coretax"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/cost"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/evm"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
@@ -49,6 +50,7 @@ type Analysis struct {
 
 	// Levelling sumber daya.
 	Level        level.Result
+	LevelOpt     level.Optimized // pencarian jadwal terbaik + batas bawah
 	LevelWhy     level.Breakdown
 	LevelProfile resource.Profile
 	CriticalRole model.Role // peran yang paling banyak membuat pekerjaan menunggu
@@ -66,6 +68,21 @@ type Analysis struct {
 	Frontier []simulate.FrontierPoint
 	Density  simulate.Grid
 	JCL70    simulate.FrontierPoint // titik frontier JCL 70% dengan tenggat terpendek
+
+	// Penutupan celah: crashing eksak, biaya bergantung waktu, risiko
+	// bergerombol, putaran GERT, dan prakiraan dari tanggal data.
+	Exact     compress.TradeOff
+	Rentals   []cost.Rental
+	RiskSweep []RiskPoint
+	GERT      []GERTRow
+
+	InFlight         *simulate.InFlight
+	Forecast         simulate.IntegratedResult // dari tanggal data, estimasi terkalibrasi
+	ForecastPrior    simulate.IntegratedResult // dari tanggal data, tanpa belajar dari realisasi
+	ForecastFrontier []simulate.FrontierPoint
+	ForecastJCL70    simulate.FrontierPoint
+	// IEACt adalah prakiraan durasi Earned Schedule: AT + (PD - ES) / SPI(t).
+	IEACt float64
 
 	Findings []Finding
 }
@@ -86,7 +103,8 @@ func (a *Analysis) Final() simulate.IntegratedResult { return a.Ladder[len(a.Lad
 var LadderNames = []model.Text{
 	{ID: "Independen", EN: "Independent"},
 	{ID: "+ Korelasi peran", EN: "+ Role correlation"},
-	{ID: "+ Kejadian risiko", EN: "+ Risk events"},
+	{ID: "+ Risiko bergerombol", EN: "+ Clustered risks"},
+	{ID: "+ Putaran rework", EN: "+ Rework loops"},
 	{ID: "+ Kapasitas & ujian", EN: "+ Capacity & exams"},
 }
 
@@ -355,5 +373,6 @@ func deriveFindings(a *Analysis) []Finding {
 		})
 	}
 
-	return append(out, upgradeFindings(a)...)
+	out = append(out, upgradeFindings(a)...)
+	return append(out, closureFindings(a)...)
 }

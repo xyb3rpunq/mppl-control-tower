@@ -184,3 +184,12 @@ func TestWeeksConversion(t *testing.T) {
 		t.Errorf("Weeks(85) = %q, mau \"17,0\"", got)
 	}
 }
+
+func TestPercentPointsAndWorkdayLabel(t *testing.T) {
+	if got := render.PctPoints(41, 0, "id"); got != "41%" {
+		t.Errorf("PctPoints = %q", got)
+	}
+	if render.WorkdayLabel(12, "id") != "hari ke-12" || render.WorkdayLabel(12, "en") != "day 12" {
+		t.Error("WorkdayLabel harus dwibahasa")
+	}
+}

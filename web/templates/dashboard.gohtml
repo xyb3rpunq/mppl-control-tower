@@ -40,7 +40,7 @@
     <div class="kpi {{if gt (f $a.Level.Duration) (f $a.Plan.Duration)}}bad{{else}}good{{end}}">
       <p class="kpi-label">{{if eq $l "id"}}Durasi yang bisa dijalankan{{else}}Deliverable duration{{end}}</p>
       <p class="kpi-value">{{$a.Level.Duration}}</p>
-      <p class="kpi-note">{{if eq $l "id"}}hari kerja setelah levelling, bukan {{$a.Plan.Duration}}; selesai {{date ($a.FinishISO $a.Level.Duration) $l}}{{else}}working days after levelling, not {{$a.Plan.Duration}}; finishes {{date ($a.FinishISO $a.Level.Duration) $l}}{{end}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}hari kerja setelah levelling, bukan {{$a.Plan.Duration}}; selesai {{date ($a.FinishISO $a.Level.Duration) $l}}{{if $a.LevelOpt.Proven}}; terbukti optimal{{end}}{{else}}working days after levelling, not {{$a.Plan.Duration}}; finishes {{date ($a.FinishISO $a.Level.Duration) $l}}{{if $a.LevelOpt.Proven}}; proven optimal{{end}}{{end}}</p>
       <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/optimasi/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
     </div>
     <div class="kpi {{if lt $a.Final.JCL 0.5}}bad{{else}}good{{end}}">
@@ -49,11 +49,11 @@
       <p class="kpi-note">{{if $a.JCL70.Feasible}}{{if eq $l "id"}}JCL 70% = {{num $a.JCL70.Duration 0 $l}} hari & {{rpShort $a.JCL70.Budget $l}}{{else}}70% JCL = {{num $a.JCL70.Duration 0 $l}} days & {{rpShort $a.JCL70.Budget $l}}{{end}}{{end}}</p>
       <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/simulasi-terpadu/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
     </div>
-    <div class="kpi neutral">
-      <p class="kpi-label">SV(t) · Earned Schedule</p>
-      <p class="kpi-value">{{signedN $s.SVt 1 $l}}</p>
-      <p class="kpi-note">{{if eq $l "id"}}hari kerja terhadap rencana; ES = {{num $s.ES 2 $l}}{{else}}working days versus plan; ES = {{num $s.ES 2 $l}}{{end}}</p>
-      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/biaya/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
+    <div class="kpi {{if gt $a.Forecast.DurP80 (f $a.Plan.Duration)}}bad{{else}}good{{end}}">
+      <p class="kpi-label">{{if eq $l "id"}}Prakiraan berjalan · P80{{else}}In-flight forecast · P80{{end}}</p>
+      <p class="kpi-value">{{num $a.Forecast.DurP80 0 $l}}</p>
+      <p class="kpi-note">{{if eq $l "id"}}hari kerja dari tanggal data; SV(t) {{signedN $s.SVt 1 $l}}, IEAC(t) {{num $a.IEACt 1 $l}}{{else}}working days from the data date; SV(t) {{signedN $s.SVt 1 $l}}, IEAC(t) {{num $a.IEACt 1 $l}}{{end}}</p>
+      <a class="kpi-link" href="{{.BaseURL}}{{pathFor "/prakiraan/" $l}}">{{if eq $l "id"}}rinci{{else}}detail{{end}} →</a>
     </div>
   </div>
 </section>

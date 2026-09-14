@@ -117,22 +117,6 @@ func upgradeExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 		}
 	}
 
-	if len(a.Ladder) >= 3 {
-		l1, l2 := a.Ladder[1], a.Ladder[2]
-		r02 := model.Risks[1]
-		hit := float64(l2.RiskHits[r02.ID]) / float64(l2.Config.Iterations)
-		ex["kejadianrisiko"] = WorkedExample{
-			Substitution: fmt.Sprintf("%s: p = %s → %s %s;  %s +%s, +%d %s",
-				r02.ID, render.Pct(r02.ResidualProb, 0, lang), tr2(lang, "terjadi", "fired"), render.Pct(hit, 1, lang),
-				tr2(lang, "bila terjadi", "if fired"), rp(r02.ResidualImpact), r02.ScheduleImpact, tr2(lang, "hari", "days")),
-			Result: fmt.Sprintf("%s %s → %s", tr2(lang, "rerata biaya", "mean cost"), rp(l1.CostMean), rp(l2.CostMean)),
-			Comment: model.Text{
-				ID: fmt.Sprintf("Kenaikan rerata biaya %s hampir persis sama dengan jumlah EMV residual pada halaman Risiko, %s - pemeriksaan silang bahwa simulasi dan register memakai angka yang sama.", rp(l2.CostMean-l1.CostMean), rp(a.Risk.TotalResidualEMV)),
-				EN: fmt.Sprintf("The rise in mean cost, %s, almost exactly matches the residual EMV total on the Risk page, %s - the cross-check that simulation and register use the same numbers.", rp(l2.CostMean-l1.CostMean), rp(a.Risk.TotalResidualEMV)),
-			},
-		}
-	}
-
 	if len(a.Ladder) > 0 {
 		fin := a.Final()
 		ex["jcl"] = WorkedExample{
@@ -146,4 +130,5 @@ func upgradeExamples(a *Analysis, lang string, ex map[string]WorkedExample) {
 			},
 		}
 	}
+	closureExamples(a, lang, ex)
 }

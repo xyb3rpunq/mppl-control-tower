@@ -1,5 +1,5 @@
 {{define "optimize"}}
-{{$l := .Lang}}{{$a := .Analysis}}{{$lv := .Analysis.Level}}{{$why := .Analysis.LevelWhy}}{{$cr := .Analysis.Crash}}
+{{$l := .Lang}}{{$a := .Analysis}}{{$lv := .Analysis.Level}}{{$why := .Analysis.LevelWhy}}{{$cr := .Analysis.Crash}}{{$opt := .Analysis.LevelOpt}}{{$ex := .Analysis.Exact}}
 
 <section class="band">
   <h2>{{if eq $l "id"}}Jadwal di atas kertas versus jadwal yang bisa dijalankan{{else}}The schedule on paper versus the schedule that can be delivered{{end}}</h2>
@@ -12,11 +12,51 @@
     <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}+ periode ujian{{else}}+ exam period{{end}}</p><p class="kpi-value">{{$why.WithWindows}}</p><p class="kpi-note">+{{sub $why.WithWindows $why.CapacityOnly}} {{if eq $l "id"}}hari; selesai{{else}}days; finishes{{end}} {{date ($a.FinishISO $lv.Duration) $l}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Peran kritis{{else}}Critical role{{end}}</p><p class="kpi-value">{{$a.CriticalRole}}</p><p class="kpi-note">{{if eq $l "id"}}paling banyak membuat pekerjaan menunggu{{else}}makes work wait the most{{end}}</p></div>
   </div>
+  {{if $opt.Proven}}
+  <div class="proof">
+    <p>{{if eq $l "id"}}<strong>Terbukti optimal.</strong> Tidak ada jadwal yang menghormati kapasitas - dengan urutan apa pun - yang bisa selesai sebelum {{$opt.Bound.Value}} hari kerja, dan jadwal di halaman ini selesai tepat pada {{$lv.Duration}} hari. Versi sebelumnya memakai satu aturan prioritas (LST) yang memberi {{$opt.Baseline.Duration}} hari.{{else}}<strong>Proven optimal.</strong> No schedule that respects capacity - in any order - can finish before {{$opt.Bound.Value}} working days, and the schedule on this page finishes at exactly {{$lv.Duration}} days. The previous version used a single priority rule (LST) that gave {{$opt.Baseline.Duration}} days.{{end}}</p>
+  </div>
+  {{end}}
+</section>
+
+<section class="band">
+  <h2>{{if eq $l "id"}}Seberapa dekat dengan jadwal terbaik yang mungkin?{{else}}How close is this to the best possible schedule?{{end}}</h2>
+  <p class="section-intro">{{if eq $l "id"}}Penjadwalan berbatas sumber daya adalah masalah NP-hard: tidak ada algoritma cepat yang menjamin jadwal terpendek untuk semua jaringan. Tetapi untuk satu jaringan tertentu, optimalitas bisa DIBUKTIKAN dengan dua angka. Batas atas adalah jadwal nyata terbaik yang berhasil ditemukan. Batas bawah adalah durasi yang secara matematis tidak mungkin dikalahkan. Bila keduanya bertemu, pencarian selesai.{{else}}Resource-constrained scheduling is NP-hard: no fast algorithm guarantees the shortest schedule for every network. But for one specific network, optimality can be PROVEN with two numbers. The upper bound is the best real schedule found. The lower bound is a duration that mathematically cannot be beaten. When the two meet, the search is over.{{end}}</p>
+  <div class="two-col">
+    <div>
+      <h3>{{if eq $l "id"}}Batas atas: tiga cara mencari{{else}}Upper bound: three ways to search{{end}}</h3>
+      <div class="table-wrap">
+      <table class="data compact">
+        <thead><tr><th>{{if eq $l "id"}}Aturan prioritas{{else}}Priority rule{{end}}</th><th class="num">SGS</th><th class="num">{{if eq $l "id"}}+ justifikasi{{else}}+ justification{{end}}</th></tr></thead>
+        <tbody>
+          {{range $opt.Rules}}
+          <tr><th><code>{{.Rule}}</code> <span class="small muted">{{ruleName .Rule $l}}</span></th><td class="num">{{.Duration}}</td><td class="num">{{.Justified}}</td></tr>
+          {{end}}
+          <tr class="highlight"><th>{{num (iterf $opt.Samples) 0 $l}} {{if eq $l "id"}}daftar acak berbias{{else}}biased random lists{{end}}</th><td class="num" colspan="2">{{if eq $l "id"}}terbaik{{else}}best{{end}} {{$opt.SampleBest}}, {{if eq $l "id"}}terburuk{{else}}worst{{end}} {{$opt.SampleWorst}}</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small">{{if eq $l "id"}}Keenam aturan klasik terjebak pada jadwal yang sama. Sampel acak berbias - aktivitas mendesak lebih mungkin didahulukan, tetapi tidak selalu - menemukan urutan yang lebih baik: A05 dikerjakan sedikit demi sedikit selama UTS alih-alih menunggu UTS selesai. Justifikasi maju-mundur (menggeser semua aktivitas sekanan mungkin lalu sekiri mungkin) dijalankan pada setiap jadwal, tetapi pada jaringan ini tidak menemukan perbaikan tambahan.{{else}}All six classic rules get stuck on the same schedule. Biased random sampling - urgent activities are more likely, but not certain, to go first - finds a better order: A05 is worked a little at a time during the midterms instead of waiting for them to end. Forward-backward justification (shifting every activity as far right as possible, then as far left) runs on every schedule, but finds no further improvement on this network.{{end}}</p>
+    </div>
+    <div>
+      <h3>{{if eq $l "id"}}Batas bawah: tiga lapis argumen{{else}}Lower bound: three layers of argument{{end}}</h3>
+      <ul class="dash small">
+        <li>{{if eq $l "id"}}<strong>CPM ({{$opt.Bound.CPM}})</strong> - sumber daya tak terbatas.{{else}}<strong>CPM ({{$opt.Bound.CPM}})</strong> - unlimited resources.{{end}}</li>
+        <li>{{if eq $l "id"}}<strong>Solo ({{$opt.Bound.Solo}})</strong> - setiap aktivitas dikerjakan sendirian, tetapi pada kapasitas nyata perannya: DevOps paruh waktu, 40% saat ujian, dan aturan laju mulai minimum {{pct (minStartRate) 0 $l}}.{{else}}<strong>Solo ({{$opt.Bound.Solo}})</strong> - every activity worked alone, but at its role's real capacity: half-time DevOps, 40% during exams, and the {{pct (minStartRate) 0 $l}} minimum start rate.{{end}}</li>
+        <li>{{if eq $l "id"}}<strong>Energetik ({{$opt.Bound.Energetic}})</strong> - sekelompok aktivitas yang memakai peran sama butuh hari-orang total yang tetap; bila jendela waktu yang mungkin baginya tidak menyediakan kapasitas sebanyak itu, aktivitas sesudahnya harus bergeser. Penalaran ini dirambatkan maju (leluhur) dan mundur (keturunan) sampai titik tetap, lalu tenggat-tenggat yang tersisa diuji secara destruktif.{{else}}<strong>Energetic ({{$opt.Bound.Energetic}})</strong> - a group of activities using the same role needs a fixed total of person-days; if the time window open to them does not supply that much capacity, later activities must shift. The reasoning propagates forward (ancestors) and backward (descendants) to a fixed point, then remaining deadlines are tested destructively.{{end}}</li>
+      </ul>
+    </div>
+  </div>
+  <figure class="figure"><div class="figure-body scrollable">{{boundChart $l}}</div></figure>
+  <div class="note-box">
+    <h4>{{if eq $l "id"}}Levelling di dalam simulasi juga diaudit{{else}}Levelling inside the simulation is audited too{{end}}</h4>
+    <p>{{if eq $l "id"}}Simulasi terpadu tidak bisa menjalankan pencarian lengkap pada sepuluh ribu iterasi. Setiap iterasinya memakai SGS cepat - aturan LST dan urutan jadwal optimal di atas, diambil yang lebih pendek. Seberapa jauh itu dari optimum? Pada {{(.Analysis.Final).Audit.Audited}} iterasi teraudit dengan durasi acak yang sama persis, SGS cepat rata-rata hanya {{num (.Analysis.Final).Audit.SGSGapMean 2 $l}} hari di atas jadwal terbaik (paling jauh {{(.Analysis.Final).Audit.SGSGapMax}} hari), dan {{pct (.Analysis.Final).Audit.SGSOptimalShare 0 $l}} iterasi sudah optimal. Jadwal terbaik pada {{pct (.Analysis.Final).Audit.ProvenShare 0 $l}} iterasi teraudit terbukti optimal lewat batas bawah.{{else}}The integrated simulation cannot run a full search on ten thousand iterations. Each iteration uses a fast SGS - the LST rule and the optimal schedule order above, taking the shorter. How far is that from the optimum? Across {{(.Analysis.Final).Audit.Audited}} audited iterations with exactly the same random durations, the fast SGS averages only {{num (.Analysis.Final).Audit.SGSGapMean 2 $l}} days above the best schedule (at most {{(.Analysis.Final).Audit.SGSGapMax}} days), and {{pct (.Analysis.Final).Audit.SGSOptimalShare 0 $l}} of iterations are already optimal. The best schedule in {{pct (.Analysis.Final).Audit.ProvenShare 0 $l}} of audited iterations is proven optimal by the lower bound.{{end}}</p>
+  </div>
 </section>
 
 <section class="band">
   <h2>{{if eq $l "id"}}Kalender ketersediaan tim{{else}}Team availability calendar{{end}}</h2>
-  <p class="section-intro">{{if eq $l "id"}}Risiko R08 pada register menyebut anggota tim tidak tersedia saat ujian kampus. Di sini risiko itu berhenti menjadi kalimat dan menjadi kapasitas yang dihitung. Karena R08 sudah dimodelkan sebagai jendela ketersediaan, dampak jadwalnya tidak dihitung ulang di simulasi terpadu - supaya tidak terhitung dua kali.{{else}}Risk R08 in the register says team members are unavailable during campus exams. Here that risk stops being a sentence and becomes computed capacity. Because R08 is modelled as an availability window, its schedule impact is not counted again in the integrated simulation - so it is not counted twice.{{end}}</p>
+  <p class="section-intro">{{if eq $l "id"}}Risiko R08 pada register menyebut anggota tim tidak tersedia saat ujian kampus. Di sini risiko itu berhenti menjadi kalimat dan menjadi kapasitas yang dihitung. Tanggal UTS diambil dari kalender akademik resmi Universitas Esa Unggul TA 2025/2026; tanggal UAS ganjil ada di halaman kedua dokumen yang sama dan belum terbaca, sehingga masih ditandai asumsi. Faktor kapasitas {{pct (examFactor) 0 $l}} adalah asumsi perencanaan - halaman Prakiraan Berjalan mengujinya terhadap realisasi selama UTS. Karena R08 sudah dimodelkan sebagai jendela ketersediaan, dampak jadwalnya tidak dihitung ulang di simulasi terpadu.{{else}}Risk R08 in the register says team members are unavailable during campus exams. Here that risk stops being a sentence and becomes computed capacity. Midterm dates come from the official Universitas Esa Unggul 2025/2026 academic calendar; the odd-semester final dates are on the second page of the same document and have not been read yet, so they remain flagged as assumed. The {{pct (examFactor) 0 $l}} capacity factor is a planning assumption - the In-flight Forecast page tests it against actuals during the midterms. Because R08 is modelled as an availability window, its schedule impact is not counted again in the integrated simulation.{{end}}</p>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Periode{{else}}Period{{end}}</th><th>{{if eq $l "id"}}Keterangan{{else}}Description{{end}}</th><th class="num">{{if eq $l "id"}}Kapasitas tersisa{{else}}Remaining capacity{{end}}</th><th>{{if eq $l "id"}}Peran{{else}}Roles{{end}}</th><th>{{t $l "t.status"}}</th></tr></thead>
     <tbody>
@@ -25,8 +65,8 @@
         <td class="small">{{date .From $l}} – {{date .To $l}}</td>
         <td>{{tx .Label $l}} <span class="muted small">({{if eq $l "id"}}memodelkan{{else}}models{{end}} {{.RiskID}})</span></td>
         <td class="num">{{pct .Factor 0 $l}}</td>
-        <td class="small">{{range $i, $r := .Roles}}{{if $i}}, {{end}}{{$r}}{{end}}</td>
-        <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}asumsi{{else}}assumed{{end}}</span>{{else}}<span class="pill ok">{{if eq $l "id"}}resmi{{else}}official{{end}}</span>{{end}}</td>
+        <td class="small">{{if eq (len .Roles) 10}}{{if eq $l "id"}}seluruh tim{{else}}whole team{{end}}{{else}}{{range $i, $r := .Roles}}{{if $i}}, {{end}}{{$r}}{{end}}{{end}}</td>
+        <td>{{if .Asumsi}}<span class="pill warn">{{if eq $l "id"}}tanggal asumsi{{else}}assumed dates{{end}}</span>{{else}}<span class="pill ok">{{if eq $l "id"}}tanggal resmi{{else}}official dates{{end}}</span> <a class="source-link" href="{{.Source}}" rel="noopener">{{if eq $l "id"}}sumber{{else}}source{{end}}</a>{{end}}</td>
       </tr>
       {{end}}
       <tr>
@@ -74,8 +114,8 @@
     </table>
     <div class="note-box warn">
       <h4>{{if eq $l "id"}}Satu orang menjadi leher botol{{else}}One person becomes the bottleneck{{end}}</h4>
-      <p>{{if eq $l "id"}}Backend Developer harus mengerjakan A16, A17, A18, dan A19 - total {{sumDur "A16" "A17" "A18" "A19"}} hari kerja - dan CPM mengira dua di antaranya bisa paralel. Karena prioritas levelling mendahulukan jalur kritis (A17→A18), A19 menunggu {{(levelTask "A19").WaitDays}} hari lalu tertabrak periode ujian. Kebetulan, peran ini diisi Daniel Hutajulu dalam dokumen tugas.{{else}}The Backend Developer must deliver A16, A17, A18, and A19 - {{sumDur "A16" "A17" "A18" "A19"}} working days in all - and CPM assumed two of them could overlap. Because levelling prioritises the critical path (A17→A18), A19 waits {{(levelTask "A19").WaitDays}} days and then runs into the exam period. As it happens, this is the role Daniel Hutajulu holds in the assignment documents.{{end}}</p>
-      <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Pindahkan A19 (API panel admin) ke Technical Lead atau tambah satu backend paruh waktu selama minggu ke-8 sampai ke-11. Ini satu-satunya perubahan penugasan yang menyerang sumber keterlambatan terbesar secara langsung.{{else}}Move A19 (admin panel API) to the Technical Lead, or add a part-time backend developer for weeks 8 to 11. It is the one assignment change that attacks the largest source of delay directly.{{end}}</p>
+      <p>{{if eq $l "id"}}Backend Developer harus mengerjakan A16, A17, A18, dan A19 - total {{sumDur "A16" "A17" "A18" "A19"}} hari kerja - dan CPM mengira dua di antaranya bisa paralel. Jadwal optimal mendahulukan jalur kritis (A17→A18), sehingga A19 menunggu {{(levelTask "A19").WaitDays}} hari{{if (levelTask "A19").Window}} lalu tertabrak periode ujian{{end}}. Kebetulan, peran ini diisi Daniel Hutajulu dalam dokumen tugas.{{else}}The Backend Developer must deliver A16, A17, A18, and A19 - {{sumDur "A16" "A17" "A18" "A19"}} working days in all - and CPM assumed two of them could overlap. The optimal schedule puts the critical path (A17→A18) first, so A19 waits {{(levelTask "A19").WaitDays}} days{{if (levelTask "A19").Window}} and then runs into the exam period{{end}}. As it happens, this is the role Daniel Hutajulu holds in the assignment documents.{{end}}</p>
+      <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Pindahkan A19 (API panel admin) ke Technical Lead atau tambah satu backend paruh waktu selama fase pengembangan. Karena jadwal ini sudah terbukti optimal, mengubah urutan tidak akan membantu - hanya menambah kapasitas pada peran yang menjadi leher botol.{{else}}Move A19 (admin panel API) to the Technical Lead, or add a part-time backend developer during development. Because this schedule is already proven optimal, reordering will not help - only adding capacity to the bottleneck role will.{{end}}</p>
     </div>
   </div>
 </section>
@@ -113,10 +153,10 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Crashing: membeli waktu dengan uang{{else}}Crashing: buying time with money{{end}}</h2>
-  <p class="section-intro">{{if eq $l "id"}}Modul 4 menyebut kompresi jadwal sebagai cara mempersingkat proyek tanpa mengubah lingkup. Crashing menambah sumber daya - lembur, tambahan orang - pada aktivitas kritis yang paling murah dipercepat. Setiap langkah di bawah memotong proyek tepat satu hari dengan biaya termurah yang benar-benar memendekkan tanggal selesai.{{else}}Module 4 describes schedule compression as shortening a project without changing scope. Crashing adds resources - overtime, extra people - to the critical activities that are cheapest to accelerate. Each step below cuts the project by exactly one day at the lowest cost that genuinely moves the finish date.{{end}}</p>
+  <p class="section-intro">{{if eq $l "id"}}Modul 4 menyebut kompresi jadwal sebagai cara mempersingkat proyek tanpa mengubah lingkup. Crashing menambah sumber daya - lembur, tambahan orang - pada aktivitas kritis yang paling murah dipercepat. Kurva di bawah dihitung dua kali: dengan algoritma serakah (setiap langkah memotong satu hari termurah dan tidak pernah membatalkan potongan lama), dan secara eksak dengan pemrograman linear. Keduanya dibandingkan titik demi titik.{{else}}Module 4 describes schedule compression as shortening a project without changing scope. Crashing adds resources - overtime, extra people - to the critical activities that are cheapest to accelerate. The curve below is computed twice: with a greedy algorithm (each step cuts the cheapest single day and never undoes an earlier cut), and exactly with linear programming. The two are compared point by point.{{end}}</p>
   <div class="kpi-grid four">
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum{{else}}Minimum duration{{end}}</p><p class="kpi-value">{{$cr.MinDuration}}</p><p class="kpi-note">{{if eq $l "id"}}dari{{else}}from{{end}} {{$cr.NormalDuration}} {{t $l "t.days"}}</p></div>
-    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}5 hari pertama{{else}}First 5 days{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps 4).TotalCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}rata-rata{{else}}average{{end}} {{rpShort (div (index $cr.Steps 4).TotalCost 5.0) $l}}/{{if eq $l "id"}}hari{{else}}day{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}5 hari pertama{{else}}First 5 days{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps 4).TotalCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}premi; bersih setelah sewa{{else}}premium; net of rentals{{end}} {{rpShort (netCrash 5) $l}}</p></div>
     <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Kompresi penuh{{else}}Full compression{{end}}</p><p class="kpi-value">{{rpShort (index $cr.Steps (sub (len $cr.Steps) 1)).TotalCost $l}}</p><p class="kpi-note">{{len $cr.Steps}} {{if eq $l "id"}}hari dipotong{{else}}days cut{{end}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Premi crash{{else}}Crash premium{{end}}</p><p class="kpi-value">{{pct (crashPremium) 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}dari biaya tenaga kerja harian (asumsi){{else}}of daily labour cost (assumed){{end}}</p></div>
   </div>
@@ -141,6 +181,36 @@
     </table>
   </div>
   <p class="small muted">{{tx $cr.Exhausted $l}}</p>
+
+  <h3>{{if eq $l "id"}}Crashing eksak dan biaya total{{else}}Exact crashing and total cost{{end}}</h3>
+  <p class="section-intro small">{{if eq $l "id"}}Untuk setiap tenggat T, LP meminimalkan jumlah slope × hari dipotong dengan batasan setiap relasi FS dan setiap aktivitas selesai paling lambat T. Matriks batasannya unimodular total, sehingga solusi simpleks selalu berupa hari bulat dan langsung bisa dijalankan - setiap solusi tetap diperiksa ulang dengan CPM. Versi kedua menambahkan biaya sewa server dan langganan tools ({{rp $a.RentalDaily $l}} per hari setelah semuanya berjalan): memendekkan proyek juga memendekkan tagihan.{{else}}For each deadline T, the LP minimises the sum of slope × days cut, subject to every FS relation and every activity finishing by T. The constraint matrix is totally unimodular, so the simplex solution is always whole days and directly executable - each solution is still re-checked with CPM. The second version adds server rental and tool subscriptions ({{rp $a.RentalDaily $l}} per day once all are running): shortening the project also shortens the bill.{{end}}</p>
+  <div class="kpi-grid four">
+    <div class="kpi {{if $ex.GreedyOptimal}}good{{else}}bad{{end}}"><p class="kpi-label">{{if eq $l "id"}}Serakah vs eksak{{else}}Greedy vs exact{{end}}</p><p class="kpi-value">{{if $ex.GreedyOptimal}}={{else}}+{{rp $ex.MaxGreedyExcess $l}}{{end}}</p><p class="kpi-note">{{if $ex.GreedyOptimal}}{{if eq $l "id"}}serakah optimal di setiap titik{{else}}greedy is optimal at every point{{end}}{{else}}{{if eq $l "id"}}kelebihan terbesar serakah{{else}}largest greedy excess{{end}}{{end}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Durasi minimum eksak{{else}}Exact minimum duration{{end}}</p><p class="kpi-value">{{$ex.ExactMin}}</p><p class="kpi-note">{{if eq $l "id"}}serakah{{else}}greedy{{end}} {{$cr.MinDuration}}</p></div>
+    <div class="kpi good"><p class="kpi-label">{{if eq $l "id"}}Biaya total terendah{{else}}Lowest total cost{{end}}</p><p class="kpi-value">{{$ex.Optimum.Duration}}</p><p class="kpi-note">{{t $l "t.days"}}; {{rpShort $ex.Optimum.Total $l}}</p></div>
+    <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Bersih 5 hari pertama{{else}}Net first 5 days{{end}}</p><p class="kpi-value">{{rpShort (netCrash 5) $l}}</p><p class="kpi-note">{{if eq $l "id"}}premi{{else}}premium{{end}} {{rpShort (exactAt (sub $ex.Normal 5)).CrashCost $l}}</p></div>
+  </div>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{tradeOffChart $l}}</div>
+    <figcaption class="below"><p class="small">{{if eq $l "id"}}Titik jingga adalah biaya serakah yang lebih mahal dari optimum eksak. Titik hijau adalah durasi dengan biaya total terendah.{{else}}Orange points are greedy costs above the exact optimum. The green point is the duration with the lowest total cost.{{end}}</p></figcaption>
+  </figure>
+  <div class="table-wrap">
+    <table class="data sticky compact">
+      <thead><tr><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th class="num">{{if eq $l "id"}}Serakah{{else}}Greedy{{end}}</th><th class="num">{{if eq $l "id"}}Eksak (LP){{else}}Exact (LP){{end}}</th><th>{{if eq $l "id"}}Potongan eksak{{else}}Exact cuts{{end}}</th><th class="num">{{if eq $l "id"}}Sewa{{else}}Rentals{{end}}</th><th class="num">{{if eq $l "id"}}Biaya total{{else}}Total cost{{end}}</th></tr></thead>
+      <tbody>
+        {{range $ex.Points}}
+        <tr class="{{if gt .Greedy (addf .CrashCost 0.5)}}highlight{{end}}">
+          <td class="num">{{.Duration}}</td>
+          <td class="num">{{if lt .Greedy 0.0}}—{{else}}{{rp .Greedy $l}}{{end}}</td>
+          <td class="num">{{rp .CrashCost $l}}</td>
+          <td class="small">{{cutsText .Cuts}}</td>
+          <td class="num">{{rp .Rental $l}}</td>
+          <td class="num"><strong>{{rp .Total $l}}</strong></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
 
   <h3>{{if eq $l "id"}}Batas crash per aktivitas{{else}}Crash limits per activity{{end}}</h3>
   <p class="section-intro small">{{if eq $l "id"}}Satu aturan untuk semua, supaya tidak ada angka yang dipilih-pilih: durasi crash = max(O, M − max(1, ⌊M/3⌋)), slope = biaya tenaga kerja harian × premi. Empat aktivitas tidak bisa dipercepat dengan uang, dan alasannya dicatat.{{else}}One rule for all, so no figure is hand-picked: crash duration = max(O, M − max(1, ⌊M/3⌋)), slope = daily labour cost × premium. Four activities cannot be accelerated with money, and the reasons are recorded.{{end}}</p>
@@ -192,7 +262,7 @@
   <div class="note-box">
     <h4>{{if eq $l "id"}}Penghematan tidak bisa dijumlahkan{{else}}Savings do not add up{{end}}</h4>
     <p>{{if eq $l "id"}}Ada {{len $a.FastViable}} kandidat layak. Menjumlahkan penghematannya satu per satu memberi angka yang menggoda, tetapi menerapkan semuanya sekaligus hanya memendekkan proyek dari {{$a.Plan.Duration}} menjadi {{$a.FastAllDur}} hari kerja: memendekkan satu jalur membuat jalur lain menjadi kritis. Peluang rework yang diasumsikan {{pct (reworkProb) 0 $l}}.{{else}}There are {{len $a.FastViable}} viable candidates. Adding their savings one by one gives a tempting figure, but applying all of them at once only shortens the project from {{$a.Plan.Duration}} to {{$a.FastAllDur}} working days: shortening one path makes another critical. The assumed rework probability is {{pct (reworkProb) 0 $l}}.{{end}}</p>
-    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Crashing lebih cocok untuk proyek ini daripada fast-tracking. Cadangan kontinjensinya sudah hanya menutup {{pct $a.Risk.ReserveCoverage 0 $l}} paparan risiko; menambah risiko rework di atasnya memperbesar lubang yang sama. Crashing lima hari pertama seharga {{rp (index $cr.Steps 4).TotalCost $l}} adalah biaya yang pasti dan bisa diajukan ke sponsor.{{else}}Crashing suits this project better than fast-tracking. Its contingency reserve already covers only {{pct $a.Risk.ReserveCoverage 0 $l}} of risk exposure; adding rework risk on top widens the same hole. Crashing the first five days for {{rp (index $cr.Steps 4).TotalCost $l}} is a known cost that can be put to the sponsor.{{end}}</p>
+    <p><strong>{{t $l "t.recommend"}}:</strong> {{if eq $l "id"}}Crashing lebih cocok untuk proyek ini daripada fast-tracking. Cadangan kontinjensinya sudah hanya menutup {{pct $a.Risk.ReserveCoverage 0 $l}} paparan risiko; menambah risiko rework di atasnya memperbesar lubang yang sama. Crashing lima hari pertama menelan premi {{rp (index $cr.Steps 4).TotalCost $l}}, tetapi setelah sewa yang dihemat dihitung, biaya bersihnya hanya {{rp (netCrash 5) $l}} - biaya pasti yang nyaris impas dan layak diajukan ke sponsor.{{else}}Crashing suits this project better than fast-tracking. Its contingency reserve already covers only {{pct $a.Risk.ReserveCoverage 0 $l}} of risk exposure; adding rework risk on top widens the same hole. Crashing the first five days costs {{rp (index $cr.Steps 4).TotalCost $l}} in premiums, but once saved rentals are counted the net cost is only {{rp (netCrash 5) $l}} - a known, near break-even cost worth putting to the sponsor.{{end}}</p>
   </div>
 </section>
 {{end}}

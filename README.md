@@ -20,9 +20,9 @@ Satu basis kode yang sama merender situs statis di server *dan* berjalan di pera
 
 1. [Masalah yang dipecahkan](#1-masalah-yang-dipecahkan)
 2. [Temuan utama](#2-temuan-utama)
-3. [Peta situs: 14 halaman × 2 bahasa](#3-peta-situs-14-halaman--2-bahasa)
+3. [Peta situs: 15 halaman × 2 bahasa](#3-peta-situs-15-halaman--2-bahasa)
 4. [Mesin hitung](#4-mesin-hitung)
-5. [Referensi 32 rumus](#5-referensi-32-rumus)
+5. [Referensi 38 rumus](#5-referensi-38-rumus)
 6. [Bedah kasus Coretax](#6-bedah-kasus-coretax)
 7. [Interaktivitas lewat WebAssembly](#7-interaktivitas-lewat-webassembly)
 8. [Data terbuka](#8-data-terbuka)
@@ -30,7 +30,7 @@ Satu basis kode yang sama merender situs statis di server *dan* berjalan di pera
 10. [Menjalankan secara lokal](#10-menjalankan-secara-lokal)
 11. [Pengujian](#11-pengujian)
 12. [CI/CD](#12-cicd)
-13. [Asumsi dan celah yang belum tertutup](#13-asumsi-dan-celah-yang-belum-tertutup)
+13. [Asumsi, celah yang ditutup, dan batas yang tersisa](#13-asumsi-celah-yang-ditutup-dan-batas-yang-tersisa)
 14. [Sumber data](#14-sumber-data)
 
 ---
@@ -41,9 +41,10 @@ Proyek perangkat lunak di Indonesia rutin gagal pada jadwal dan biaya, dan nyari
 
 Aplikasi ini menjalankan seluruh hitungan itu sebagai kode Go yang terbuka dan teruji:
 
-- **Penjadwalan** — CPM empat relasi PDM, PERT, penjadwalan berbatas sumber daya, crashing, fast-tracking
-- **Ketidakpastian** — Monte Carlo 10.000 iterasi dengan korelasi antar-aktivitas, kejadian risiko, dan kapasitas nyata
-- **Biaya** — Earned Value lengkap sampai Earned Schedule, struktur anggaran berlapis, Joint Confidence Level
+- **Penjadwalan** — CPM empat relasi PDM, PERT, GERT, penjadwalan berbatas sumber daya yang **terbukti optimal lewat batas bawah**, crashing **eksak dengan pemrograman linear**, fast-tracking
+- **Ketidakpastian** — Monte Carlo 10.000 iterasi lima lapis: korelasi antar-aktivitas, risiko yang bergerombol, putaran rework, dan kapasitas nyata
+- **Biaya** — Earned Value lengkap sampai Earned Schedule, biaya sewa yang bergantung waktu, struktur anggaran berlapis, Joint Confidence Level
+- **Pengendalian** — prakiraan berjalan dari tanggal data yang belajar dari realisasi lewat kredibilitas Bühlmann
 - **Risiko** — Expected Monetary Value inheren dan residual, uji kecukupan cadangan
 - **Mutu** — Seven Basic Tools of Quality beserta aturan keputusannya
 
@@ -59,34 +60,42 @@ Semua temuan **diturunkan dari angka, bukan ditulis tetap**. Setiap temuan menye
 | --- | --- | --- | --- |
 | 1 | kritis | Proyeksi biaya akhir melewati pagu | EAC Rp 16.157.314 vs pagu Rp 16.000.000 (CPI 0,918) |
 | 2 | kritis | Cadangan kontinjensi jauh di bawah paparan risiko | Cadangan Rp 500.000 menutup 17,4% dari EMV residual Rp 2.880.000 |
-| 3 | kritis | Komitmen 17 minggu nyaris mustahil | Peluang selesai ≤ 85 hari kerja: 1,17%; P80 = 98 hari kerja |
-| 4 | kritis | Jadwal 85 hari hanya sah di atas kertas | Setelah levelling sumber daya: **108 hari kerja**, selesai 25 Maret 2026 |
-| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,00%; komitmen JCL 70% = **135 hari kerja & Rp 21.399.000** |
-| 6 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
-| 7 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
-| 8 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
-| 9 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,687 |
-| 10 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
+| 3 | kritis | Komitmen 17 minggu nyaris mustahil | Peluang selesai ≤ 85 hari kerja: 1,2%; P80 = 98 hari kerja |
+| 4 | kritis | Jadwal 85 hari hanya sah di atas kertas | Jadwal levelling optimal: **113 hari kerja**, selesai 10 April 2026 (+15 dari kapasitas, +13 dari UTS & UAS) |
+| 5 | kritis | Peluang tepat waktu *dan* tepat anggaran nyaris nol | JCL pada target piagam: 0,0%; komitmen JCL 70% = **147 hari kerja (5 Juni 2026) & Rp 25.603.643** |
+| 6 | kritis | Dari tanggal data, P80 penyelesaian jauh melampaui prakiraan Earned Value | Prakiraan berjalan P80 **126 hari kerja** (29 April 2026) vs IEAC(t) 91,0 hari; komitmen JCL 70% berjalan 123 hari & Rp 20.971.766 |
+| 7 | tinggi | Satu orang dijadwalkan pada dua pekerjaan sekaligus | 26 hari-peran over-alokasi; peran kritis: Backend Developer |
+| 8 | tinggi | Waktu respons bergeser sistematis | 10 pelanggaran aturan Nelson walau semua nilai di bawah spesifikasi 3 detik |
+| 9 | tinggi | Proyek tertinggal dalam satuan waktu | Earned Schedule: SV(t) = −2,90 hari kerja |
+| 10 | sedang | Biaya kegagalan melebihi biaya pencegahan | Rasio kesesuaian/ketidaksesuaian 0,69 |
+| 11 | sedang | Mengabaikan korelasi menyembunyikan ketidakpastian | Simpangan baku durasi melebar 23,1% dengan ρ = 0,5 |
+| 12 | sedang | Risiko yang berbagi sebab menebalkan ekor biaya | Rerata tetap Rp 19,18 jt; P95 biaya naik dari Rp 22,79 jt ke Rp 23,23 jt |
+| 13 | sedang | Pemeriksaan bisa gagal berulang (GERT) | Tambahan harapan 1,52 hari kerja dan Rp 121.690; P(regresi butuh ≥ 2 putaran tambahan) = 9% |
+| 14 | sedang | Realisasi selama UTS membantah asumsi kapasitas ujian 40% | Laju saat UTS 103,5% dari normal; faktor ujian diperbarui menjadi 64,7% |
+| 15 | baik | Jadwal levelling terbukti tidak bisa diperpendek dengan mengubah urutan | Jadwal terbaik 113 = batas bawah 113; aturan LST lama memberi 114 |
+| 16 | baik | Lima hari percepatan pertama hampir dibayar sendiri | Premi crash Rp 176.250, biaya bersih setelah sewa hanya **Rp 15.289** |
 
-Satu temuan tambahan dari halaman Piagam: **tanggal selesai di Project Charter salah lima hari kerja.** Tujuh belas minggu kalender polos berakhir 13 Februari 2026; 85 hari kerja sesungguhnya berakhir 20 Februari 2026 setelah akhir pekan dan lima hari libur dikeluarkan.
+Temuan tambahan dari halaman Piagam dan pencocokan kalender resmi: **tanggal selesai di Project Charter salah enam hari kerja.** Tujuh belas minggu kalender polos berakhir 13 Februari 2026; 85 hari kerja sesungguhnya berakhir **23 Februari 2026** setelah akhir pekan, empat libur nasional, dan dua cuti bersama dikeluarkan. Pencocokan dengan SKB 3 Menteri menemukan cuti bersama Imlek 16 Februari 2026 yang sebelumnya tidak ada di model.
+
+Temuan yang tidak terlihat dari SPI: rasio durasi aktual terhadap rerata PERT pada 16 aktivitas yang sudah selesai adalah **0,983** — tim bekerja sesuai sebaran estimasinya. SPI 0,915 lahir dari jadwal yang disusun memakai M (paling mungkin), bukan dari kinerja buruk.
 
 ---
 
-## 3. Peta situs: 14 halaman × 2 bahasa
+## 3. Peta situs: 15 halaman × 2 bahasa
 
-Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (`/en/…`), dengan tautan `hreflang` yang saling menunjuk. Total 28 halaman.
+Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (`/en/…`), dengan tautan `hreflang` yang saling menunjuk. Total 30 halaman.
 
 ### 3.1 Ruang Kendali — `/`
 
-- **Delapan KPI** dengan warna status: SPI, CPI, EAC, peluang tepat waktu, cakupan cadangan risiko, SV(t), durasi yang bisa dijalankan, dan JCL.
+- **Delapan KPI** dengan warna status: SPI, CPI, EAC, peluang tepat waktu, cakupan cadangan risiko, durasi yang bisa dijalankan (dengan status terbukti optimal), JCL, dan P80 prakiraan berjalan (dengan SV(t) dan IEAC(t)).
 - **Kurva-S Earned Value**: PV, EV, AC, proyeksi biaya sampai akhir (mengikuti bentuk sisa kurva PV, bukan garis lurus), garis BAC, dan garis tanggal data.
-- **Sepuluh temuan** diturunkan dari ambang, masing-masing dengan metrik pemicu, rekomendasi, dan tautan ke halaman perhitungannya.
+- **Enam belas temuan** diturunkan dari ambang, masing-masing dengan metrik pemicu, rekomendasi, dan tautan ke halaman perhitungannya.
 - Ringkasan jadwal (termasuk selisih akibat hari libur) dan ringkasan anggaran berlapis.
 
 ### 3.2 Piagam & Lingkup — `/piagam/`
 
 - Project Charter terstruktur: informasi umum, tujuan, lingkup masuk dan keluar, deliverable, asumsi, batasan.
-- **Catatan pemeriksaan** yang membuktikan tanggal selesai piagam tidak konsisten dengan kalender kerja, lengkap dengan tabel hari libur yang ditandai *tetap* atau *asumsi*.
+- **Catatan pemeriksaan** yang membuktikan tanggal selesai piagam tidak konsisten dengan kalender kerja, lengkap dengan tabel libur nasional dan cuti bersama beserta dasar hukumnya (SKB 3 Menteri 2025 dan 2026).
 - Kriteria keberhasilan dengan status menurut data (anggaran dan jadwal terancam; sisanya belum terukur sebelum go-live).
 - **Work Breakdown Structure** 5 fase → 15 paket kerja → 35 aktivitas + 5 milestone, dengan estimasi tiga titik, anggaran, float, dan pendahulu per aktivitas.
 - **Pemeriksaan aturan 100%** secara aritmetis (jumlah anggaran aktivitas = BAC).
@@ -99,16 +108,18 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - **Tabel CPM lengkap** 40 simpul: d, ES, EF, LS, LF, TF, FF, tanggal mulai/selesai, pendahulu.
 - Rantai jalur kritis tersambung (29 simpul) dan tabel aktivitas ber-float terbesar beserta maknanya.
 
-### 3.4 Levelling & Kompresi — `/optimasi/` *(baru)*
+### 3.4 Levelling & Kompresi — `/optimasi/`
 
-- **Levelling sumber daya** dengan Serial Schedule Generation Scheme: CPM 85 → kapasitas nyata 102 → periode ujian 108 hari kerja.
-- **Kalender ketersediaan** per peran: Ujian Akhir Semester (kapasitas 40%, ditandai asumsi, memodelkan risiko R08) dan DevOps paruh waktu (dari piagam).
-- **Gantt pembanding** CPM vs levelling, batang diwarnai menurut penyebab (terbawa pendahulu, menunggu orang, paruh waktu, periode ujian), dengan jendela ujian diarsir.
+- **Levelling sumber daya yang terbukti optimal**: CPM 85 → kapasitas nyata 100 → UTS dan UAS 113 hari kerja, selesai 10 April 2026.
+- **Bukti optimalitas**: enam aturan prioritas (LST, LFT, MSLK, GRPW, MTS, SPT), 300 daftar acak berbias, dan justifikasi maju-mundur mencari batas atas; batas bawah tiga lapis (CPM 85, solo 107, energetik 113) plus pembuktian destruktif. Batas atas = batas bawah = 113, jadi tidak ada urutan kerja yang bisa selesai lebih cepat.
+- **Audit levelling di dalam simulasi**: pada 40 iterasi teraudit, SGS cepat rata-rata 0,43 hari di atas optimum (paling jauh 4 hari); 85% iterasi sudah optimal.
+- **Kalender ketersediaan**: UTS ganjil 3–15 Nov 2025 dan UTS genap 18–30 Mei 2026 dari kalender akademik resmi Esa Unggul; UAS ganjil 12–23 Jan 2026 masih bertanda asumsi; DevOps paruh waktu (dari piagam).
+- **Gantt pembanding** CPM vs levelling, batang diwarnai menurut penyebab, jendela ujian diarsir.
 - **Histogram pembebanan setelah levelling** dengan garis kapasitas bertangga per hari — nol over-alokasi.
-- Hari menunggu per peran dan identifikasi **peran kritis** (Backend Developer, 14 hari tunggu).
-- Tabel aktivitas yang bergeser: geser, terbawa, menunggu, memanjang, penyebab.
-- **Crashing**: kurva waktu-biaya 85 → 63 hari seharga Rp 1.215.375; lima hari pertama Rp 176.250; langkah yang memotong jalur kritis paralel ditandai; tabel batas crash per aktivitas dan alasan empat aktivitas yang tidak bisa dipercepat dengan uang.
-- **Fast-tracking**: 23 kandidat diuji dengan tumpang tindih 50%; kandidat yang pendahulu dan penerusnya dikerjakan orang yang sama **ditolak**; 11 kandidat layak; penerapan serentak memberi 66 hari (penghematan tidak bisa dijumlahkan).
+- Hari menunggu per peran dan **peran kritis** (Backend Developer).
+- **Crashing serakah vs eksak**: kurva 85 → 63 hari; LP simpleks membuktikan serakah **tidak optimal** (kelebihan sampai Rp 3.750).
+- **Time-cost trade-off**: LP biaya total (premi crash + sewa server & langganan Rp 44.740/hari). Lima hari pertama berpremi Rp 176.250 tetapi biaya bersihnya hanya Rp 15.289; grafik tiga kurva (crash eksak, sewa, total) dengan titik biaya terendah.
+- **Fast-tracking**: 23 kandidat diuji dengan tumpang tindih 50%; kandidat orang-sama **ditolak**; 11 kandidat layak; penerapan serentak memberi 66 hari.
 
 ### 3.5 PERT & Monte Carlo — `/pert/`
 
@@ -120,24 +131,27 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - Tabel estimasi tiga titik: O, M, P, te, σ, varians, dan kecondongan.
 - **Panel WebAssembly**: jalankan ulang Monte Carlo dengan iterasi, benih, dan sebaran (beta-PERT/segitiga) pilihan.
 
-### 3.6 Simulasi Terpadu & JCL — `/simulasi-terpadu/` *(baru)*
+### 3.6 Simulasi Terpadu & JCL — `/simulasi-terpadu/`
 
-- **Empat lapisan realisme** dengan benih yang sama sehingga selisihnya murni efek yang ditambahkan:
+- **Lima lapisan realisme** dengan benih yang sama sehingga selisihnya murni efek yang ditambahkan:
 
   | Lapisan | Efek | P80 durasi | P80 biaya | JCL |
   | --- | --- | --- | --- | --- |
-  | L0 | Independen (identik dengan halaman PERT) | 98 | Rp 15,93 jt | 1,17% |
-  | L1 | + Korelasi peran (kopula Gauss, ρ 0,5) | 99 | Rp 16,01 jt | 3,45% |
-  | L2 | + Kejadian risiko dari register | 116 | Rp 19,94 jt | 0,16% |
-  | L3 | + Kapasitas & periode ujian (levelling per iterasi) | 139 | Rp 19,94 jt | 0,00% |
+  | L0 | Independen (identik dengan halaman PERT) | 98 | Rp 16,23 jt | 1,17% |
+  | L1 | + Korelasi peran (kopula Gauss, ρ 0,5) | 99 | Rp 16,34 jt | 3,45% |
+  | L2 | + Risiko bergerombol (kopula faktor, λ 0,6) | 117 | Rp 20,94 jt | 0,45% |
+  | L3 | + Putaran rework GERT | 119 | Rp 21,18 jt | 0,31% |
+  | L4 | + Kapasitas, UTS & UAS (levelling per iterasi) | 151 | Rp 22,02 jt | 0,00% |
 
+  Biaya di setiap lapisan sudah memuat sewa server dan langganan yang ikut memanjang bersama jadwal.
 - **Tangga realisme** durasi dan biaya (P50–P90 dengan penanda P80 dan garis target piagam).
-- Penjelasan mengapa biaya lapisan independen pun sudah di atas BAC (kecondongan estimasi tiga titik).
-- **Peta kepadatan JCL** (histogram 2D durasi × biaya) dengan **frontier JCL 70%**, silang target piagam, dan titik P80 × P80.
-- Tabel frontier tenggat → anggaran minimum, dan histogram biaya akhir dengan penanda pagu, P50, P80.
-- **Uji kepekaan ρ** (0; 0,25; 0,5; 0,75) dengan korelasi terealisasi sebagai bukti model kopula bekerja.
-- Frekuensi kejadian setiap risiko dalam simulasi terhadap peluang residualnya.
-- **Panel WebAssembly**: geser ρ, pilih lapisan, jalankan simulasi terpadu di peramban.
+- **Peta kepadatan JCL** dengan **frontier JCL 70%**, silang target piagam, titik P80 × P80; tabel frontier dan histogram biaya akhir.
+- **Uji kepekaan ρ** (0; 0,25; 0,5; 0,75) dengan korelasi terealisasi.
+- **Risiko bergerombol**: lima penggerak bersama yang dibaca dari kolom penyebab register; penggerak kinerja pengembang memakai faktor laten Backend Developer yang sama dengan durasi aktivitasnya. Uji kepekaan λ (0; 0,3; 0,6; 0,9): rerata biaya tetap, phi terealisasi naik, P95 biaya menebal; grafik sebaran jumlah risiko per proyek.
+- **Putaran rework GERT**: dua pemeriksaan yang bisa gagal berulang (regresi pasca perbaikan bug p = 30%, uji penetrasi p = 25%) direduksi dengan aturan Mason; rerata putaran analitik 0,429 dan 0,333 cocok dengan Monte Carlo 0,445 dan 0,330.
+- **Biaya yang bergantung waktu**: empat pos sewa dan langganan dengan tarif harian dari rentang rencana.
+- Frekuensi kejadian setiap risiko beserta penggeraknya.
+- **Panel WebAssembly**: geser ρ, pilih lapisan L0–L4, jalankan simulasi terpadu di peramban.
 
 ### 3.7 Biaya & Earned Value — `/biaya/`
 
@@ -147,21 +161,30 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - Kurva-S, grafik anggaran berlapis, dan catatan bahwa proyeksi menembus seluruh cadangan.
 - Earned Value per fase dan per aktivitas (% rencana, % aktual, EV, AC, CV, status).
 
-### 3.8 Manajemen Risiko — `/risiko/`
+### 3.8 Prakiraan Berjalan — `/prakiraan/` *(baru)*
+
+- **Simulasi terpadu dari tanggal data** (19 Des 2025): 18 simpul selesai dikunci pada realisasinya, 3 aktivitas yang sedang berjalan (A17, A19, A21) memakai durasi bersyarat F(x | x > e), 19 sisanya dirilis pada tanggal data.
+- **Lima prakiraan berdampingan**: rencana CPM 85; Earned Value IEAC(t) 91,0 & EAC Rp 16,16 jt; simulasi perencanaan P80 151; prakiraan berjalan tanpa belajar P80 129; **prakiraan berjalan terkalibrasi P80 126 & Rp 20,75 jt** — dengan kolom "buta terhadap" untuk tiap metode.
+- **Kredibilitas Bühlmann**: Z = 16/(16+10) = 61,5%; rasio aktual/rerata PERT 0,983 → faktor durasi 0,989; rasio biaya harian 1,057 → faktor biaya 1,035.
+- **Kalibrasi kapasitas ujian** dari realisasi selama UTS resmi: laju 103,5% dari normal, faktor untuk UAS diperbarui 40% → 64,7%.
+- Tabel bukti per aktivitas selesai, durasi bersyarat aktivitas yang sedang berjalan, status risiko pada tanggal data (risiko berstatus "terjadi" ditutup; risiko terbuka dipindah ke pekerjaan yang belum selesai), dan frontier JCL 70% dari tanggal data (123 hari & Rp 20.971.766).
+- **Panel WebAssembly**: pilih tanggal data lain dan prakirakan ulang — kalibrasi dihitung dari bukti yang tersedia saat itu.
+
+### 3.9 Manajemen Risiko — `/risiko/`
 
 - KPI EMV inheren, EMV residual, cadangan tersedia, kekurangan cadangan dan paparan jadwal.
 - **Dua peta panas 5×5** — sebelum dan sesudah mitigasi.
 - **Risk register 12 entri**, masing-masing dengan kategori, pemilik, WBS terpapar, sebab, akibat, peluang/dampak/EMV/skor inheren dan residual, persentase penurunan EMV, strategi respons, mitigasi, dan pemicu.
 - Paparan per kategori dan rekomendasi soal kecukupan cadangan.
 
-### 3.9 Organisasi & Sumber Daya — `/organisasi/`
+### 3.10 Organisasi & Sumber Daya — `/organisasi/`
 
 - **Bagan organisasi** lima tingkat (sponsor → PM → core lead → tim pelaksana) dan kartu tanggung jawab tiap peran.
 - **Matriks RACI** per fase WBS yang divalidasi uji (tepat satu A per baris).
 - **Histogram pembebanan** 10 peran sepanjang 85 hari kerja dengan batang over-alokasi merah, tabel utilisasi, dan daftar bentrokan terberat.
 - **Grid kuasa-kepentingan** 10 pemangku kepentingan dan **rencana komunikasi** enam jalur.
 
-### 3.10 Manajemen Mutu — `/kualitas/`
+### 3.11 Manajemen Mutu — `/kualitas/`
 
 - **Tujuh metrik mutu** terukur terhadap target standar Project Charter.
 - **Peta kendali X-bar** waktu respons: CL, UCL, LCL (metode A2·R̄), batas spesifikasi, σ proses, Cpk, dan penanda pelanggaran **empat aturan Nelson**.
@@ -169,24 +192,24 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 - **Dua diagram fishbone** (6M) dengan akar penyebab.
 - **Biaya kualitas** empat kategori, rincian pos (terjadi vs proyeksi), dan rasio kesesuaian/ketidaksesuaian.
 
-### 3.11 Bedah Kasus: Coretax — `/coretax/`
+### 3.12 Bedah Kasus: Coretax — `/coretax/`
 
 Lihat [bagian 6](#6-bedah-kasus-coretax).
 
-### 3.12 Referensi Rumus — `/rumus/`
+### 3.13 Referensi Rumus — `/rumus/`
 
-32 rumus dalam enam kelompok. Setiap rumus memuat notasi (dwibahasa), arti tiap simbol, makna, cara membaca, **jebakan umum**, rujukan materi, dan **contoh hitung yang disuntik dari angka hidup** — jadi halaman rumus tidak pernah bisa berbeda dari halaman analisisnya. Lihat [bagian 5](#5-referensi-32-rumus).
+38 rumus dalam sembilan kelompok. Setiap rumus memuat notasi (dwibahasa), arti tiap simbol, makna, cara membaca, **jebakan umum**, rujukan materi, dan **contoh hitung yang disuntik dari angka hidup** — jadi halaman rumus tidak pernah bisa berbeda dari halaman analisisnya. Lihat [bagian 5](#5-referensi-38-rumus).
 
-### 3.13 Materi & Area Pengetahuan — `/materi/`
+### 3.14 Materi & Area Pengetahuan — `/materi/`
 
 - **Sembilan area pengetahuan** (Modul 2) dengan tautan ke artefak yang membuktikan area itu benar-benar dikerjakan, plus catatan area kesepuluh PMBOK 5.
 - **Empat tahap siklus hidup** (Tugas 3) dipetakan ke fase WBS.
-- **Peta materi kuliah → paket kode** yang mengimplementasikannya.
+- **Peta materi kuliah → paket kode** yang mengimplementasikannya, termasuk GERT ("loop tes yang harus diulang") dan pengawasan jadwal dari Modul 4.
 - Daftar dokumen sumber di folder mata kuliah, termasuk satu berkas yang tidak terkait (dokumen Oracle OLVM).
 
-### 3.14 Metode & Sumber — `/metode/`
+### 3.15 Metode & Sumber — `/metode/`
 
-Arsitektur paket, keputusan teknis, **tabel asumsi** (alasan dan akibatnya bila keliru), **celah yang belum tertutup**, dan tautan data terbuka.
+Arsitektur paket, keputusan teknis, **tabel asumsi** (alasan dan akibatnya bila keliru), **celah yang sudah ditutup** beserta buktinya, **batas yang tersisa**, dan tautan data terbuka.
 
 ---
 
@@ -195,27 +218,38 @@ Arsitektur paket, keputusan teknis, **tabel asumsi** (alasan dan akibatnya bila 
 Seluruh perhitungan berada di `internal/` sebagai paket Go murni **tanpa satu pun dependensi pihak ketiga**.
 
 ### `workcal` — kalender kerja
-Pemetaan dua arah indeks hari kerja ↔ tanggal, lima hari libur (ditandai tetap/asumsi), indeks pecahan untuk tanggal data yang jatuh di akhir pekan, dan daftar libur di dalam rentang.
+Pemetaan dua arah indeks hari kerja ↔ tanggal, seluruh libur nasional dan cuti bersama sampai akhir 2026 dengan dasar hukum SKB 3 Menteri, indeks pecahan untuk tanggal data yang jatuh di akhir pekan, dan daftar libur di dalam rentang.
 
 ### `schedule` — CPM dan PERT
 - Urutan topologis dengan deteksi siklus, predecessor tak dikenal, dan kode ganda.
-- Forward pass dan backward pass untuk **FS, SS, FF, SF** dengan lag dan lead.
+- Forward pass dan backward pass untuk **FS, SS, FF, SF** dengan lag dan lead, serta tanggal rilis (*start no earlier than*) untuk prakiraan berjalan.
 - Total float, free float, dan **rantai kritis tersambung** (bukan sekadar filter float nol).
 - PERT: te, σ, varians, varians jalur kritis, Z-score, dan peluang selesai.
 - Konvensi batas inklusif untuk tampilan dan eksklusif untuk aritmetika, sehingga milestone berdurasi nol tidak butuh kasus khusus.
 
-### `level` — penjadwalan berbatas sumber daya *(baru)*
-- **Serial Schedule Generation Scheme** dengan aturan prioritas minimum latest start.
+### `level` — penjadwalan berbatas sumber daya
+- **Serial Schedule Generation Scheme** dengan enam aturan prioritas atau daftar aktivitas, tanggal rilis, dan laju mulai minimum 20% (satu hari kerja per minggu).
 - **Model isi pekerjaan**: laju harian = min(1, sisa kapasitas / alokasi) atas semua peran; hari-orang dilestarikan, kalender yang memanjang.
-- Kapasitas per peran per hari dari `model.AvailabilityWindows` (jendela bertumpuk dikalikan).
-- Pemecahan keterlambatan per aktivitas: **terbawa**, **menunggu**, **memanjang**, beserta penyebab (paruh waktu, jendela ketersediaan, berbagi orang).
-- `Explain`: dekomposisi bertahap CPM → kapasitas → jendela.
-- Mode `Lite` dan `CapacityGrid` yang dihitung sekali untuk dipakai ribuan kali di simulasi (hasil identik, diuji).
+- **`Optimize`**: aturan prioritas + sampel acak berbias (*regret-based biased random sampling*) + **justifikasi maju-mundur** di atas jaringan dan kalender terbalik.
+- **`LowerBound`**: batas solo (kapasitas nyata tanpa berbagi), penalaran **energetik** leluhur/keturunan/global yang dirambatkan sampai titik tetap, lalu **pembuktian destruktif** yang menguji tenggat bertanggal. Celah optimalitas = jadwal terbaik − batas bawah.
+- Kapasitas per peran per hari dari `model.AvailabilityWindows`, dengan faktor ujian yang bisa diganti hasil kalibrasi.
+- Pemecahan keterlambatan per aktivitas: **terbawa**, **menunggu**, **memanjang**, beserta penyebab.
+- `Explain`: dekomposisi bertahap CPM → kapasitas → jendela, setiap tahap memakai `Optimize`.
 
-### `compress` — kompresi jadwal *(baru)*
-- **Crashing** serakah per hari: kandidat tunggal, lalu pasangan, lalu tiga aktivitas sekaligus bila ada jalur kritis paralel; setiap langkah diverifikasi ulang dengan CPM.
-- Batas crash per aktivitas dengan satu aturan untuk semua dan daftar aktivitas yang tidak bisa dipercepat dengan uang beserta alasannya.
-- **Fast-tracking**: setiap relasi FS kritis diganti SS dengan tumpang tindih 50%; rework harapan; **penolakan kandidat orang-sama**; penerapan gabungan untuk menunjukkan penghematan tidak aditif.
+### `compress` — kompresi jadwal
+- **Crashing serakah** per hari dengan pencarian pasangan dan tiga aktivitas untuk jalur kritis paralel.
+- **Crashing eksak** (`Exact`): LP per tenggat; matriks jaringan unimodular total sehingga solusi simpleks berupa hari bulat, diverifikasi ulang dengan CPM; perbandingan titik demi titik dengan serakah.
+- **Time-cost trade-off**: LP biaya total dengan sewa `cost.Rental`, tanggal mulai proyek dikunci, titik biaya terendah, dan nilai impas per hari.
+- **Fast-tracking** dengan rework harapan dan penolakan kandidat orang-sama.
+
+### `lp` — pemrograman linear
+Simpleks dua fase dengan tableau padat dan **aturan Bland** (tidak pernah berputar pada masalah degeneratif — diuji dengan contoh klasik Beale).
+
+### `gert` — reduksi jaringan GERT
+Transmitansi dibawa sebagai koefisien Taylor orde dua sehingga aljabarnya eksak: seri, paralel, putaran **aturan Mason**; rerata dan varians waktu; jumlah putaran geometrik, kuantil, dan sampel transformasi invers.
+
+### `cost` — biaya yang bergantung waktu
+Memisahkan sewa dan langganan dari biaya sekali beli; tarif harian dari rentang rencana sehingga biaya pada jadwal rencana persis sama dengan BAC.
 
 ### `evm` — Earned Value
 PV/EV/AC dengan kemajuan linear dalam aktivitas; SV, CV, SPI, CPI; **Earned Schedule** (pencarian biner pada kurva PV) dengan SV(t) dan SPI(t); tiga varian EAC; ETC; VAC; TCPI; kurva-S dan proyeksi biaya; rincian per fase dan per aktivitas.
@@ -223,9 +257,10 @@ PV/EV/AC dengan kemajuan linear dalam aktivitas; SV, CV, SPI, CPI; **Earned Sche
 ### `simulate` — Monte Carlo
 - PRNG **mulberry32 berbenih** — hasil identik di server dan WebAssembly.
 - **Sampler bersama** lewat transformasi invers: beta-PERT baku (α = 1 + 4(M−O)/(P−O)), CDF dari **fungsi beta tak lengkap teregularisasi** (pecahan berlanjut Lentz) ditabulasi pada 2.049 titik; sebaran segitiga dengan invers tertutup.
-- **Kopula Gauss** per peran dominan: u = Φ(ρ·z_peran + √(1−ρ²)·ε).
+- **Kopula Gauss** per peran dominan: u = Φ(ρ·z_peran + √(1−ρ²)·ε); faktor laten peran bisa dibaca untuk kopula risiko.
 - Simulasi PERT: histogram, kuantil, peluang, sensitivitas Spearman, porsi kritis.
-- **Simulasi terpadu** empat lapisan dengan biaya per iterasi, kejadian risiko Bernoulli, levelling per iterasi, **Joint Confidence Level**, frontier iso-JCL, histogram 2D, dan korelasi terealisasi.
+- **Simulasi terpadu** lima lapisan: biaya per iterasi termasuk sewa bergantung waktu, **kopula faktor risiko** dengan phi terealisasi, **putaran rework GERT**, levelling per iterasi (LST + urutan optimal) dengan **audit terhadap `level.Optimize`**, Joint Confidence Level, frontier iso-JCL, histogram 2D.
+- **Prakiraan berjalan** (`PrepareInFlight`): status per aktivitas pada tanggal data, jaringan sisa dengan tanggal rilis, durasi bersyarat, **kredibilitas Bühlmann** untuk durasi, biaya, dan kapasitas ujian.
 
 ### `risk` — risiko kuantitatif
 Tingkat peluang dan dampak (relatif terhadap BAC), skor dan keparahan, matriks inheren dan residual, EMV, penurunan EMV per risiko, agregasi kategori, cakupan dan kekurangan cadangan, paparan jadwal harapan.
@@ -240,27 +275,28 @@ Pareto berbobot dengan kelompok *vital few*; peta kendali X-bar dengan konstanta
 Metrik turunan dari fakta bersumber, empat skenario transisi dengan EMV, titik impas peluang kegagalan, dan tabel cermin Coretax ↔ proyek kuliah.
 
 ### `render` — grafik SVG
-Pembangun kanvas SVG dan 22 jenis grafik, semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks.
+Pembangun kanvas SVG dan 25 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, dan sebaran jumlah risiko), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks.
 
 ### `site`, `model`, `i18n`
 Perakit analisis dan penurun temuan; sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa.
 
 ---
 
-## 5. Referensi 32 rumus
+## 5. Referensi 38 rumus
 
 | Kelompok | Rumus |
 | --- | --- |
 | **Penjadwalan & Jalur Kritis** | Early Finish (forward pass) · Late Start (backward pass) · Total & free float |
-| **Estimasi Tiga Titik & PERT** | Durasi harapan te · Simpangan baku & varians · Peluang Z · Simulasi Monte Carlo · Sensitivitas Spearman · **Sebaran beta-PERT & transformasi invers** |
+| **Estimasi Tiga Titik & PERT** | Durasi harapan te · Simpangan baku & varians · Peluang Z · Simulasi Monte Carlo · Sensitivitas Spearman · Sebaran beta-PERT & transformasi invers |
 | **Earned Value Management** | PV/EV/AC · SV & CV · SPI & CPI · Tiga varian EAC · TCPI · Earned Schedule |
 | **Risiko Kuantitatif** | EMV · Skor & matriks probabilitas-dampak · Struktur anggaran berlapis |
 | **Pengendalian Mutu** | Batas kendali X-bar · Aturan Nelson · Cpk · Biaya kualitas · Analisis Pareto |
 | **Sumber Daya** | Pembebanan & utilisasi · Kehalusan kurva tim |
-| **Levelling & Kompresi Jadwal** | **Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan** |
-| **Simulasi Terpadu & JCL** | **Korelasi lewat kopula Gauss · Kejadian risiko dalam simulasi · Joint Confidence Level** |
+| **Levelling & Kompresi Jadwal** | Serial Schedule Generation Scheme · Laju kerja berbatas kapasitas · Crashing & slope biaya · Fast-tracking & rework harapan · **Batas bawah energetik & celah optimalitas · Crashing eksak & trade-off biaya total (LP)** |
+| **Simulasi Terpadu & JCL** | Korelasi lewat kopula Gauss · Kejadian risiko dalam simulasi · Joint Confidence Level · **Biaya sewa yang bergantung waktu · Risiko bergerombol lewat kopula faktor · GERT: putaran rework dengan aturan Mason** |
+| **Prakiraan Berjalan** | **Kredibilitas Bühlmann & durasi bersyarat** |
 
-Rumus bercetak tebal ditambahkan pada upgrade terakhir. Setiap rumus di atas punya contoh hitung dari data hidup — uji `TestEveryFormulaHasAWorkedExample` gagal bila ada yang tidak.
+Rumus bercetak tebal ditambahkan pada upgrade terakhir. Setiap rumus punya contoh hitung dari data hidup — uji `TestEveryFormulaHasAWorkedExample` gagal bila ada yang tidak. Rumus lama yang maknanya bergeser (SGS, crashing, kejadian risiko) ikut diperbarui notasi dan jebakannya.
 
 ---
 
@@ -280,13 +316,14 @@ Isi halaman: 14 kartu fakta bersumber, linimasa 2018–2026, tabel metrik turuna
 
 ## 7. Interaktivitas lewat WebAssembly
 
-`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi: simulasi terpadu L3 10.000 iterasi di peramban menghasilkan P80 139 dan biaya P80 Rp 19.937.000 — identik dengan hasil server.
+`cmd/wasm` mengompilasi paket `internal/` yang sama ke WebAssembly. Tidak ada rumus yang ditulis dua kali, jadi tidak mungkin ada versi JavaScript yang diam-diam berbeda dari versi Go. Terverifikasi di peramban: simulasi terpadu L4 10.000 iterasi memberi P80 151 dan biaya P80 Rp 22.023.287,01, dan prakiraan berjalan 10.000 iterasi memberi P80 126 dan biaya P80 Rp 20.747.668,75 — keduanya identik sampai digit terakhir dengan hasil server.
 
 | Halaman | Fungsi Go | Kendali |
 | --- | --- | --- |
 | Biaya | `mpplRecompute(tanggal)` | Geser tanggal data → SPI, CPI, SV(t), EV, AC, EAC, VAC, TCPI, % selesai |
 | PERT | `mpplSimulate(iterasi, benih, sebaran)` | Monte Carlo ulang + histogram |
-| Simulasi Terpadu | `mpplIntegrated(iterasi, benih, ρ, lapisan)` | Slider ρ, pilihan lapisan L0–L3 → JCL, peluang, P80, korelasi terealisasi + histogram |
+| Simulasi Terpadu | `mpplIntegrated(iterasi, benih, ρ, lapisan)` | Slider ρ, pilihan lapisan L0–L4 → JCL, peluang, P80, korelasi terealisasi, phi risiko, hari rework, biaya sewa + histogram |
+| Prakiraan Berjalan | `mpplForecast(tanggal, iterasi)` | Pilih tanggal data → status aktivitas, kredibilitas Z, faktor durasi, P50, P80, biaya P80 + histogram |
 
 Bila WebAssembly gagal dimuat, panel tetap tersembunyi dan halaman menampilkan angka yang benar untuk tanggal data bawaan — seluruh isi dan grafik sudah dirender server.
 
@@ -296,10 +333,10 @@ Bila WebAssembly gagal dimuat, panel tetap tersembunyi dan halaman menampilkan a
 
 | Berkas | Isi |
 | --- | --- |
-| [`data/metrik.json`](https://xyb3rpunq.github.io/mppl-control-tower/data/metrik.json) | Earned Value, anggaran berlapis, simulasi PERT, risiko, mutu, **levelling, kompresi, dan simulasi terpadu per lapisan** |
+| [`data/metrik.json`](https://xyb3rpunq.github.io/mppl-control-tower/data/metrik.json) | Earned Value (termasuk IEAC(t)), anggaran berlapis, simulasi PERT, risiko, mutu, **levelling beserta batas bawah dan audit, kurva crashing eksak & biaya total, simulasi terpadu lima lapisan, putaran GERT, dan prakiraan berjalan** |
 | [`data/aktivitas.csv`](https://xyb3rpunq.github.io/mppl-control-tower/data/aktivitas.csv) | 40 simpul: WBS, durasi, ES, EF, LS, LF, float, kritis, **mulai/selesai/geser levelling**, anggaran, PV, EV, AC |
 | [`data/risiko.csv`](https://xyb3rpunq.github.io/mppl-control-tower/data/risiko.csv) | 12 risiko: peluang, dampak, EMV inheren dan residual, skor, keparahan, respons, pemilik, status |
-| [`sitemap.xml`](https://xyb3rpunq.github.io/mppl-control-tower/sitemap.xml) | 28 URL dengan pasangan `hreflang` |
+| [`sitemap.xml`](https://xyb3rpunq.github.io/mppl-control-tower/sitemap.xml) | 30 URL dengan pasangan `hreflang` |
 
 ---
 
@@ -311,15 +348,20 @@ flowchart LR
         D1[Charter, WBS, 40 simpul]
         D2[Risiko, organisasi, mutu]
         D3[Fakta Coretax bersumber]
-        D4[Kalender ketersediaan]
+        D4[Kalender ketersediaan & libur resmi]
+        D5[Penggerak risiko, putaran rework, sewa]
     end
 
     subgraph mesin["Mesin hitung internal/"]
         S[schedule] --> L[level]
         S --> C[compress]
+        LP[lp] --> C
+        CO[cost] --> C
+        CO --> M
         S --> E[evm]
         S --> M[simulate]
         L --> M
+        G[gert] --> M
         R[risk]
         Q[quality]
         CT[coretax]
@@ -329,21 +371,21 @@ flowchart LR
     mesin --> SITE[internal/site<br/>analisis + temuan + contoh rumus]
     SITE --> RENDER[internal/render<br/>SVG]
     RENDER --> GEN[cmd/site<br/>html/template]
-    GEN --> DIST[(dist/<br/>28 halaman + CSV + JSON + sitemap)]
+    GEN --> DIST[(dist/<br/>30 halaman + CSV + JSON + sitemap)]
     mesin --> WASM[cmd/wasm<br/>WebAssembly]
-    WASM --> BROWSER[Peramban: 3 panel interaktif]
+    WASM --> BROWSER[Peramban: 4 panel interaktif]
     DIST --> PAGES[GitHub Pages]
 ```
 
 Keputusan teknis penting:
 
 - **Grafik dirender di server** sebagai SVG inline. Halaman utuh tanpa JavaScript, bisa dicetak jadi PDF, terbaca mesin pengindeks, tanpa kedipan saat muat.
-- **Semua perhitungan dijalankan sekali** per build dan dibagikan ke semua halaman, sehingga halaman biaya dan halaman risiko tidak mungkin melihat BAC yang berbeda.
+- **Semua perhitungan dijalankan sekali** per build dan dibagikan ke semua halaman, sehingga halaman biaya dan halaman risiko tidak mungkin melihat BAC yang berbeda. Lima belas simulasi Monte Carlo yang saling bebas dijalankan **paralel** dengan generator berbenih masing-masing — hasilnya identik dengan eksekusi berurutan, waktu analisis turun dari sekitar 25 detik ke 7 detik.
 - **Benih acak tetap.** Tanpa itu angka dasbor bergoyang setiap build dan mustahil diverifikasi.
 - **Nol dependensi.** Setiap angka bisa ditelusuri sampai ke barisnya.
 - **PWA luring**: service worker di akar situs (cache-first untuk aset, network-first untuk halaman) dan manifest.
 
-Ukuran kode: sekitar 10.650 baris Go aplikasi, 3.150 baris Go uji, 2.080 baris templat, 750 baris CSS.
+Ukuran kode: sekitar 14.650 baris Go aplikasi, 4.630 baris Go uji, 2.460 baris templat, 770 baris CSS.
 
 ---
 
@@ -383,22 +425,23 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**145 fungsi uji di 12 paket.** Sebagian besar tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**205 fungsi uji di 17 paket, cakupan pernyataan 94,2%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
-**Penjadwalan**
-- Durasi jaringan harus 85 hari kerja = 17 minggu piagam.
+**Penjadwalan dan kalender**
+- Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
+- Setiap libur punya dasar hukum, jatuh pada hari kerja, terurut, dan tidak berstatus asumsi.
 - Uji tangan forward/backward pass pada jaringan kecil, keempat relasi PDM, lag dan lead.
-- Jalur kritis harus benar-benar tersambung; free float tidak boleh melebihi total float.
 - Siklus, predecessor tak dikenal, dan kode ganda harus ditolak.
 
 **Levelling dan kompresi**
-- Tidak ada satu hari-peran pun melebihi kapasitas setelah levelling.
-- **Hari-orang dilestarikan** — levelling menggeser pekerjaan, tidak menambah atau menghilangkannya.
-- Setiap relasi tetap dihormati; pemecahan terbawa + menunggu harus menjumlah.
-- Mode `Lite` harus menghasilkan jadwal identik dengan mode lengkap.
-- Setiap langkah crashing diverifikasi ulang dengan CPM; tidak ada hari yang "dibeli" tanpa memendekkan proyek.
-- Jalur kritis paralel harus dipotong berpasangan; aktivitas terlarang tidak pernah di-crash.
-- Kandidat fast-tracking orang-sama tidak boleh dianggap layak; penghematan gabungan tidak boleh melebihi jumlah naif.
+- Tidak ada satu hari-peran pun melebihi kapasitas; **hari-orang dilestarikan**; setiap relasi dihormati — untuk setiap aturan prioritas.
+- **Batas bawah diuji jujur terhadap brute force**: pada jaringan kecil, *semua* urutan aktivitas dicoba, dan tidak satu pun jadwal boleh lebih pendek dari batas bawah; `Optimize` harus menemukan optimum brute force.
+- Jadwal proyek terbukti optimal: 100 hari tanpa ujian dan 113 hari dengan ujian, batas bawah sama.
+- Justifikasi tidak pernah memperburuk jadwal; mode `Lite` identik dengan mode lengkap.
+- **Crashing eksak diuji terhadap brute force**: setiap kombinasi potongan dicoba dengan CPM; biaya termurah per tenggat harus sama dengan LP.
+- LP tidak pernah lebih mahal dari serakah; serakah terbukti tidak optimal pada jaringan proyek.
+- Simpleks: contoh buku teks, fase 1, tidak layak, tak terbatas, baris artifisial redundan, dan contoh degeneratif Beale.
+- Kandidat fast-tracking orang-sama tidak boleh dianggap layak.
 
 **Simulasi**
 - Benih sama → hasil identik; benih berbeda → kesimpulan stabil.
@@ -406,8 +449,14 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - ρ = 0 memberi korelasi terealisasi mendekati nol; ρ = 0,8 menaikkannya dan melebarkan sebaran.
 - Setiap lapisan realisme menggeser P80 ke arah yang benar; JCL tidak pernah melebihi peluang marginal; peluang bersama di P80×P80 selalu di bawah 80%.
 - Frekuensi kejadian risiko cocok dengan peluang residual; frontier JCL tidak naik saat tenggat dilonggarkan.
-- **Kenaikan rerata biaya dari L1 ke L2 harus mendekati EMV residual register** (pemeriksaan silang antar-halaman).
-- Nilai-nilai I_x(a,b) terhadap solusi tertutup; rerata beta-PERT sama dengan te.
+- **Kenaikan rerata biaya dari L1 ke L2, di luar sewa yang ikut memanjang, harus mendekati EMV residual register** (pemeriksaan silang antar-halaman).
+- **Kopula risiko menjaga peluang marginal** setiap risiko dan rerata biaya, sementara phi terealisasi naik bersama λ dan P95 biaya menebal.
+- Faktor laten peran yang dibaca kopula risiko benar-benar faktor yang menggerakkan durasi aktivitas.
+- **Rerata putaran rework di simulasi cocok dengan bentuk tertutup GERT** p/(1−p); aljabar Mason cocok dengan rumus geometrik.
+- Biaya sewa pada jadwal rencana persis sama dengan anggaran; BAC tetap Rp 14.832.000.
+- **Prakiraan berjalan**: status per aktivitas pada tanggal data, AC sama dengan mesin EVM, rumus kredibilitas, risiko berstatus "terjadi" tidak disampel lagi, tidak ada prakiraan yang selesai sebelum realisasi atau berbiaya di bawah AC.
+- Urutan jadwal optimal tidak pernah memperpanjang levelling per iterasi; audit berjalan tepat pada iterasi yang diminta.
+- Nilai-nilai I_x(a,b) terhadap solusi tertutup; rerata beta-PERT sama dengan te; CDF(Q(u)) = u.
 
 **Anggaran, risiko, mutu**
 - BAC + kontinjensi + cadangan manajemen = Rp 16.000.000 persis; aturan 100% WBS dua arah.
@@ -415,10 +464,11 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - Titik di luar UCL harus terdeteksi aturan 1 (batas yang digambar = batas yang diuji).
 
 **Render dan konten**
-- Seluruh 28 halaman dirender tanpa galat, tanpa sisa sintaks templat, tanpa kunci terjemahan hilang.
+- Seluruh 30 halaman dirender tanpa galat, tanpa sisa sintaks templat, tanpa kunci terjemahan hilang.
 - **Halaman Inggris tidak boleh memuat kata fungsi Indonesia** — uji ini merender HTML sungguhan lalu memindainya, dan menemukan bocoran nyata (label status, notasi rumus, nilai fakta, metrik temuan) yang lolos dari pemeriksaan kelengkapan kamus.
 - Tidak ada singkatan bulan Indonesia di dalam kalimat Inggris.
-- Angka kunci — termasuk angka halaman baru — harus benar-benar sampai ke HTML, diformat dari struct analisis, bukan diketik.
+- Angka kunci — termasuk angka halaman Optimasi, Simulasi Terpadu, dan Prakiraan Berjalan — harus benar-benar sampai ke HTML dalam kedua bahasa, diformat dari struct analisis, bukan diketik.
+- `metrik.json` harus JSON sah dengan seluruh blok baru; seluruh temuan penutup celah harus diturunkan.
 - Setiap fakta Coretax punya URL sumber yang tertaut di HTML dengan `rel="noopener"`.
 - Setiap SVG utuh, beraksesibilitas, bebas NaN, tanpa warna heksadesimal langsung.
 - Setiap rumus punya contoh hitung dalam kedua bahasa.
@@ -429,35 +479,47 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 Dua alur kerja GitHub Actions:
 
-**`uji`** — setiap push dan pull request: `gofmt`, `go vet`, `go test -race`, laporan cakupan, kompilasi WebAssembly, build situs, dan pemeriksaan keluaran (28 halaman, sitemap, service worker, metrik).
+**`uji`** — setiap push dan pull request: `gofmt`, `go vet`, `go test -race`, laporan cakupan, kompilasi WebAssembly, build situs, dan pemeriksaan keluaran (30 halaman termasuk halaman prakiraan dua bahasa, sitemap, service worker, metrik).
 
 **`terbitkan`** — setiap push ke `main`: uji ulang, kompilasi WebAssembly, `configure-pages` (dijalankan **sebelum** build agar URL dasar benar), build situs, lalu penerbitan ke GitHub Pages.
 
 ---
 
-## 13. Asumsi dan celah yang belum tertutup
+## 13. Asumsi, celah yang ditutup, dan batas yang tersisa
 
 **Asumsi** (seluruhnya dinyatakan juga di halaman Metode):
 
 | Asumsi | Akibat bila keliru |
 | --- | --- |
 | Kemajuan linear dalam aktivitas | Aturan 0/100 atau 50/50 memberi EV berbeda |
-| Data realisasi SIATS adalah skenario pelaksanaan yang wajar (proyek kuliah tidak dieksekusi) | Angka EV berubah; rumus dan cara membaca tidak |
-| Tiga dari lima hari libur ditandai asumsi | Setiap libur yang meleset menggeser selesai satu hari kerja |
+| Data realisasi SIATS adalah skenario pelaksanaan yang wajar (proyek kuliah tidak dieksekusi) | Angka EV dan prakiraan berjalan berubah; rumus dan cara membaca tidak |
 | Korelasi peran ρ = 0,5 | P80 hanya bergeser satu hari; lebar sebaran yang berubah |
-| Periode ujian 12–23 Jan 2026 dengan kapasitas 40% | Tanpa jendela ini levelling masih 102 hari kerja |
-| Premi crash 75%, peluang rework 30% | Biaya berubah sebanding, urutan potongan tidak |
+| Kapasitas 40% saat ujian; tanggal UAS ganjil 12–23 Jan 2026 | Tanpa jendela ujian levelling masih 100 hari kerja; realisasi UTS memperbarui faktornya menjadi 64,7% |
+| Laju mulai minimum 20% (satu hari kerja per minggu) | Ambang 25% memberi jadwal terbaik satu hari lebih panjang |
+| Lima penggerak risiko bersama, λ = 0,6 | Rerata biaya tidak berubah pada λ berapa pun; hanya ekor |
+| Peluang gagal GERT 30% (regresi) dan 25% (uji penetrasi) | Rerata putaran p/(1−p) tidak linear |
+| Bobot keyakinan awal k = 10 | Prakiraan tanpa belajar ditampilkan sebagai pembanding |
+| Sewa & langganan sebanding dengan rentang pemakaian | Vendor bulanan membuat biaya naik bertahap, bukan halus |
+| Premi crash 75%, peluang rework fast-tracking 30% | Biaya berubah sebanding, urutan potongan tidak |
 | Peluang gagal cutover Coretax 35% (skenario) | Titik impasnya 0,279% — kesimpulan bertahan |
 
-**Celah yang belum tertutup:**
+**Celah yang sudah ditutup** (lima celah versi sebelumnya):
 
-1. **Levelling adalah heuristik** — SGS memberi jadwal yang bisa dijalankan, bukan jaminan jadwal terpendek (RCPSP adalah NP-hard).
-2. **Kejadian risiko saling bebas** — dan tidak berkorelasi dengan durasi aktivitas; ekor kanan simulasi masih terlalu tipis.
-3. **Biaya tidak punya komponen yang bergantung waktu** — proyek yang molor tidak dikenai biaya hosting atau koordinasi tambahan.
-4. **Simulasi berpandangan perencanaan** — belum dimulai dari realisasi pada tanggal data.
-5. **Tidak ada pengulangan kerja (GERT)** — rework hanya muncul sebagai biaya dan hari, bukan putaran di jaringan.
+1. **Levelling adalah heuristik** → jadwal 113 hari **terbukti optimal**: batas atas dari enam aturan, 300 sampel berbias, dan justifikasi; batas bawah energetik dan destruktif 113; diuji jujur terhadap brute force.
+2. **Kejadian risiko saling bebas** → **kopula faktor** dengan lima penggerak bersama; penggerak kinerja pengembang berkorelasi dengan durasi aktivitas Backend Developer; phi terealisasi 0,18.
+3. **Biaya tidak punya komponen bergantung waktu** → **sewa dan langganan** mengikuti rentang pemakaian di setiap iterasi, dan crashing dihitung ulang sebagai **trade-off biaya total dengan LP**.
+4. **Simulasi berpandangan perencanaan** → halaman **Prakiraan Berjalan**: realisasi dikunci, durasi bersyarat, kredibilitas Bühlmann, kalibrasi kapasitas ujian.
+5. **Tidak ada pengulangan kerja (GERT)** → dua putaran rework direduksi dengan **aturan Mason** dan disimulasikan sebagai lapisan L3; analitik dan Monte Carlo saling cocok.
 
-Versi sebelumnya mencantumkan empat celah lain — korelasi durasi, penjadwalan berbatas sumber daya, simulasi biaya, dan kalender per peran — yang kini sudah dikerjakan.
+Tambahan yang ditemukan selama penutupan: crashing serakah ternyata tidak optimal (kini LP eksak); kalender libur kini resmi dan menambahkan cuti bersama 16 Februari 2026; UTS diambil dari kalender akademik resmi.
+
+**Batas yang tersisa** (bukan pekerjaan yang lupa, melainkan batas yang harus diketahui):
+
+1. **Optimalitas berlaku di dalam model isi pekerjaan** — laju pecahan tanpa biaya berpindah konteks; tim sungguhan bisa sedikit lebih lambat.
+2. **Levelling di dalam simulasi tetap cepat, bukan eksak** — rata-rata 0,43 hari di atas optimum menurut audit.
+3. **Tanggal UAS ganjil belum resmi** — ada di halaman kedua PDF kalender akademik Esa Unggul yang belum terbaca; cukup ubah satu baris di `internal/model/capacity.go`.
+4. **Parameter asumsi hanya sebagian terkalibrasi** — faktor ujian diperbarui dari realisasi; premi crash, peluang GERT, λ, dan k masih asumsi dengan uji kepekaan.
+5. **Data realisasi adalah skenario** — prakiraan berjalan memperagakan metodenya.
 
 ---
 
@@ -465,9 +527,11 @@ Versi sebelumnya mencantumkan empat celah lain — korelasi durasi, penjadwalan 
 
 **Proyek SIATS** — tugas mata kuliah Manajemen Proyek Perangkat Lunak, Universitas Esa Unggul: Tugas 2 (9 area pengetahuan), Tugas 3 (siklus hidup), Tugas 5 (uraian peran), Tugas 6 (Project Charter & WBS), Tugas 10 (bagan organisasi & RACI); serta materi Modul 2, Modul 4, Pertemuan 3, Pertemuan 7 (MS Project), dan Pertemuan 9 (manajemen mutu, Schwalbe bab 8).
 
+**Kalender** — [Kalender Akademik Universitas Esa Unggul TA 2025/2026](https://www.esaunggul.ac.id/en/kalender-akademik-tahun-akademik-2025-2026/) (SK Rektor No. 039/SK-R/UEU/III/2025) untuk tanggal UTS; [SKB 3 Menteri libur nasional dan cuti bersama 2026](https://setneg.go.id/baca/index/inilah_skb_3_menteri_libur_nasional_dan_cuti_bersama_2026) dan [SKB perubahan 2025](https://www.kompas.com/jawa-tengah/read/2025/12/09/104500088/apakah-tanggal-26-desember-2025-cuti-bersama-ini-jawabannya-sesuai) untuk hari libur.
+
 **Studi kasus Coretax** — pemberitaan publik Kompas, Tempo, Hukumonline, DDTC News, Beritasatu, dan keterangan resmi Direktorat Jenderal Pajak; daftar lengkap dengan tanggal ada di [halaman studi kasus](https://xyb3rpunq.github.io/mppl-control-tower/coretax/).
 
-**Metode** — PMBOK; Kolisch (1996) untuk SGS; Lipke (2003) untuk Earned Schedule; Nelson (1984) untuk aturan peta kendali; Vose (2008) untuk beta-PERT; Numerical Recipes untuk fungsi beta tak lengkap; NASA Cost Estimating Handbook untuk JCL 70%.
+**Metode** — PMBOK; Kolisch (1996) dan Kolisch & Hartmann (1999) untuk SGS dan aturan prioritas; Valls, Ballestín & Quintanilla (2005) untuk justifikasi; Baptiste, Le Pape & Nuijten (2001) untuk penalaran energetik; Klein & Scholl (1999) untuk batas bawah destruktif; Kelley (1961) untuk crashing dengan LP; Pritsker (1966) untuk GERT; Bühlmann (1967) untuk kredibilitas; Lipke (2003) untuk Earned Schedule; Nelson (1984) untuk aturan peta kendali; Vose (2008) untuk beta-PERT; Numerical Recipes untuk fungsi beta tak lengkap; NASA Cost Estimating Handbook untuk JCL 70%.
 
 Situs ini tidak berafiliasi dengan Direktorat Jenderal Pajak maupun pihak mana pun yang disebut. Analisisnya adalah kerja akademik.
 

@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/xyb3rpunq/mppl-control-tower/internal/compress"
+	"github.com/xyb3rpunq/mppl-control-tower/internal/cost"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/level"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/model"
 	"github.com/xyb3rpunq/mppl-control-tower/internal/render"
@@ -15,16 +16,16 @@ import (
 // jadwal, dan simulasi terpadu. Dipisah dari Build supaya urutan ketergantungan
 // terlihat jelas - semuanya membutuhkan kalender dan jadwal CPM yang sudah jadi.
 func buildUpgrade(a *Analysis) error {
-	opts := level.Options{Calendar: a.Calendar, Capacity: model.Capacity, UseWindows: true}
-	lv, err := level.Run(model.Activities, opts)
+	opts := level.OptimizeOptions{Options: level.Options{Calendar: a.Calendar, Capacity: model.Capacity, UseWindows: true}}
+	why, err := level.Explain(model.Activities, opts)
 	if err != nil {
 		return err
 	}
+	a.LevelWhy = why
+	a.LevelOpt = why.Stage[1]
+	lv := a.LevelOpt.Best
 	a.Level = lv
 	a.LevelProfile = lv.Profile()
-	if a.LevelWhy, err = level.Explain(model.Activities, opts); err != nil {
-		return err
-	}
 
 	// Peran kritis: peran dominan dari aktivitas yang paling lama menunggu
 	// sumber daya. Hari tunggu yang terbawa dari pendahulu tidak dihitung,
@@ -54,33 +55,15 @@ func buildUpgrade(a *Analysis) error {
 	if a.FastAllDur, err = compress.ApplyFastTracks(model.Activities, a.FastViable); err != nil {
 		return err
 	}
-
-	base := simulate.IntegratedConfig{
-		Iterations: simulate.Defaults().Iterations,
-		Seed:       simulate.Defaults().Seed,
-		Rho:        simulate.DefaultRho,
-		Calendar:   a.Calendar,
-		Capacity:   model.Capacity,
-		Budget:     model.TotalAuthorised,
-		Deadline:   float64(a.Plan.Duration),
+	if a.Exact, err = compress.Exact(model.Activities, model.RateCard, a.Crash); err != nil {
+		return err
 	}
-	if a.Ladder, err = simulate.Ladder(model.Activities, base); err != nil {
+	if a.Rentals, _, err = cost.Rentals(model.Activities); err != nil {
 		return err
 	}
 
-	for _, rho := range []float64{0, 0.25, 0.5, 0.75} {
-		c := base
-		// Iterasi dan benih sama dengan tangga, sehingga baris rho baku identik
-		// dengan lapisan korelasi dan tidak ada dua angka yang tampak bertentangan.
-		c.Layer, c.Rho = simulate.LayerCorrelated, rho
-		r, err := simulate.RunIntegrated(model.Activities, c)
-		if err != nil {
-			return err
-		}
-		a.RhoSweep = append(a.RhoSweep, RhoPoint{
-			Rho: rho, P80: r.DurP80, StdDev: simulate.StdDev(r.Durations),
-			Realised: r.RealisedSameRole, OnTime: r.OnTime,
-		})
+	if err := runSimulations(a); err != nil {
+		return err
 	}
 
 	final := a.Final()
@@ -98,7 +81,24 @@ func buildUpgrade(a *Analysis) error {
 		}
 	}
 	a.Density = final.Density(36, 24)
-	return nil
+	return finishClosure(a)
+}
+
+// baseSimConfig adalah konfigurasi simulasi terpadu yang dipakai seluruh
+// halaman. WebAssembly membangun konfigurasi yang sama persis agar hasil di
+// peramban identik dengan hasil server.
+func (a *Analysis) baseSimConfig() simulate.IntegratedConfig {
+	return simulate.IntegratedConfig{
+		Iterations:  simulate.Defaults().Iterations,
+		Seed:        simulate.Defaults().Seed,
+		Rho:         simulate.DefaultRho,
+		RiskLoading: model.RiskLoading,
+		Calendar:    a.Calendar,
+		Capacity:    model.Capacity,
+		Budget:      model.TotalAuthorised,
+		Deadline:    float64(a.Plan.Duration),
+		LevelOrder:  a.Level.Order,
+	}
 }
 
 // CrashStepsUpTo mengembalikan langkah crashing sampai n hari.

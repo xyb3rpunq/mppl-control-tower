@@ -241,3 +241,9 @@ func TestEmptyInputsDoNotPanic(t *testing.T) {
 		t.Error("ringkasan COQ kosong harus nol")
 	}
 }
+
+func TestRoundToDecimals(t *testing.T) {
+	if quality.Round(1.23456, 2) != 1.23 || quality.Round(2.5, 0) != 3 || quality.Round(-1.005, 1) != -1 {
+		t.Errorf("Round salah: %v %v %v", quality.Round(1.23456, 2), quality.Round(2.5, 0), quality.Round(-1.005, 1))
+	}
+}

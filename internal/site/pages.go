@@ -40,8 +40,8 @@ var Pages = []Page{
 	{
 		Route: "/optimasi/", Template: "optimize", NavKey: "nav.optimize", Icon: "⇄",
 		Summary: model.Text{
-			ID: "Jadwal yang benar-benar bisa dijalankan dengan kapasitas nyata, plus harga mempercepatnya: levelling sumber daya, crashing, dan fast-tracking.",
-			EN: "The schedule that can actually be delivered with real capacity, plus the price of speeding it up: resource levelling, crashing, and fast-tracking.",
+			ID: "Jadwal levelling yang terbukti optimal lewat batas bawah, crashing eksak dengan pemrograman linear, trade-off biaya total, dan fast-tracking.",
+			EN: "A levelled schedule proven optimal by a lower bound, exact crashing through linear programming, the total-cost trade-off, and fast-tracking.",
 		},
 	},
 	{
@@ -54,8 +54,8 @@ var Pages = []Page{
 	{
 		Route: "/simulasi-terpadu/", Template: "integrated", NavKey: "nav.integrated", Icon: "⧉",
 		Summary: model.Text{
-			ID: "Monte Carlo yang menghitung korelasi peran, kejadian risiko, dan kapasitas sekaligus - lalu menjawab peluang tepat waktu DAN tepat anggaran lewat Joint Confidence Level.",
-			EN: "A Monte Carlo that counts role correlation, risk events, and capacity together - then answers the odds of on time AND on budget through a Joint Confidence Level.",
+			ID: "Monte Carlo lima lapis - korelasi peran, risiko bergerombol, putaran rework GERT, kapasitas, dan biaya sewa yang bergantung waktu - yang menjawab peluang tepat waktu DAN tepat anggaran lewat Joint Confidence Level.",
+			EN: "A five-layer Monte Carlo - role correlation, clustered risks, GERT rework loops, capacity, and time-dependent rental cost - answering the odds of on time AND on budget through a Joint Confidence Level.",
 		},
 	},
 	{
@@ -63,6 +63,13 @@ var Pages = []Page{
 		Summary: model.Text{
 			ID: "Earned Value lengkap: PV, EV, AC, SPI, CPI, tiga varian EAC, TCPI, dan Earned Schedule.",
 			EN: "Full Earned Value: PV, EV, AC, SPI, CPI, three EAC variants, TCPI, and Earned Schedule.",
+		},
+	},
+	{
+		Route: "/prakiraan/", Template: "forecast", NavKey: "nav.forecast", Icon: "⇢",
+		Summary: model.Text{
+			ID: "Simulasi terpadu yang dijalankan dari tanggal data: realisasi dikunci, estimasi belajar dari realisasi lewat kredibilitas Bühlmann, lalu dibandingkan dengan prakiraan Earned Value.",
+			EN: "The integrated simulation run from the data date: actuals locked, estimates learning from actuals through Bühlmann credibility, then compared with the Earned Value forecast.",
 		},
 	},
 	{

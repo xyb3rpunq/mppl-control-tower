@@ -214,3 +214,18 @@ func TestMeanAndStdDev(t *testing.T) {
 		t.Errorf("StdDev = %v, mau %v", got, want)
 	}
 }
+
+func TestSamplerRolesAndDaysForConfidence(t *testing.T) {
+	s := simulate.NewSampler(model.Activities)
+	if len(s.Roles()) != 10 {
+		t.Errorf("sampler mengenali %d peran, mau 10", len(s.Roles()))
+	}
+	plan := schedule.MustCompute(model.Activities, schedule.Options{})
+	r, err := simulate.Run(model.Activities, plan, simulate.Config{Iterations: 500, Seed: 3, Distribution: "pert"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.DaysForConfidence(0.8) != r.P80 || r.DaysForConfidence(0.5) != r.P50 {
+		t.Error("DaysForConfidence harus sama dengan kuantil yang dilaporkan")
+	}
+}

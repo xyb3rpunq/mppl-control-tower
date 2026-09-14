@@ -51,8 +51,36 @@ func TestCharterFinishDateIsLaterThanNaiveCalculation(t *testing.T) {
 			"temuan soal hari libur di halaman Piagam jadi tidak berlaku",
 			finish, model.ProjectCharter.TargetFinish)
 	}
-	if finish != "2026-02-20" {
-		t.Errorf("hari kerja ke-85 = %s, mau 2026-02-20", finish)
+	// Cuti bersama Imlek 16 Februari 2026 (SKB 2026) menggeser hari kerja
+	// ke-85 dari 20 ke 23 Februari.
+	if finish != "2026-02-23" {
+		t.Errorf("hari kerja ke-85 = %s, mau 2026-02-23", finish)
+	}
+}
+
+// TestHolidaysAreOfficialWeekdays menjaga kalender libur tetap berdasar
+// keputusan resmi: setiap tanggal punya dasar hukum, jatuh pada hari kerja
+// (libur akhir pekan tidak mengubah hitungan), terurut, dan tidak ganda.
+func TestHolidaysAreOfficialWeekdays(t *testing.T) {
+	prev := ""
+	for _, h := range workcal.Holidays {
+		d, err := workcal.ParseISO(h.Date)
+		if err != nil {
+			t.Fatalf("tanggal libur tidak sah %q", h.Date)
+		}
+		if workcal.IsWeekend(d) {
+			t.Errorf("%s jatuh pada akhir pekan; tidak perlu dicantumkan", h.Date)
+		}
+		if h.Asumsi {
+			t.Errorf("%s masih berstatus asumsi padahal SKB sudah terbit", h.Date)
+		}
+		if h.Source == "" || h.NameID == "" || h.NameEN == "" {
+			t.Errorf("%s tanpa dasar hukum atau nama dua bahasa", h.Date)
+		}
+		if h.Date <= prev {
+			t.Errorf("%s tidak terurut atau ganda setelah %s", h.Date, prev)
+		}
+		prev = h.Date
 	}
 }
 
@@ -129,11 +157,26 @@ func TestInvalidInputIsRejected(t *testing.T) {
 func TestHolidaysBetween(t *testing.T) {
 	c := workcal.MustNew(model.ProjectCharter.StartDate, 200)
 	got := c.HolidaysBetween(0, 84)
-	if len(got) != len(workcal.Holidays) {
-		t.Errorf("hari libur di dalam rentang proyek = %d, mau %d", len(got), len(workcal.Holidays))
+	want := 0
+	for _, h := range workcal.Holidays {
+		if h.Date >= c.ISOAt(0) && h.Date <= c.ISOAt(84) {
+			want++
+		}
+	}
+	// Natal, cuti bersama Natal, Tahun Baru, Isra Mikraj, cuti bersama Imlek, Imlek.
+	if len(got) != want || want != 6 {
+		t.Errorf("hari libur di dalam 85 hari kerja = %d (hitung ulang %d), mau 6", len(got), want)
 	}
 	// Rentang sempit di awal proyek tidak boleh memuat libur Desember.
 	if n := len(c.HolidaysBetween(0, 5)); n != 0 {
 		t.Errorf("minggu pertama seharusnya tanpa hari libur, dapat %d", n)
+	}
+}
+
+func TestCalendarStartIsFirstWorkingDay(t *testing.T) {
+	// 2025-10-18 adalah Sabtu; hari kerja pertama adalah Senin 20 Oktober.
+	c := workcal.MustNew("2025-10-18", 5)
+	if got := workcal.ISO(c.Start()); got != "2025-10-20" {
+		t.Errorf("Start = %s, mau 2025-10-20", got)
 	}
 }
