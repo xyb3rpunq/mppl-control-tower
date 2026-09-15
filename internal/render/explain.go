@@ -83,6 +83,18 @@ func (lp *labelPlacer) place(x, y float64, lines []string, size float64) (float6
 	return x + bestDx, y + bestDy, bestAnchor
 }
 
+// avoidSegment mendaftarkan garis sebagai rintangan: kotak kecil setiap
+// beberapa piksel sepanjang garis. Label yang hanya bisa ditempatkan di atas
+// garis tetap boleh, tetapi kandidat yang bebas garis dipilih lebih dulu.
+func (lp *labelPlacer) avoidSegment(x1, y1, x2, y2 float64) {
+	n := int(math.Ceil(math.Hypot(x2-x1, y2-y1) / 6))
+	for i := 0; i <= n; i++ {
+		t := float64(i) / math.Max(float64(n), 1)
+		x, y := x1+(x2-x1)*t, y1+(y2-y1)*t
+		lp.boxes = append(lp.boxes, [4]float64{x - 2, y - 2, x + 2, y + 2})
+	}
+}
+
 // spreadY menjauhkan posisi tegak label sedikitnya gap piksel dengan urutan
 // tetap dan menjaganya di dalam [lo, hi]. Tiga lintasan: dorong ke bawah
 // untuk jarak, tarik ke atas dari batas bawah, lalu dorong lagi dari batas
@@ -267,6 +279,15 @@ func OptionMap(pts []OptionPoint, cal *workcal.Calendar, lang string) template.H
 	for _, p := range pts {
 		x, y := cv.X(p.Day), cv.Y(p.Budget)
 		lp.boxes = append(lp.boxes, [4]float64{x - 9, y - 9, x + 9, y + 9})
+		if base != nil && p.Class != "base" {
+			lp.avoidSegment(cv.X(base.Day), cv.Y(base.Budget), x, y)
+		}
+		if p.DayLo > 0 && p.DayHi > p.DayLo {
+			lp.avoidSegment(cv.X(p.DayLo), y, cv.X(p.DayHi), y)
+		}
+		if p.BudgetLo > 0 && p.BudgetHi > p.BudgetLo {
+			lp.avoidSegment(x, cv.Y(p.BudgetLo), x, cv.Y(p.BudgetHi))
+		}
 	}
 	for _, p := range pts {
 		x, y := cv.X(p.Day), cv.Y(p.Budget)
@@ -715,6 +736,9 @@ func FrontierLine(days, budgets []float64, marks []FrontierMark, cal *workcal.Ca
 	cv.PolyLine(days, budgets, "series frontier")
 	cv.Text(cv.X(days[len(days)-1]), cv.Y(budgets[len(budgets)-1])-10, tr(lang, "di atas garis: peluang ≥ 70%", "above the line: chance ≥ 70%"), "axis-label", "end")
 	lp := &labelPlacer{w: cv.W, h: cv.H - cv.Pad.Bottom}
+	for i := 1; i < len(days); i++ {
+		lp.avoidSegment(cv.X(days[i-1]), cv.Y(budgets[i-1]), cv.X(days[i]), cv.Y(budgets[i]))
+	}
 	for _, m := range marks {
 		x, y := cv.X(m.Day), cv.Y(m.Budget)
 		cv.Circle(x, y, 6, "fl-mark "+m.Class).Title(m.Label + ": " + finishLabel(cal, m.Day, lang) + ", " + Rp(m.Budget, lang))

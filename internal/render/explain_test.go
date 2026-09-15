@@ -434,3 +434,34 @@ func TestLabelPlacerFallbackStaysOnCanvas(t *testing.T) {
 		t.Errorf("fallback kanvas mungil = (%v, %v, %s)", x, y, a)
 	}
 }
+
+// TestLabelPlacerPrefersCandidatesOffLines: garis yang didaftarkan sebagai
+// rintangan membuat label memilih kandidat lain yang bebas garis.
+func TestLabelPlacerPrefersCandidatesOffLines(t *testing.T) {
+	free := &labelPlacer{w: 400, h: 300}
+	_, y0, a0 := free.place(200, 150, []string{"label"}, 11)
+	if y0 != 142 || a0 != "start" {
+		t.Fatalf("tanpa rintangan kandidat pertama (kanan atas) harus dipakai, dapat y=%v %s", y0, a0)
+	}
+	lined := &labelPlacer{w: 400, h: 300}
+	// Garis mendatar tepat melewati kandidat kanan atas.
+	lined.avoidSegment(150, 136, 300, 136)
+	x, y, anchor := lined.place(200, 150, []string{"label"}, 11)
+	w := textWidth("label", 11)
+	x1 := x
+	if anchor == "end" {
+		x1 = x - w
+	}
+	if y-13 <= 138 && y-11+14 >= 134 && x1 < 300 && x1+w > 150 {
+		t.Errorf("label tetap ditempatkan di atas garis: x=%v y=%v %s", x, y, anchor)
+	}
+	if len(lined.boxes) < 25 {
+		t.Errorf("garis 150 px harus menjadi paling sedikit 25 rintangan, dapat %d", len(lined.boxes))
+	}
+	// Garis nol panjang tetap satu rintangan, tanpa pembagian nol.
+	dot := &labelPlacer{w: 10, h: 10}
+	dot.avoidSegment(5, 5, 5, 5)
+	if len(dot.boxes) != 1 {
+		t.Errorf("garis nol panjang = %d rintangan, mau 1", len(dot.boxes))
+	}
+}

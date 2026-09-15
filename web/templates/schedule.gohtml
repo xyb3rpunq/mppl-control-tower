@@ -97,6 +97,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Aktivitas dengan float terbesar{{else}}Activities with the most float{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Di sinilah ruang gerak proyek berada. Kalau jalur kritis perlu dipercepat, orang dan uang paling murah diambil dari aktivitas-aktivitas ini - bukan dari mana pun.{{else}}This is where the project's slack lives. If the critical path needs compressing, people and money come most cheaply from these activities - not from anywhere else.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Ruang gerak aktivitas non-kritis{{else}}Room to move for non-critical activities{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{floatChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah aktivitas dengan float lebih dari nol, diurutkan dari yang terbesar.</li><li>Bagian hijau adalah float bebas: bisa dipakai tanpa menggeser aktivitas lain.</li><li>Bagian kuning hanya bisa dipakai dengan menggeser penerusnya - memakainya menghabiskan ruang gerak aktivitas lain.</li>{{else}}<li>Each row is an activity with more than zero float, sorted from the largest.</li><li>The green part is free float: usable without moving any other activity.</li><li>The yellow part can only be used by moving successors - using it eats other activities' room to move.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$fs := floatSummary}}Hanya {{$fs.WithFloat}} dari {{$fs.Total}} aktivitas punya ruang gerak, dan {{$fs.FreeOnly}} di antaranya seluruhnya float bebas. Ruang terbesar ada di <code>{{$fs.Max.ID}}</code> {{tx $fs.Max.Name $l}} ({{$fs.MaxFloat}} hari): dari sinilah orang dan waktu paling murah dipinjam bila jalur kritis perlu dipercepat.{{else}}{{$fs := floatSummary}}Only {{$fs.WithFloat}} of {{$fs.Total}} activities have room to move, and {{$fs.FreeOnly}} of those are entirely free float. The most room is in <code>{{$fs.Max.ID}}</code> {{tx $fs.Max.Name $l}} ({{$fs.MaxFloat}} days): this is where people and time are cheapest to borrow if the critical path must speed up.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">{{t $l "t.totalFloat"}}</th><th class="num">{{t $l "t.freeFloat"}}</th><th>{{if eq $l "id"}}Artinya{{else}}Meaning{{end}}</th></tr></thead>
     <tbody>

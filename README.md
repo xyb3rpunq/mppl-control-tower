@@ -102,7 +102,25 @@ Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (
 | Titik SPI/CPI | Biaya | Fase mana yang menarik indeks proyek ke bawah? |
 | Batang berpasangan | Risiko | Seberapa besar mitigasi menurunkan EMV setiap kategori? |
 
-Label ditulis langsung di dalam gambar (bukan legenda terpisah) oleh penempat label yang mencoba posisi makin jauh dari titik setinggi labelnya, lalu memilih tumpang-tindih terkecil bila kanvas penuh.
+Label ditulis langsung di dalam gambar (bukan legenda terpisah) oleh penempat label yang mencoba posisi makin jauh dari titik setinggi labelnya, menghindari garis panah dan interval, lalu memilih tumpang-tindih terkecil bila kanvas penuh.
+
+Bagian yang dulu hanya tabel panjang juga mendapat **grafik rincian** — sembilan bentuk generik yang dipakai di empat belas tempat, masing-masing dengan panduan baca:
+
+| Grafik | Halaman | Pertanyaan yang dijawab |
+|---|---|---|
+| Panel sapuan rho dan lambda | Simulasi Terpadu | Besaran mana yang peka terhadap asumsi korelasi dan penggerak bersama? Skala tegak minimum 8% dari nilainya, jadi perubahan kecil tetap tampak datar. |
+| Sebaran putaran GERT | Simulasi Terpadu | Berapa peluang pemeriksaan harus diulang 0, 1, 2, … kali, dan apakah rerata analitik cocok dengan simulasi? |
+| Biaya sewa per lapisan | Simulasi Terpadu | Berapa biaya sewa yang lahir hanya karena proyek lebih lama dari rencana BAC? |
+| Register dibanding simulasi | Simulasi Terpadu | Apakah kopula menjaga peluang setiap risiko? |
+| Risiko sebelum dan sesudah berjalan | Prakiraan | Risiko mana yang sudah ditutup dan tidak lagi disampel? |
+| Rentang tiga titik | PERT | Seberapa lebar dan condong estimasi setiap aktivitas? |
+| Float bebas dan bersama | Jadwal | Aktivitas mana yang punya ruang gerak, dan apakah memakainya mengganggu penerus? |
+| Pecahan pergeseran | Optimasi | Dari mana setiap hari keterlambatan levelling datang: terbawa, menunggu orang, atau memanjang? |
+| Scatter fast-tracking | Optimasi | Kandidat mana yang menghemat hari tanpa rework mahal, dan mana yang mustahil karena orangnya sama? |
+| Varians biaya per aktivitas | Biaya | Aktivitas mana yang membuat CPI proyek turun? |
+| Anggaran per fase dan paket | Piagam | Ke mana anggaran aktivitas mengalir? |
+| Linimasa Coretax berskala waktu | Coretax | Berapa lama membangun dibanding secepat apa dampaknya datang? |
+| Biaya membangun vs kerugian sebulan | Coretax | Seberapa besar paparan dibanding biaya proyek, pada skala yang sama? |
 
 ### 3.1 Ruang Kendali — `/`
 
@@ -335,7 +353,7 @@ Pareto berbobot dengan kelompok *vital few*; peta kendali X-bar dengan konstanta
 Metrik turunan dari fakta bersumber, empat skenario transisi dengan EMV, titik impas peluang kegagalan, dan tabel cermin Coretax ↔ proyek kuliah.
 
 ### `render` — grafik SVG
-Pembangun kanvas SVG dan 36 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, sebaran jumlah risiko, dan sebelas grafik penjelas di `explain.go`), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks. `labelPlacer` menempatkan label tanpa saling menimpa; `spreadY` menjaga jarak label di ujung garis tanpa keluar dari bidang gambar.
+Pembangun kanvas SVG dan 45 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, sebaran jumlah risiko, sebelas grafik penjelas di `explain.go`, dan sembilan grafik rincian generik di `detail.go`), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks. `labelPlacer` menempatkan label tanpa saling menimpa; `spreadY` menjaga jarak label di ujung garis tanpa keluar dari bidang gambar.
 
 ### `site`, `model`, `i18n`
 Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari tanggal data, lantai terbukti, harga per hari, satu komitmen, satu permintaan anggaran, pita nilai waktu, bootstrap berpasangan, dan skenario asumsi); sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa. `cmd/site` juga mengekspor dan mengimpor `realisasi.csv`.
@@ -487,7 +505,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**264 fungsi uji di 18 paket, cakupan pernyataan 94,9%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**280 fungsi uji di 18 paket, cakupan pernyataan 95,3%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -551,7 +569,9 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - **Setiap grafik di 32 halaman punya panduan baca** (di dalam figurnya atau panduan bersama di bagiannya); judul panduan sesuai bahasa, minimal dua butir cara membaca, dan arti berupa kalimat tanpa sisa templat.
 - **Arti grafik mengutip angka analisis**: jumlah metrik gagal, hari tambahan dari kapasitas dan ujian, peluang tepat waktu PERT, konflik kapasitas, P80 L4, penurunan EMV, dan SPI dibandingkan langsung dengan struct.
 - **Grafik penjelas diuji isinya, bukan hanya bentuknya**: tanggal selesai tertulis pada titiknya, panah hanya dari opsi dasar, batas pita di nol tidak digambar, tanda ✓/✗ skenario, delta negatif berkelas turun, pita derau hanya bila derau diketahui, ekor frontier datar dipotong, kelas kepekatan kapasitas dibatasi 1–5, fase tanpa indeks ditandai "belum dimulai", dan kenaikan ditulis "naik" bukan "turun" negatif. Masukan kosong, timpang, atau datar tidak boleh panik.
-- **Penempat label dan penyebar label diuji sifatnya**: delapan label dua baris pada titik yang hampir sama tidak boleh bertabrakan atau keluar kanvas, dan label tetap berurutan berjarak di dalam batas. Kedua uji ini **gagal pada kode lama** (kandidat terlalu rapat untuk label dua baris; satu label di luar batas menumpuk semua label) sebelum diperbaiki.
+- **Grafik rincian diuji isinya**: perubahan Rp 3 ribu pada Rp 19 juta di panel sapuan harus setinggi paling banyak 2 px (uji ini gagal dengan skala otomatis: 55 px), peluang GERT menjumlah 1, kolom negatif setinggi nol, sumbu peluang tidak melewati 100%, garis M di antara O dan P, segmen nol dan label yang tidak muat dilewati, titik tanpa label digambar di bawah, batang divergen mengikuti tanda yang ada dan labelnya tidak menimpa nama baris, dan linimasa menjaga skala waktu (jeda tujuh tahun lebih dari 20 kali jeda enam minggu) serta memisahkan lajur kejadian yang berdekatan.
+- **Klaim kalimat arti dicek secara independen**: frekuensi setiap risiko dalam 4 simpangan baku binomial peluang register; risiko tertutup berfrekuensi nol di prakiraan; condong kanan beta-PERT sama dengan hitung tangan O + P > 2M; pecahan pergeseran menjumlah ke total pergeseran; anggaran fase menjumlah ke BAC; kandidat fast-tracking layak + orang sama + tanpa hari = semua; Q90 GERT konsisten dengan sebaran geometriknya; sewa L4 di atas rencana. Fungsi grafik mengembalikan kosong, bukan panik, tanpa paket keputusan atau prakiraan berjalan.
+- **Penempat label dan penyebar label diuji sifatnya**: delapan label dua baris pada titik yang hampir sama tidak boleh bertabrakan atau keluar kanvas, dan label tetap berurutan berjarak di dalam batas. Kedua uji ini **gagal pada kode lama** (kandidat terlalu rapat untuk label dua baris; satu label di luar batas menumpuk semua label) sebelum diperbaiki. Garis yang didaftarkan sebagai rintangan membuat label pindah ke kandidat yang bebas garis.
 - Setiap rumus punya contoh hitung dalam kedua bahasa.
 
 ---

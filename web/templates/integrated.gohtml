@@ -110,6 +110,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Seberapa peka hasilnya terhadap asumsi korelasi{{else}}How sensitive the result is to the correlation assumption{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Nilai rho adalah asumsi, dan asumsi harus diuji, bukan dipercaya. Tabel di bawah menjalankan lapisan korelasi dengan empat nilai rho. Kolom "terealisasi" adalah rerata korelasi peringkat yang benar-benar muncul antar-aktivitas dengan peran sama - bukti bahwa model kopulanya bekerja seperti yang diklaim.{{else}}Rho is an assumption, and assumptions must be tested rather than trusted. The table below runs the correlation layer at four rho values. The "realised" column is the mean rank correlation that actually appears between same-role activities - evidence that the copula model works as claimed.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Empat besaran terhadap rho{{else}}Four quantities against rho{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{rhoSweepChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap panel adalah satu besaran; sumbu mendatarnya sama, yaitu nilai rho.</li><li>Garis putus-putus adalah rho yang dipakai situs; titik penuh adalah nilainya.</li><li>Label tebal di pojok menulis perubahan dari rho terkecil ke terbesar. Panel yang datar tidak peka terhadap asumsi.</li>{{else}}<li>Each panel is one quantity; they share the horizontal axis, rho.</li><li>The dashed line is the rho the site uses; the filled dot is its value.</li><li>The bold corner label states the change from the smallest to the largest rho. A flat panel is not sensitive to the assumption.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$r0 := index $a.RhoSweep 0}}{{$rn := index $a.RhoSweep (sub (len $a.RhoSweep) 1)}}Menaikkan rho dari {{num $r0.Rho 2 $l}} ke {{num $rn.Rho 2 $l}} menggeser P80 dari {{num $r0.P80 0 $l}} ke {{num $rn.P80 0 $l}} hari kerja, tetapi simpangan baku berubah dari {{num $r0.StdDev 2 $l}} ke {{num $rn.StdDev 2 $l}}. Yang dipertaruhkan asumsi korelasi adalah lebar sebaran, bukan P80.{{else}}{{$r0 := index $a.RhoSweep 0}}{{$rn := index $a.RhoSweep (sub (len $a.RhoSweep) 1)}}Raising rho from {{num $r0.Rho 2 $l}} to {{num $rn.Rho 2 $l}} moves the P80 from {{num $r0.P80 0 $l}} to {{num $rn.P80 0 $l}} working days, but the standard deviation goes from {{num $r0.StdDev 2 $l}} to {{num $rn.StdDev 2 $l}}. What the correlation assumption puts at stake is the width of the spread, not the P80.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th class="num">rho</th><th class="num">P80 {{if eq $l "id"}}durasi{{else}}duration{{end}}</th><th class="num">{{if eq $l "id"}}Simpangan baku{{else}}Std. deviation{{end}}</th><th class="num">{{if eq $l "id"}}Tepat waktu{{else}}On time{{end}}</th><th class="num">{{if eq $l "id"}}Korelasi terealisasi{{else}}Realised correlation{{end}}</th></tr></thead>
     <tbody>
@@ -202,6 +210,14 @@
     </table>
   </div>
   <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Lima besaran terhadap lambda{{else}}Five quantities against lambda{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{riskSweepChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap panel adalah satu besaran pada lapisan L2; sumbu mendatarnya kekuatan penggerak bersama lambda.</li><li>Garis putus-putus adalah lambda yang dipakai situs.</li><li>Bandingkan panel rerata dengan panel P95: kopula yang benar membiarkan rerata datar dan hanya menebalkan ekor.</li>{{else}}<li>Each panel is one quantity at layer L2; the horizontal axis is the shared-driver strength lambda.</li><li>The dashed line is the lambda the site uses.</li><li>Compare the mean panel with the P95 panels: a correct copula leaves the mean flat and only thickens the tail.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$k0 := index $a.RiskSweep 0}}{{$kn := index $a.RiskSweep (sub (len $a.RiskSweep) 1)}}Dari lambda {{num $k0.Loading 1 $l}} ke {{num $kn.Loading 1 $l}}, rerata biaya hanya berubah {{signed (subf $kn.CostMean $k0.CostMean) $l}}, sedangkan P95 biaya berubah {{signed (subf $kn.CostP95 $k0.CostP95) $l}} dan peluang empat risiko sekaligus dari {{pct $k0.ManyRisks 1 $l}} ke {{pct $kn.ManyRisks 1 $l}}. Cadangan yang dihitung dari rerata akan tampak cukup padahal ekornya tidak.{{else}}{{$k0 := index $a.RiskSweep 0}}{{$kn := index $a.RiskSweep (sub (len $a.RiskSweep) 1)}}From lambda {{num $k0.Loading 1 $l}} to {{num $kn.Loading 1 $l}}, the mean cost changes by only {{signed (subf $kn.CostMean $k0.CostMean) $l}}, while the P95 cost changes by {{signed (subf $kn.CostP95 $k0.CostP95) $l}} and the chance of four risks at once goes from {{pct $k0.ManyRisks 1 $l}} to {{pct $kn.ManyRisks 1 $l}}. A reserve sized from the mean looks sufficient while the tail is not.{{end}}</p></div>
+    </div>
+  </figure>
+  <figure class="figure">
     <div class="figure-body scrollable">{{riskCountBars $l}}</div>
     <div class="reading-guide">
       <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap pasangan batang adalah porsi iterasi dengan tepat k risiko terjadi.</li><li>Batang abu-abu: risiko saling bebas. Batang merah: risiko berbagi penggerak (bergerombol).</li><li>Rerata jumlah risiko sama; yang berubah adalah seberapa sering banyak risiko datang bersamaan.</li>{{else}}<li>Each pair of bars is the share of iterations with exactly k risks occurring.</li><li>Grey bars: independent risks. Red bars: risks sharing drivers (clustered).</li><li>The mean number of risks is the same; what changes is how often many arrive together.</li>{{end}}</ul></div>
@@ -236,6 +252,14 @@
     </tbody>
   </table>
   </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Peluang setiap jumlah putaran ulang{{else}}The chance of each number of repeats{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{gertLoopChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap kelompok batang adalah satu jumlah putaran ulang: 0 berarti lulus pada percobaan pertama.</li><li>Warna membedakan putaran rework; legenda menulis peluang gagal p, rerata putaran analitik dan simulasi, serta putaran pada keyakinan 90%.</li><li>Batang turun geometris: setiap putaran tambahan makin jarang, tetapi tidak pernah nol.</li>{{else}}<li>Each group of bars is one number of repeats: 0 means passing on the first attempt.</li><li>Colour separates the rework loops; the legend gives the failure chance p, the analytic and simulated mean repeats, and the repeats at 90% confidence.</li><li>Bars fall geometrically: each extra repeat is rarer, but never zero.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{range $i, $g := $a.GERT}}{{if $i}} {{end}}<code>{{$g.Loop.ID}}</code> lulus tanpa diulang pada {{pct (subf 1.0 $g.Loop.FailProb) 0 $l}} proyek dan butuh paling banyak {{$g.Q90}} putaran pada 90% proyek; rerata analitik {{num $g.Cycles 3 $l}} cocok dengan simulasi {{num $g.MCCycles 3 $l}}.{{end}} Jaringan CPM yang asiklis tidak bisa menggambar hari-hari ini sama sekali.{{else}}{{range $i, $g := $a.GERT}}{{if $i}} {{end}}<code>{{$g.Loop.ID}}</code> passes without a repeat in {{pct (subf 1.0 $g.Loop.FailProb) 0 $l}} of projects and needs at most {{if eq $g.Q90 1}}one repeat{{else}}{{$g.Q90}} repeats{{end}} in 90% of them; the analytic mean {{num $g.Cycles 3 $l}} matches the simulated {{num $g.MCCycles 3 $l}}.{{end}} An acyclic CPM network cannot draw these days at all.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="two-col">
     {{range $a.GERT}}
     <div class="note-box">
@@ -261,12 +285,28 @@
     </tbody>
   </table>
   </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Biaya sewa dan langganan yang ikut memanjang{{else}}Rental and subscription cost that grows with the schedule{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{timeCostChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap kolom adalah rerata biaya sewa dan langganan pada satu lapisan realisme.</li><li>Garis putus-putus adalah nilainya pada jadwal rencana - angka yang tercatat di BAC.</li><li>Selisih kolom dengan garis adalah biaya yang lahir hanya karena proyek lebih lama.</li>{{else}}<li>Each column is the mean rental and subscription cost at one realism layer.</li><li>The dashed line is its value on the planned schedule - the figure recorded in the BAC.</li><li>The gap between a column and the line is cost that exists only because the project runs longer.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$last := index $lad (sub (len $lad) 1)}}Pada lapisan paling realistis rerata sewa {{rp $last.TimeCost $l}}, {{rp (subf $last.TimeCost $last.TimeCostPlan) $l}} di atas rencana {{rp $last.TimeCostPlan $l}}. Setiap hari keterlambatan menambah {{rp $a.RentalDaily $l}} - biaya yang tidak pernah terlihat di BAC.{{else}}{{$last := index $lad (sub (len $lad) 1)}}At the most realistic layer the mean rental cost is {{rp $last.TimeCost $l}}, {{rp (subf $last.TimeCost $last.TimeCostPlan) $l}} above the planned {{rp $last.TimeCostPlan $l}}. Every day of delay adds {{rp $a.RentalDaily $l}} - a cost the BAC never shows.{{end}}</p></div>
+    </div>
+  </figure>
   <p class="small">{{if eq $l "id"}}Rerata biaya sewa per lapisan: {{range $i, $r := $lad}}{{if $i}} → {{end}}L{{$i}} {{rpShort $r.TimeCost $l}}{{end}}. Lapisan kapasitas paling mahal karena jadwal yang menghormati kapasitas selalu lebih panjang - biaya itu tidak pernah terlihat di BAC.{{else}}Mean rental cost per layer: {{range $i, $r := $lad}}{{if $i}} → {{end}}L{{$i}} {{rpShort $r.TimeCost $l}}{{end}}. The capacity layer is the most expensive because a schedule that respects capacity is always longer - a cost BAC never shows.{{end}}</p>
 </section>
 
 <section class="band">
   <h2>{{if eq $l "id"}}Frekuensi kejadian risiko di simulasi{{else}}Risk event frequency in the simulation{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Bila terjadi, dampak rupiah risiko ditambahkan ke biaya, dan dampak jadwalnya ditambahkan ke aktivitas terpanjang pada paket kerja risiko itu - atau ke aktivitas terakhir bila risikonya lintas fase. Karena kopula menjaga peluang marginal, frekuensi di bawah tetap bisa dicocokkan dengan peluang residual pada halaman Risiko.{{else}}When a risk fires, its monetary impact is added to cost and its schedule impact to the longest activity in its work package - or to the final activity for cross-phase risks. Because the copula preserves marginal probabilities, the frequencies below still match the residual probabilities on the Risk page.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Register dibanding simulasi{{else}}Register versus simulation{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{riskFrequencyChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu risiko register.</li><li>Lingkaran kosong adalah peluang residual yang ditulis register; lingkaran penuh adalah frekuensinya di sepuluh ribu iterasi L4.</li><li>Garis penghubung yang panjang berarti simulasi tidak menghormati register.</li>{{else}}<li>Each row is one register risk.</li><li>The hollow circle is the residual probability the register states; the filled circle is its frequency across ten thousand L4 iterations.</li><li>A long connecting line would mean the simulation does not honour the register.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$g := riskFrequencyGap}}Selisih terbesar hanya {{num (mul $g.Gap 100.0) 1 $l}} poin persentase (<code>{{$g.ID}}</code>): lingkaran praktis berimpit. Kopula menata ulang kapan risiko terjadi bersamaan tanpa mengubah peluang masing-masing, jadi EMV register tetap sah dipakai.{{else}}{{$g := riskFrequencyGap}}The largest gap is only {{num (mul $g.Gap 100.0) 1 $l}} percentage points (<code>{{$g.ID}}</code>): the circles practically coincide. The copula rearranges which risks strike together without changing each one's chance, so the register EMV remains valid.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th>{{if eq $l "id"}}Penggerak{{else}}Driver{{end}}</th><th class="num">{{if eq $l "id"}}Peluang residual{{else}}Residual probability{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di simulasi{{else}}Simulated frequency{{end}}</th><th class="num">{{if eq $l "id"}}Dampak biaya{{else}}Cost impact{{end}}</th><th class="num">{{if eq $l "id"}}Dampak jadwal{{else}}Schedule impact{{end}}</th></tr></thead>
     <tbody>

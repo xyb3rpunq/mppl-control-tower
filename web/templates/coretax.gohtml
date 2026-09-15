@@ -29,6 +29,14 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Linimasa{{else}}Timeline{{end}}</h2>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Tonggak pada skala waktu sebenarnya{{else}}Milestones on their real time scale{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{coretaxTimelineChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap titik adalah satu tonggak bersumber pada tanggalnya; jarak antar-titik adalah jeda waktu sebenarnya.</li><li>Biru: regulasi, pengadaan, pelaksanaan. Merah besar: go-live. Merah: dampak. Kuning: remediasi.</li><li>Daftar di bawah grafik memuat sumber setiap tonggak.</li>{{else}}<li>Each dot is one sourced milestone on its date; the gaps between dots are the real time gaps.</li><li>Blue: regulation, procurement, implementation. Large red: go-live. Red: impact. Yellow: remediation.</li><li>The list below the chart gives the source of every milestone.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Butuh {{num $d.PerpresToGoLiveYears 1 $l}} tahun dari Perpres ke go-live dan {{num $d.AwardToGoLiveMonths 0 $l}} bulan dari penetapan kontrak, tetapi titik-titik merah dampak berdempet dalam tiga bulan pertama setelah go-live. Risiko cutover tidak tumbuh perlahan seperti pembangunannya - ia datang sekaligus.{{else}}It took {{num $d.PerpresToGoLiveYears 1 $l}} years from the regulation to go-live and {{num $d.AwardToGoLiveMonths 0 $l}} months from contract award, yet the red impact dots crowd into the first three months after go-live. Cutover risk does not grow slowly like the build did - it arrives all at once.{{end}}</p></div>
+    </div>
+  </figure>
   <ol class="timeline">
     {{range coretaxTimeline}}
     <li class="kind-{{.Kind}}">
@@ -44,6 +52,14 @@
 <section class="band">
   <h2><span class="badge derived">{{t $l "t.derived"}}</span> {{if eq $l "id"}}Metrik turunan{{else}}Derived metrics{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Semua angka di bawah adalah aritmetika murni atas fakta di atas. Kolom rumus menunjukkan persis bagaimana masing-masing diperoleh.{{else}}Every figure below is pure arithmetic on the facts above. The formula column shows exactly how each is obtained.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Biaya membangun dibanding kerugian sebulan{{else}}Cost to build versus one month of loss{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{coretaxExposureChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Kolom kiri adalah seluruh nilai kontrak pembangunan Coretax.</li><li>Kolom kanan adalah potensi penerimaan pajak yang hilang dalam satu bulan gangguan.</li><li>Keduanya pada skala rupiah yang sama, jadi perbandingan tingginya adalah perbandingan nilainya.</li>{{else}}<li>The left column is the whole Coretax build contract.</li><li>The right column is the tax revenue potentially lost in one month of disruption.</li><li>Both use the same rupiah scale, so their height ratio is their value ratio.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Kerugian sebulan {{ratio $d.ExposureRatio $l}} seluruh biaya membangun; biaya membangun setara {{num $d.DaysOfLossEqualToProject 2 $l}} hari kerugian. Pada skala ini, uji paralel atau pilot yang menambah biaya proyek sekalipun tetap murah.{{else}}One month of loss is {{ratio $d.ExposureRatio $l}} the whole build cost; the build cost equals {{num $d.DaysOfLossEqualToProject 2 $l}} days of loss. At this scale, even parallel runs or a pilot that add project cost remain cheap.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data wide-first">
     <thead><tr><th>{{if eq $l "id"}}Metrik{{else}}Metric{{end}}</th><th>{{t $l "t.formula"}}</th><th class="num">{{if eq $l "id"}}Nilai{{else}}Value{{end}}</th></tr></thead>
     <tbody>

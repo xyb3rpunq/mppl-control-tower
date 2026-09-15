@@ -131,6 +131,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Risiko dan putaran rework pada tanggal data{{else}}Risks and rework loops at the data date{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Status register adalah otoritasnya. Risiko berstatus "terjadi" sudah tercermin di realisasi dan tidak disampel lagi. Risiko yang masih terbuka tetap bisa terjadi walaupun paket kerja tempat sebabnya lahir sudah selesai; dampak jadwalnya dipindahkan ke pekerjaan pertama yang belum selesai pada paket kerja yang sama atau sesudahnya.{{else}}The register status is the authority. Risks marked "occurred" are already reflected in actuals and are not sampled again. Open risks can still fire even when the work package where their cause arose is finished; their schedule impact moves to the first unfinished work in the same or a later package.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Frekuensi risiko sebelum dan sesudah proyek berjalan{{else}}Risk frequency before and after the project started{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{forecastRiskChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu risiko register.</li><li>Lingkaran kosong adalah frekuensinya di simulasi perencanaan; lingkaran penuh di prakiraan dari tanggal data.</li><li>Baris pudar sudah ditutup register: sudah tercermin di realisasi dan tidak disampel lagi.</li>{{else}}<li>Each row is one register risk.</li><li>The hollow circle is its frequency in the planning simulation; the filled circle in the forecast from the data date.</li><li>Faded rows are closed in the register: already reflected in actuals and no longer sampled.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$closed := 0}}{{range risks}}{{if index $fl.ClosedRisk .ID}}{{$closed = add $closed 1}}{{end}}{{end}}{{$closed}} dari {{len risks}} risiko sudah ditutup dan frekuensinya nol. Sisanya tetap bisa terjadi walau paket kerjanya sudah lewat, karena dampak jadwalnya dipindah ke aktivitas yang masih berjalan.{{else}}{{$closed := 0}}{{range risks}}{{if index $fl.ClosedRisk .ID}}{{$closed = add $closed 1}}{{end}}{{end}}{{$closed}} of {{len risks}} risks are closed and their frequency is zero. The rest can still strike even when their work package has passed, because their schedule impact moves to activities still in progress.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
   <table class="data compact">
     <thead><tr><th>{{t $l "t.code"}}</th><th>{{if eq $l "id"}}Risiko{{else}}Risk{{end}}</th><th>{{t $l "t.status"}}</th><th>{{if eq $l "id"}}Dampak jadwal ditanggung{{else}}Schedule impact borne by{{end}}</th><th class="num">{{if eq $l "id"}}Frekuensi di prakiraan{{else}}Forecast frequency{{end}}</th></tr></thead>

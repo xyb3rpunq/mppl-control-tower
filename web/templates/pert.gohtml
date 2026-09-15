@@ -130,6 +130,14 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Estimasi tiga titik per aktivitas{{else}}Three-point estimates per activity{{end}}</h2>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Rentang estimasi setiap aktivitas{{else}}The estimate range of every activity{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{threePointChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu aktivitas: garis dari durasi optimistis ke pesimistis.</li><li>Garis tegak adalah durasi paling mungkin (M); belah ketupat adalah rerata beta-PERT (te).</li><li>Garis merah berada di jalur kritis. Belah ketupat di kanan garis tegak berarti estimasi condong ke keterlambatan.</li>{{else}}<li>Each row is one activity: a line from the optimistic to the pessimistic duration.</li><li>The tick is the most likely duration (M); the diamond is the beta-PERT mean (te).</li><li>Red lines are on the critical path. A diamond right of the tick means the estimate leans toward delay.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$e := estimateSummary}}{{$e.RightSkewed}} dari {{$e.Total}} aktivitas punya rerata di atas durasi paling mungkin, jadi menjumlahkan M saja - seperti jadwal CPM - selalu optimistis. Rentang terlebar ada di <code>{{$e.Widest.ID}}</code> {{tx $e.Widest.Name $l}} ({{$e.Widest.Optimistic}}–{{$e.Widest.Pessimistic}} hari).{{else}}{{$e := estimateSummary}}{{$e.RightSkewed}} of {{$e.Total}} activities have a mean above their most likely duration, so adding up M alone - as the CPM schedule does - is always optimistic. The widest range is <code>{{$e.Widest.ID}}</code> {{tx $e.Widest.Name $l}} ({{$e.Widest.Optimistic}}–{{$e.Widest.Pessimistic}} days).{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
     <table class="data sticky">
       <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">O</th><th class="num">M</th><th class="num">P</th><th class="num">te</th><th class="num">sigma</th><th class="num">{{if eq $l "id"}}varians{{else}}variance{{end}}</th><th class="num">{{if eq $l "id"}}kecondongan{{else}}skew{{end}}</th></tr></thead>

@@ -892,3 +892,71 @@ text.marker.plan-p80 { fill: var(--pv); }
 .cap-project { fill: var(--accent-soft); opacity: .6; }
 .vb-ci { stroke: var(--ink-soft); stroke-width: 2; }
 .reading-guide.standalone { border: 1px solid var(--rule); border-radius: var(--radius); margin: 0 0 1.6rem; }
+
+/* --- grafik rincian (detail.go) ------------------------------------------ */
+.sweep-bg { fill: var(--bg-inset); stroke: var(--rule); rx: 6; }
+.sweep-line { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
+.sweep-dot { fill: var(--bg-raised); stroke: var(--accent); stroke-width: 2; }
+.sweep-dot.default { fill: var(--accent); r: 6; }
+.sweep-change { fill: var(--ink); font-weight: 600; }
+.ref-line.sweep-default { stroke: var(--ink-faint); }
+.loop-bar { rx: 2; }
+.loop-bar.loop-0 { fill: var(--accent); opacity: .75; }
+.loop-bar.loop-1 { fill: var(--warn); opacity: .8; }
+.loop-bar.loop-2 { fill: var(--good); opacity: .75; }
+.loop-bar.loop-3 { fill: var(--bad); opacity: .7; }
+.loop-col:hover .loop-bar { opacity: 1; }
+.col-bar { rx: 3; fill: var(--accent); opacity: .7; }
+.col-bar.step-0 { fill: var(--pv); }
+.col-bar.step-1 { fill: var(--accent); }
+.col-bar.step-2 { fill: var(--warn); }
+.col-bar.step-3 { fill: var(--bad); }
+.col-bar.step-4 { fill: var(--critical); }
+.col-bar.exposure-build { fill: var(--pv); }
+.col-bar.exposure-loss { fill: var(--bad); opacity: .8; }
+.col:hover .col-bar { opacity: 1; }
+.db-line { stroke: var(--ink-faint); stroke-width: 2; }
+.db-a { fill: var(--bg-raised); stroke: var(--ink-soft); stroke-width: 2; }
+.db-b { fill: var(--accent); stroke: var(--bg-raised); stroke-width: 1.5; }
+.db-b.muted { fill: var(--ink-faint); }
+.db-row.muted .row-label, .db-row.muted .bar-value { fill: var(--ink-faint); }
+.rr-range { stroke: var(--pv); stroke-width: 2.4; stroke-linecap: round; }
+.rr-range.critical { stroke: var(--critical); }
+.rr-mode { stroke: var(--ink); stroke-width: 2; }
+.rr-mean { fill: var(--warn); stroke: var(--bg-raised); stroke-width: 1; }
+.row-label.small { font-size: 10.5px; }
+.stack-seg { rx: 2; opacity: .85; }
+.stack-part:hover .stack-seg { opacity: 1; }
+.stack-label { fill: var(--bg-raised); font-size: 9.5px; font-weight: 700; font-family: var(--mono); pointer-events: none; }
+.stack-seg.seg-free { fill: var(--good); }
+.stack-seg.seg-shared { fill: var(--warn); }
+.stack-seg.seg-carried { fill: var(--pv); }
+.stack-seg.seg-wait { fill: var(--bad); }
+.stack-seg.seg-stretch { fill: var(--warn); }
+.stack-seg.seg-a { fill: var(--accent); }
+.stack-seg.seg-b { fill: var(--good); }
+.stack-seg.seg-c { fill: var(--warn); }
+.stack-seg.seg-d { fill: var(--pv); }
+.stack-seg.seg-e { fill: var(--critical); }
+.sc-pt { stroke: var(--bg-raised); stroke-width: 2; }
+.sc-pt.ft-viable { fill: var(--good); }
+.sc-pt.ft-same { fill: var(--bad); opacity: .75; }
+.sc-pt.ft-none { fill: var(--ink-faint); opacity: .7; }
+.sc-label.ft-viable { fill: var(--good); font-weight: 700; }
+.div-bar { rx: 2; }
+.div-bar.neg { fill: var(--bad); opacity: .75; }
+.div-bar.pos { fill: var(--good); opacity: .75; }
+.div-row:hover .div-bar { opacity: 1; }
+.div-neg-label { fill: var(--bad); font-weight: 600; }
+.div-pos-label { fill: var(--good); font-weight: 600; }
+.tl-axis { stroke: var(--rule-strong); stroke-width: 2; }
+.tl-leader { stroke: var(--rule-strong); stroke-width: 1; }
+.tl-dot { fill: var(--pv); stroke: var(--bg-raised); stroke-width: 2; }
+.tl-dot.kind-regulasi, .tl-dot.kind-pelaksanaan, .tl-dot.kind-pengadaan { fill: var(--accent); }
+.tl-dot.kind-cutover { fill: var(--bad); r: 8; }
+.tl-dot.kind-dampak { fill: var(--bad); }
+.tl-dot.kind-remediasi { fill: var(--warn); }
+.tlc-date { fill: var(--ink); font-weight: 700; }
+.tlc-label { fill: var(--ink-soft); }
+.div-label-in { fill: var(--bg-raised); font-weight: 700; }
+.sc-label { font-family: var(--sans); }

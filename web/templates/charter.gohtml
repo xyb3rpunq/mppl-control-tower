@@ -100,6 +100,14 @@
   </p>
 
   {{$totalBudget := 0.0}}
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Ke mana anggaran aktivitas mengalir{{else}}Where the activity budget goes{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{wbsBudgetChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu fase WBS; panjang batang adalah anggaran bottom-up fase itu.</li><li>Segmen berwarna adalah paket kerja dengan kodenya tertulis di dalam; urutan warna mengikuti urutan paket di fase.</li><li>Arahkan kursor ke segmen untuk nama dan nilai paket.</li>{{else}}<li>Each row is one WBS phase; bar length is its bottom-up budget.</li><li>Coloured segments are work packages with codes written inside; colour order follows package order in the phase.</li><li>Hover a segment for the package name and value.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$w := wbsSummary}}Fase {{$w.Top.Code}} {{tx $w.Top.Name $l}} menyerap {{pct $w.Share 0 $l}} anggaran aktivitas ({{rp $w.Budget $l}}). Kesalahan estimasi di fase ini paling cepat menembus cadangan, jadi paketnya yang pertama diperiksa.{{else}}{{$w := wbsSummary}}Phase {{$w.Top.Code}} {{tx $w.Top.Name $l}} absorbs {{pct $w.Share 0 $l}} of the activity budget ({{rp $w.Budget $l}}). Estimation errors in this phase breach the reserve fastest, so its packages are checked first.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="wbs-tree">
     {{range wbsPhases}}
     {{$phase := .}}
