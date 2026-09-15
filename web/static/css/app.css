@@ -780,3 +780,115 @@ text.marker.plan-p80 { fill: var(--pv); }
 .source-link { font-size: .78rem; color: var(--ink-faint); }
 .sim-form label.check { display: flex; align-items: center; gap: .45rem; flex-direction: row; }
 .sim-form label.check input { width: auto; accent-color: var(--accent); }
+
+/* ------------------------------------------------ grafik penjelas & panduan */
+.reading-guide { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: .9rem 1.4rem; padding: .9rem 1.1rem 1rem; border-top: 1px solid var(--rule); background: var(--bg-inset); }
+.reading-guide h4 { margin: 0 0 .35rem; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.reading-guide ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; color: var(--ink-soft); }
+.reading-guide li { margin: .15rem 0; }
+.reading-guide .takeaway { margin: 0; font-size: .9rem; color: var(--ink); border-left: 3px solid var(--accent); padding-left: .7rem; }
+@media (max-width: 720px) { .reading-guide { grid-template-columns: minmax(0, 1fr); } }
+.axis-label.dim { fill: var(--ink-faint); font-size: 9.5px; }
+.ref-label { font-weight: 600; }
+.ref-line.data { stroke: var(--bad); stroke-dasharray: 5 3; }
+.ref-label.data { fill: var(--bad); }
+.ref-line.charter { stroke: var(--accent); stroke-dasharray: 3 3; }
+.ref-label.charter { fill: var(--accent); }
+
+.dd-band { fill: var(--bg-inset); }
+.dd-guide { stroke: var(--rule-strong); stroke-dasharray: 2 4; }
+.dd-dot { stroke: var(--bg-raised); stroke-width: 2; fill: var(--pv); }
+.dd-dot.inforce { fill: var(--good); r: 9; }
+.dd-dot.superseded { fill: var(--warn); }
+.dd-dot.invalid { fill: var(--ink-faint); }
+.dd-status.inforce { fill: var(--good); font-weight: 700; }
+.dd-status.superseded { fill: var(--warn); }
+.dd-status.invalid { fill: var(--ink-faint); }
+.dd-row.inforce .dd-label { font-weight: 700; }
+.dd-value { fill: var(--ink-soft); }
+.dd-row.inforce .dd-value { fill: var(--ink); font-weight: 700; }
+
+.om-link { stroke: var(--ink-faint); stroke-dasharray: 4 4; stroke-width: 1.2; }
+.om-ci { stroke: var(--ink-faint); stroke-width: 1.4; opacity: .7; }
+.om-pt { stroke: var(--bg-raised); stroke-width: 2.4; fill: var(--pv); }
+.om-pt.base { fill: var(--ink-soft); }
+.om-pt.cheapest { fill: var(--good); }
+.om-pt.fastest { fill: var(--accent); }
+.om-pt.other { fill: var(--warn); }
+.om-pt.assumed { fill: var(--float); }
+.om-option.cheapest .om-label { fill: var(--good); font-weight: 700; }
+.om-option.fastest .om-label { fill: var(--accent); font-weight: 700; }
+.om-note { fill: var(--ink-faint); }
+
+.opt-tanpa { --opt: var(--ink-faint); }
+.opt-lembur { --opt: var(--good); }
+.opt-tambah { --opt: var(--warn); }
+.opt-tambah-adaptasi { --opt: var(--float); }
+.opt-tambah-lembur { --opt: var(--accent); }
+.vb-band { fill: var(--opt); opacity: .09; }
+.vb-band-label { fill: var(--opt); font-weight: 700; }
+.vb-ci { fill: var(--ink-faint); opacity: .14; }
+.vb-edge { stroke: var(--ink-soft); stroke-dasharray: 5 3; }
+.vb-edge-label { fill: var(--ink); font-weight: 600; }
+.vb-line { stroke: var(--opt); stroke-width: 1.5; fill: none; opacity: .75; }
+.vb-line-label { fill: var(--opt); }
+.vb-envelope { stroke: var(--ink); stroke-width: 3.2; fill: none; stroke-linejoin: round; }
+.strip-seg { fill: var(--opt); opacity: .8; }
+.strip-row.base .row-label { font-weight: 700; }
+.strip-mark { font-size: 16px; font-weight: 700; font-family: var(--sans); }
+.strip-mark.same { fill: var(--good); }
+.strip-mark.diff { fill: var(--bad); }
+
+.bridge-bar { rx: 3; }
+.bridge-bar.base { fill: var(--pv); opacity: .7; }
+.bridge-bar.delta { fill: var(--bad); opacity: .65; }
+.bridge-bar.delta.down { fill: var(--good); }
+.bridge-bar.total { fill: var(--accent); opacity: .85; }
+.bridge-link { stroke: var(--ink-faint); stroke-dasharray: 3 3; }
+.bridge-value { fill: var(--ink); font-weight: 600; }
+
+.oc-pay { stroke: var(--bad); stroke-width: 2.6; fill: none; }
+.oc-net { stroke: var(--warn); stroke-width: 1.6; fill: none; stroke-dasharray: 5 3; }
+.oc-compare { stroke: var(--ink-faint); stroke-width: 1.6; fill: none; stroke-dasharray: 2 3; }
+.oc-compare-label { fill: var(--ink-faint); }
+.oc-dot { fill: var(--bg-raised); stroke: var(--bad); stroke-width: 2; }
+.oc-floor { fill: var(--bad); font-weight: 700; }
+.oc-pay-label { fill: var(--bad); }
+.oc-net-label { fill: var(--warn); }
+
+.cred-noise { fill: var(--ink-faint); opacity: .16; rx: 4; }
+.cred-prior { stroke: var(--ink-soft); stroke-width: 2.2; }
+.cred-prior-label { fill: var(--ink-soft); }
+.cred-arrow { stroke: var(--accent); stroke-width: 2.2; fill: none; }
+.cred-obs { fill: var(--warn); stroke: var(--bg-raised); stroke-width: 2; }
+.cred-obs-label { fill: var(--warn); }
+.cred-blend { fill: var(--accent); stroke: var(--bg-raised); stroke-width: 1.5; }
+.cred-blend-label { fill: var(--accent); font-weight: 700; }
+.cred-z { fill: var(--accent); font-weight: 700; font-size: 12px; }
+
+.frontier-area { fill: var(--good); opacity: .07; }
+.fl-mark { stroke: var(--bg-raised); stroke-width: 2; fill: var(--ink-soft); }
+.fl-mark.inforce { fill: var(--good); }
+.fl-mark.p80 { fill: var(--warn); }
+.fl-label.inforce { fill: var(--good); font-weight: 700; }
+.fl-label.p80 { fill: var(--warn); }
+
+.cap-bar { rx: 3; fill: var(--bad); }
+.cap-bar.cap-1 { opacity: .2; }
+.cap-bar.cap-2 { opacity: .35; }
+.cap-bar.cap-3 { opacity: .55; }
+.cap-bar.cap-4 { opacity: .72; }
+.cap-bar.cap-5 { opacity: .9; }
+.cap-bar.assumed { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 2; }
+
+.idx-bad { fill: var(--bad-soft); opacity: .6; }
+.idx-spi { fill: var(--accent); stroke: var(--bg-raised); stroke-width: 1.5; }
+.idx-cpi { fill: var(--warn); stroke: var(--bg-raised); stroke-width: 1.5; }
+
+.pair-bar { rx: 3; }
+.pair-bar.before { fill: var(--bad); opacity: .22; }
+.pair-bar.after { fill: var(--bad); opacity: .8; }
+.vb-leader { stroke: var(--opt); stroke-width: 1; opacity: .5; }
+.cap-project { fill: var(--accent-soft); opacity: .6; }
+.vb-ci { stroke: var(--ink-soft); stroke-width: 2; }
+.reading-guide.standalone { border: 1px solid var(--rule); border-radius: var(--radius); margin: 0 0 1.6rem; }

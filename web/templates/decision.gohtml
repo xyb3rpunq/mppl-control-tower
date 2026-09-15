@@ -15,6 +15,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Satu komitmen, bukan enam{{else}}One commitment, not six{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Setiap angka di bawah benar untuk pertanyaannya. Hanya satu yang memuat ketidakpastian, kapasitas orang, risiko, DAN realisasi sekaligus - dan hanya itu yang boleh menjadi janji.{{else}}Every figure below is right for its own question. Only one carries uncertainty, people's capacity, risk, AND actuals at once - and only that one may become the promise.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Enam angka komitmen pada satu garis waktu{{else}}Six commitment figures on one timeline{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{commitmentTimeline $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu angka yang pernah disebut sebagai komitmen di situs ini.</li><li>Posisi titik adalah tanggal selesainya; jarak antar-titik adalah selisih janji dalam hari kerja.</li><li>Titik abu-abu tidak berlaku, jingga sudah digantikan, hijau yang berlaku. Garis merah adalah tanggal data.</li>{{else}}<li>Each row is one figure that has been named a commitment on this site.</li><li>The dot sits at its finish date; the gap between dots is the difference in working days.</li><li>Grey dots are not in force, orange is superseded, green is in force. The red line is the data date.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Angka-angka yang terlihat masuk akal terpaut {{num (subf $fj.Duration (f $a.Plan.Duration)) 0 $l}} hari kerja. Hanya satu yang memuat ketidakpastian, kapasitas, risiko, dan realisasi sekaligus: selesai {{date ($a.FinishISO (int $fj.Duration)) $l}} dengan {{rp $fj.Budget $l}}.{{else}}Figures that each look reasonable are {{num (subf $fj.Duration (f $a.Plan.Duration)) 0 $l}} working days apart. Only one carries uncertainty, capacity, risk, and actuals at once: finishing {{date ($a.FinishISO (int $fj.Duration)) $l}} with {{rp $fj.Budget $l}}.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Angka{{else}}Figure{{end}}</th><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran{{else}}Budget{{end}}</th><th>{{if eq $l "id"}}Status{{else}}Status{{end}}</th></tr></thead>
@@ -54,10 +62,26 @@
     </tbody>
   </table>
   </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Peta opsi: lebih cepat ke kiri, lebih mahal ke atas{{else}}Options map: faster to the left, pricier upward{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{optionMap $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Titik abu-abu adalah komitmen tanpa percepatan; setiap panah menuju satu opsi.</li><li>Panjang panah mendatar adalah hari yang dimajukan; tegak adalah tambahan anggaran.</li><li>Garis silang pada titik adalah interval bootstrap 90%: bila dua silang tidak bertumpuk, perbedaannya bukan derau.</li><li>Hijau adalah opsi termurah per hari, biru yang tercepat. Opsi masa adaptasi tidak digambar karena titiknya sama dengan tambah satu BE.</li>{{else}}<li>The grey dot is the no-acceleration commitment; each arrow points to one option.</li><li>The horizontal length of an arrow is days gained; the vertical length is extra budget.</li><li>The cross lines on a dot are the 90% bootstrap interval: when two crosses do not overlap, the difference is not noise.</li><li>Green is the cheapest option per day, blue the fastest. The ramp-up option is not drawn because its point equals adding one BE.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{if ge $d.Cheapest 0}}{{$c := index $d.Options $d.Cheapest}}Panah terpendek ke atas untuk hari yang cukup banyak adalah {{tx $c.Name $l}}: {{num $c.DaysEarlier 0 $l}} hari lebih cepat untuk {{rp $c.ExtraBudget $l}}.{{end}} Opsi yang titiknya lebih tinggi tetapi tidak lebih ke kiri tidak pernah layak dipilih.{{else}}{{if ge $d.Cheapest 0}}{{$c := index $d.Options $d.Cheapest}}The shortest upward arrow for a meaningful number of days is {{tx $c.Name $l}}: {{num $c.DaysEarlier 0 $l}} days faster for {{rp $c.ExtraBudget $l}}.{{end}} An option whose dot is higher but not further left is never worth choosing.{{end}}</p></div>
+    </div>
+  </figure>
   <p class="small muted">{{if eq $l "id"}}Lantai adalah durasi terpendek pada durasi paling mungkin, dibuktikan batas bawah energetik{{if not $d.AllFloorsProven}} (* belum terbukti){{end}}. Harga per hari adalah tambahan anggaran JCL 70% dibagi hari yang dimajukan - biaya sewa yang ikut memendek sudah terhitung.{{if $d.RampChangesNothing}} Masa adaptasi tidak mengubah hasil: pekerjaan {{$a.CriticalRole}} yang menunggu baru menumpuk setelah {{$d.Ramp}} hari kerja pertama.{{end}}{{else}}The floor is the shortest duration at most-likely durations, proven by the energetic lower bound{{if not $d.AllFloorsProven}} (* not proven){{end}}. The price per day is the extra 70% JCL budget divided by the days gained - rentals that shorten too are already counted.{{if $d.RampChangesNothing}} The ramp-up changes nothing: the {{$a.CriticalRole}} work that waits only piles up after the first {{$d.Ramp}} working days.{{end}}{{end}}</p>
   {{if $d.Bands}}
   <h3>{{if eq $l "id"}}Aturan keputusan menurut nilai satu hari lebih cepat{{else}}Decision rule by what a day earlier is worth{{end}}</h3>
   <p class="section-intro small">{{if eq $l "id"}}Nilai satu hari lebih cepat bagi sponsor tidak ada di data, jadi halaman ini tidak menebaknya. Untuk setiap rentang nilai, opsi di bawah memberi manfaat bersih terbesar: nilai x hari lebih cepat - tambahan anggaran pada titik JCL 70%. Batas antar-rentang adalah selisih anggaran dibagi selisih hari.{{else}}What a day earlier is worth to the sponsor is not in the data, so this page does not guess it. For each value range, the option below gives the largest net benefit: value x days earlier - extra budget at the 70% JCL. The boundary between ranges is the budget difference divided by the day difference.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Opsi mana yang terbaik, menurut nilai satu hari lebih cepat{{else}}Which option is best, by the value of a day earlier{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{valueBandsChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Sumbu mendatar adalah nilai satu hari lebih cepat bagi sponsor; sponsor cukup menunjuk titiknya.</li><li>Setiap garis tipis adalah manfaat bersih satu opsi: makin banyak hari yang dimajukan, makin curam garisnya.</li><li>Garis hitam tebal adalah opsi terbaik pada nilai itu; latar berwarna menandai rentangnya.</li><li>Garis galat abu-abu di dekat sumbu adalah interval bootstrap 90% setiap batas: makin panjang, makin tidak pasti letak batasnya.</li>{{else}}<li>The horizontal axis is what a day earlier is worth to the sponsor; the sponsor only has to point at a spot.</li><li>Each thin line is one option's net benefit: the more days gained, the steeper the line.</li><li>The thick black line is the best option at that value; the coloured background marks its range.</li><li>The grey error bar near the axis is each boundary's 90% bootstrap interval: the longer it is, the less certain the boundary.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$d.BandRuleID}}{{else}}{{$d.BandRuleEN}}{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
     <table class="data">
       <thead><tr><th>{{if eq $l "id"}}Nilai satu hari lebih cepat{{else}}Value of a day earlier{{end}}</th><th>{{if eq $l "id"}}Opsi terbaik{{else}}Best option{{end}}</th><th class="num">JCL 70%</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran{{else}}Budget{{end}}</th></tr></thead>
@@ -96,6 +120,14 @@
   {{if $d.Scenarios}}{{$sb := $d.ScenarioBase}}
   <h3>{{if eq $l "id"}}Kepekaan terhadap asumsi tanpa data{{else}}Sensitivity to assumptions without data{{end}}</h3>
   <p class="section-intro small">{{if eq $l "id"}}Keputusan dihitung ulang dengan satu asumsi diganti. Supaya build tetap wajar, setiap skenario memakai {{num (iterf $sb.Iterations) 0 $l}} iterasi dan levelling cepat tanpa pembuktian per iterasi, lalu dibandingkan dengan asumsi dasar yang dihitung dengan cara yang sama - perubahan rekomendasi hanya bisa lahir dari asumsinya. Rekomendasi sama pada <strong>{{$d.ScenariosSame}} dari {{len $d.AssumptionScenarios}}</strong> skenario{{if $sb.Same}}, dan pembanding cara skenario sendiri memberi rekomendasi yang sama dengan keputusan utama{{else}}; <strong>pembanding cara skenario memberi rekomendasi berbeda dari keputusan utama</strong>{{end}}.{{else}}The decision is recomputed with one assumption changed. To keep the build reasonable, each scenario uses {{num (iterf $sb.Iterations) 0 $l}} iterations and fast levelling without per-iteration proof, then is compared with the base assumptions computed the same way - a changed recommendation can only come from the assumption. The recommendation is the same in <strong>{{$d.ScenariosSame}} of {{len $d.AssumptionScenarios}}</strong> scenarios{{if $sb.Same}}, and the scenario-method baseline itself gives the same recommendation as the main decision{{else}}; <strong>the scenario-method baseline gives a different recommendation from the main decision</strong>{{end}}.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Apakah rekomendasinya bergeser bila asumsi diganti?{{else}}Does the recommendation move when assumptions change?{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{scenarioStrips $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu cara menghitung: keputusan utama, pembanding cara skenario, lalu satu asumsi diganti.</li><li>Warna menunjukkan opsi terbaik pada setiap nilai satu hari lebih cepat.</li><li>Bila urutan warnanya sama di semua baris, rekomendasinya tahan; yang bergeser hanya letak batasnya.</li><li>Centang hijau berarti urutan opsi sama dengan pembanding.</li>{{else}}<li>Each row is one way of computing: the main decision, the scenario-method baseline, then one assumption changed.</li><li>Colour shows the best option at each value of a day earlier.</li><li>If the colour order is the same in every row, the recommendation holds; only its boundaries move.</li><li>A green tick means the option order matches the baseline.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Rekomendasi sama pada {{$d.ScenariosSame}} dari {{len $d.AssumptionScenarios}} skenario. Asumsi yang belum punya data menggeser harga, bukan pilihan.{{else}}The recommendation is the same in {{$d.ScenariosSame}} of {{len $d.AssumptionScenarios}} scenarios. Assumptions without data move the price, not the choice.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
     <table class="data compact">
       <thead><tr><th>{{if eq $l "id"}}Skenario{{else}}Scenario{{end}}</th><th class="num">{{if eq $l "id"}}JCL 70% tanpa percepatan{{else}}70% JCL without acceleration{{end}}</th><th>{{if eq $l "id"}}Opsi termurah per hari{{else}}Cheapest option per day{{end}}</th><th class="num">{{if eq $l "id"}}Harga per hari{{else}}Price per day{{end}}</th><th>{{if eq $l "id"}}Batas aturan{{else}}Rule boundaries{{end}}</th><th>{{if eq $l "id"}}Rekomendasi sama{{else}}Same recommendation{{end}}</th></tr></thead>
@@ -118,6 +150,14 @@
 
   {{if $d.Overtime.Points}}
   <h3>{{if eq $l "id"}}Lembur sah dari tanggal data, pada durasi paling mungkin{{else}}Legal overtime from the data date, at most-likely durations{{end}}</h3>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Harga setiap hari yang dibeli dengan lembur, dari tanggal data{{else}}The price of each day bought with overtime, from the data date{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{decisionOvertimeCurve $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Titik paling kanan adalah jadwal tanpa lembur pada durasi paling mungkin.</li><li>Setiap titik ke kiri adalah satu hari lebih cepat dengan rencana lembur termurah yang ditemukan.</li><li>Garis merah adalah upah lembur; garis jingga putus-putus adalah biaya bersih setelah sewa yang ikut memendek.</li><li>Titik paling kiri adalah lantai: batas bawah membuktikan tidak ada rencana lembur sah yang lebih cepat.</li>{{else}}<li>The rightmost point is the schedule without overtime at most-likely durations.</li><li>Each point to the left is one day faster with the cheapest overtime plan found.</li><li>The red line is overtime pay; the dashed orange line is the net cost after rentals that shorten too.</li><li>The leftmost point is the floor: the lower bound proves no legal overtime plan is faster.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Hari-hari pertama murah karena cukup lembur satu peran; hari-hari terakhir mahal karena butuh lembur lebih banyak peran sekaligus. Lantainya {{$d.Overtime.MinDuration}} hari kerja.{{else}}The first days are cheap because one role's overtime is enough; the last days are expensive because several roles must work overtime at once. The floor is {{$d.Overtime.MinDuration}} working days.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
     <table class="data compact">
       <thead><tr><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th>{{if eq $l "id"}}Lembur per peran{{else}}Overtime by role{{end}}</th><th class="num">{{if eq $l "id"}}Upah lembur{{else}}Overtime pay{{end}}</th><th class="num">{{if eq $l "id"}}Sewa dihemat{{else}}Rentals saved{{end}}</th><th class="num">{{if eq $l "id"}}Bersih{{else}}Net{{end}}</th></tr></thead>
@@ -141,6 +181,14 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Anggaran: satu permintaan, bukan tiga{{else}}Budget: one request, not three{{end}}</h2>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Dari pagu piagam ke anggaran yang dibutuhkan{{else}}From the charter cap to the budget needed{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{budgetBridge $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang abu-abu adalah pagu yang disetujui piagam.</li><li>Batang merah pertama adalah kekurangan menurut tren biaya saja (EAC).</li><li>Batang merah kedua adalah yang tidak dilihat EAC: risiko, kapasitas orang, dan periode ujian.</li><li>Batang biru adalah anggaran untuk peluang 70% selesai tepat waktu DAN tepat anggaran.</li>{{else}}<li>The grey bar is the cap approved by the charter.</li><li>The first red bar is the shortfall from the cost trend alone (EAC).</li><li>The second red bar is what the EAC cannot see: risk, people's capacity, and exam periods.</li><li>The blue bar is the budget for a 70% chance of finishing on time AND on budget.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Hampir seluruh kekurangan datang dari hal yang tidak terlihat di Earned Value. Mengajukan perubahan anggaran dari EAC saja akan kurang {{rp (subf $fj.Budget $s.EACTypical) $l}}.{{else}}Almost the entire shortfall comes from what Earned Value cannot see. Requesting the budget change from the EAC alone would fall short by {{rp (subf $fj.Budget $s.EACTypical) $l}}.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="two-col">
     <table class="data">
       <tbody>

@@ -17,6 +17,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Lima prakiraan untuk satu proyek yang sama{{else}}Five forecasts for the same project{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Setiap baris memakai metode berbeda atas data yang sama. Bedanya bukan kebetulan: setiap metode buta terhadap sesuatu yang dilihat metode di bawahnya.{{else}}Each row applies a different method to the same data. The differences are not noise: each method is blind to something the method below it sees.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Lima prakiraan pada satu garis waktu{{else}}Five forecasts on one timeline{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{forecastDots $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu metode prakiraan atas data yang sama.</li><li>Label kecil menyebut apa yang tidak dilihat metode itu.</li><li>Makin banyak yang dilihat sebuah metode, makin ke kanan titiknya - bukan karena pesimis, tetapi karena jujur.</li>{{else}}<li>Each row is one forecasting method on the same data.</li><li>The small label names what that method cannot see.</li><li>The more a method sees, the further right its dot - not pessimism, just honesty.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Earned Value menjanjikan {{num $a.IEACt 0 $l}} hari; prakiraan yang melihat kapasitas, ujian, risiko, dan realisasi memberi P80 {{num $fc.DurP80 0 $l}} hari. Selisih {{num (subf $fc.DurP80 $a.IEACt) 0 $l}} hari itu adalah hal-hal yang tidak pernah muncul di laporan SPI.{{else}}Earned Value promises {{num $a.IEACt 0 $l}} days; the forecast that sees capacity, exams, risk, and actuals gives a P80 of {{num $fc.DurP80 0 $l}} days. The {{num (subf $fc.DurP80 $a.IEACt) 0 $l}}-day gap is everything an SPI report never shows.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Metode{{else}}Method{{end}}</th><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th class="num">{{if eq $l "id"}}Biaya akhir{{else}}Cost at completion{{end}}</th><th>{{if eq $l "id"}}Buta terhadap{{else}}Blind to{{end}}</th></tr></thead>
@@ -52,6 +60,10 @@
   <figure class="figure">
     <figcaption><h3>{{if eq $l "id"}}Sebaran durasi dari tanggal data{{else}}Duration distribution from the data date{{end}}</h3></figcaption>
     <div class="figure-body scrollable">{{forecastHistogram $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah jumlah iterasi yang selesai pada durasi itu, dihitung dari tanggal data.</li><li>Garis tegak menandai rencana, IEAC(t) Earned Schedule, P50, P80, dan P80 perencanaan.</li><li>Makin jauh sebuah penanda di kiri tumpukan batang, makin optimistis angka itu.</li>{{else}}<li>Each bar is the number of iterations finishing at that duration, from the data date.</li><li>Vertical lines mark the plan, the Earned Schedule IEAC(t), P50, P80, and the planning P80.</li><li>The further left a marker sits from the bulk of the bars, the more optimistic that figure.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Separuh iterasi selesai paling lambat hari ke-{{num $fc.DurP50 0 $l}}; untuk keyakinan 80% dibutuhkan {{num $fc.DurP80 0 $l}} hari - {{num (subf $fc.DurP80 $a.IEACt) 0 $l}} hari lebih lama dari IEAC(t).{{else}}Half the iterations finish by day {{num $fc.DurP50 0 $l}}; 80% confidence needs {{num $fc.DurP80 0 $l}} days - {{num (subf $fc.DurP80 $a.IEACt) 0 $l}} days longer than IEAC(t).{{end}}</p></div>
+    </div>
   </figure>
   <div class="note-box warn">
     <h4>{{if eq $l "id"}}Mengapa IEAC(t) jauh lebih optimistis{{else}}Why IEAC(t) is far more optimistic{{end}}</h4>
@@ -68,6 +80,14 @@
     <div class="kpi {{if gt $fl.ObservedCostRatio 1.0}}bad{{else}}good{{end}}"><p class="kpi-label">{{if eq $l "id"}}Biaya harian aktual ÷ tarif{{else}}Actual daily cost ÷ rate{{end}}</p><p class="kpi-value">{{num $fl.ObservedCostRatio 3 $l}}</p><p class="kpi-note">{{if eq $l "id"}}faktor biaya sisa{{else}}remaining-cost factor{{end}} {{num $fl.CostFactor 3 $l}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Kapasitas saat ujian{{else}}Capacity during exams{{end}}</p><p class="kpi-value">{{pct $fl.ExamFactor 0 $l}}</p><p class="kpi-note">{{if eq $l "id"}}asumsi{{else}}assumed{{end}} {{pct (examFactor) 0 $l}} → {{if eq $l "id"}}teramati{{else}}observed{{end}} {{pct $fl.ExamObserved 0 $l}}</p></div>
   </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Kapan realisasi boleh menggeser rencana{{else}}When actuals may move the plan{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{credibilityPanels $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Garis tegak abu-abu adalah rencana; pita abu-abu adalah rentang yang masih bisa dijelaskan derau estimasi (95%).</li><li>Titik jingga adalah hasil teramati; belah ketupat biru adalah nilai yang dipakai prakiraan.</li><li>Titik di dalam pita: belum ada bukti, rencana dipertahankan (Z mendekati 0). Titik jauh di luar pita: data dipercaya (Z mendekati 1).</li>{{else}}<li>The grey vertical line is the plan; the grey band is the range estimation noise can still explain (95%).</li><li>The orange dot is the observed result; the blue diamond is the value the forecast uses.</li><li>A dot inside the band: no evidence yet, plan kept (Z near 0). A dot far outside: data trusted (Z near 1).</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Durasi tim masih di dalam derau, jadi rencana tidak diubah (Z {{pct $fl.Credibility 0 $l}}). Biaya harian dan kapasitas saat ujian jauh di luar derau, jadi prakiraan memakai datanya (Z {{pct $fl.CostCredibility 0 $l}} dan {{pct $fl.ExamCredibility 0 $l}}).{{else}}Team durations are still within noise, so the plan is unchanged (Z {{pct $fl.Credibility 0 $l}}). Daily cost and exam capacity are far outside noise, so the forecast uses the data (Z {{pct $fl.CostCredibility 0 $l}} and {{pct $fl.ExamCredibility 0 $l}}).{{end}}</p></div>
+    </div>
+  </figure>
   <div class="proof">
     <p>{{if eq $l "id"}}<strong>Temuan yang tidak terlihat dari SPI.</strong> Rasio durasi aktual terhadap rerata PERT adalah {{num $fl.ObservedRatio 3 $l}}. Penyimpangan itu masih di dalam derau estimasi (sd {{pct (sqrtf $fl.DurationVar) 1 $l}}), sehingga Z durasi {{pct $fl.Credibility 0 $l}}: tidak ada bukti tim lebih cepat atau lebih lambat dari sebaran estimasinya. SPI {{idx $s.SPI $l}} tidak lahir dari kinerja buruk, melainkan dari jadwal rencana yang disusun memakai M (paling mungkin), padahal rerata beta-PERT hampir selalu di atas M. Keterlambatan itu sudah terkunci di rencana sejak hari pertama.{{else}}<strong>A finding SPI cannot show.</strong> The ratio of actual durations to PERT means is {{num $fl.ObservedRatio 3 $l}}. That deviation is within estimation noise (sd {{pct (sqrtf $fl.DurationVar) 1 $l}}), so the duration Z is {{pct $fl.Credibility 0 $l}}: there is no evidence the team is faster or slower than its estimated distributions. The SPI of {{idx $s.SPI $l}} does not come from poor performance but from a plan built on M (most likely), while the beta-PERT mean almost always sits above M. The delay was locked into the plan from day one.{{end}}</p>
   </div>
@@ -132,6 +152,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Frontier JCL 70% dari tanggal data{{else}}JCL 70% frontier from the data date{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Komitmen yang bisa diperbarui ke sponsor hari ini: untuk setiap tenggat, anggaran minimum agar peluang selesai tepat waktu dan tepat anggaran sekaligus mencapai 70%.{{else}}The commitment that can be updated with the sponsor today: for each deadline, the minimum budget that brings the odds of finishing on time and on budget together to 70%.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Anggaran minimum untuk setiap tanggal selesai{{else}}Minimum budget for every finish date{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{forecastFrontierLine $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Garis hijau adalah anggaran terkecil yang memberi peluang 70% selesai tepat waktu DAN tepat anggaran.</li><li>Titik mana pun di atas garis juga mencapai 70%; di bawahnya tidak.</li><li>Titik jingga P80 × P80 terlihat aman, tetapi peluang bersamanya di bawah 70%.</li>{{else}}<li>The green line is the smallest budget that gives a 70% chance of on time AND on budget.</li><li>Any point above the line also reaches 70%; below it does not.</li><li>The orange P80 × P80 point looks safe, but its joint chance is below 70%.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Komitmen terawal yang masih 70%: {{date ($a.FinishISO (int $a.ForecastJCL70.Duration)) $l}} dengan {{rp $a.ForecastJCL70.Budget $l}}. Menjanjikan tanggal lebih awal butuh anggaran naik tajam - atau peluangnya turun.{{else}}The earliest commitment still at 70%: {{date ($a.FinishISO (int $a.ForecastJCL70.Duration)) $l}} with {{rp $a.ForecastJCL70.Budget $l}}. Promising an earlier date needs a sharply higher budget - or the odds fall.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
   <table class="data">
     <thead><tr><th class="num">{{if eq $l "id"}}Tenggat{{else}}Deadline{{end}}</th><th>{{if eq $l "id"}}Tanggal{{else}}Date{{end}}</th><th class="num">{{if eq $l "id"}}Anggaran minimum{{else}}Minimum budget{{end}}</th><th class="num">{{if eq $l "id"}}Terhadap pagu{{else}}Against the cap{{end}}</th></tr></thead>

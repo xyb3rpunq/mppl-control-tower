@@ -114,6 +114,10 @@
   <h2>{{if eq $l "id"}}Kurva-S dan proyeksi biaya{{else}}S-curve and cost forecast{{end}}</h2>
   <figure class="figure">
     <div class="figure-body scrollable">{{sCurve $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Garis putus-putus abu-abu adalah PV (rencana), biru EV (nilai yang dikerjakan), merah AC (uang yang keluar).</li><li>Jarak tegak EV ke PV adalah varians jadwal; EV ke AC varians biaya.</li><li>Jarak MENDATAR EV ke PV adalah keterlambatan dalam hari (SV(t)).</li><li>Garis jingga adalah proyeksi biaya bila kinerja biaya saat ini berlanjut.</li>{{else}}<li>The dashed grey line is PV (plan), blue is EV (value done), red is AC (money spent).</li><li>The vertical gap EV to PV is schedule variance; EV to AC is cost variance.</li><li>The HORIZONTAL gap EV to PV is the delay in days (SV(t)).</li><li>The orange line is the cost projection if current cost performance continues.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}SPI {{num $s.SPI 3 $l}} berarti proyek tertinggal {{num (neg $s.SVt) 1 $l}} hari kerja; CPI {{num $s.CPI 3 $l}} berarti setiap rupiah menghasilkan {{num $s.CPI 2 $l}} rupiah nilai. Bila berlanjut, biaya akhir {{rp $s.EACTypical $l}}.{{else}}An SPI of {{num $s.SPI 3 $l}} means the project is {{num (neg $s.SVt) 1 $l}} working days behind; a CPI of {{num $s.CPI 3 $l}} means each rupiah produces {{num $s.CPI 2 $l}} rupiah of value. If it continues, the final cost is {{rp $s.EACTypical $l}}.{{end}}</p></div>
+    </div>
   </figure>
 </section>
 
@@ -122,6 +126,10 @@
   <p class="section-intro">{{if eq $l "id"}}Manajer proyek boleh menarik dari cadangan kontinjensi tanpa persetujuan tambahan; cadangan manajemen butuh keputusan sponsor. Perbedaan wewenang itulah alasan kedua lapis ini dipisah, bukan sekadar kerapian pencatatan.{{else}}A project manager may draw contingency without further approval; management reserve requires a sponsor decision. That difference in authority is why the two layers are separated - not mere bookkeeping tidiness.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable">{{budgetWaterfall $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang menumpuk dari biaya aktivitas ke cadangan kontinjensi, cadangan manajemen, sampai pagu.</li><li>Cadangan kontinjensi untuk risiko yang dikenal; cadangan manajemen untuk yang tidak dikenal.</li>{{else}}<li>Bars stack from activity cost to contingency reserve, management reserve, and the cap.</li><li>Contingency covers known risks; the management reserve covers unknown ones.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Proyeksi biaya akhir {{rp $s.EACTypical $l}} sudah melampaui seluruh tumpukan ini. Permintaan anggaran yang berlaku ada di halaman Keputusan Sponsor.{{else}}The final cost projection {{rp $s.EACTypical $l}} already exceeds this whole stack. The budget request in force is on the Sponsor Decisions page.{{end}}</p></div>
+    </div>
   </figure>
   <div class="note-box bad">
     <h4>{{if eq $l "id"}}Proyeksi menembus seluruh cadangan{{else}}The forecast punches through every reserve{{end}}</h4>
@@ -132,6 +140,14 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Earned Value per fase{{else}}Earned Value by phase{{end}}</h2>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Fase mana yang terlambat, dan mana yang boros{{else}}Which phases are late, and which over cost{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{phaseIndexDots $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Lingkaran biru adalah SPI (jadwal), kotak jingga adalah CPI (biaya).</li><li>Garis tegak di 1,0 berarti tepat rencana; area merah di kirinya berarti terlambat atau boros.</li><li>Garis penghubung antara keduanya memperlihatkan fase yang masalahnya di jadwal, di biaya, atau keduanya.</li>{{else}}<li>The blue circle is SPI (schedule), the orange square is CPI (cost).</li><li>The vertical line at 1.0 means on plan; the red area to its left means late or over cost.</li><li>The connector between them shows whether a phase's problem is schedule, cost, or both.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}SPI proyek {{num $s.SPI 3 $l}} dan CPI {{num $s.CPI 3 $l}} adalah rata-rata; grafik ini menunjukkan fase mana yang menariknya ke bawah.{{else}}The project SPI of {{num $s.SPI 3 $l}} and CPI of {{num $s.CPI 3 $l}} are averages; this chart shows which phases pull them down.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th>{{t $l "t.phase"}}</th><th class="num">{{t $l "t.budget"}}</th><th class="num">PV</th><th class="num">EV</th><th class="num">AC</th><th class="num">SPI</th><th class="num">CPI</th><th class="num">{{if eq $l "id"}}Selesai{{else}}Complete{{end}}</th></tr></thead>
     <tbody>

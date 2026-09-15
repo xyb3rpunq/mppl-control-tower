@@ -6,6 +6,10 @@
   <p class="section-intro">{{if eq $l "id"}}Lima tingkat dari sponsor sampai pengguna akhir. Tiga posisi diisi nama mahasiswa; sisanya adalah peran yang harus ada tetapi belum memiliki orang - kenyataan yang lebih baik dinyatakan terbuka daripada disamarkan.{{else}}Five levels from sponsor to end user. Three positions carry student names; the rest are roles that must exist but have nobody assigned - a reality better stated openly than papered over.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable wide">{{orgChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Kotak teratas adalah sponsor; di bawahnya manajer proyek, lalu tim inti dan tim pengembang.</li><li>Garis menunjukkan jalur pelaporan, bukan urutan kerja.</li>{{else}}<li>The top box is the sponsor; below it the project manager, then the core and development teams.</li><li>Lines show reporting lines, not work order.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Setiap peran diisi satu orang. Karena itu satu orang yang sibuk - terutama {{$a.CriticalRole}} - bisa menahan banyak pekerjaan sekaligus; lihat pembebanan di bawah.{{else}}Each role is filled by one person. So one busy person - especially {{$a.CriticalRole}} - can hold up many tasks at once; see the loading below.{{end}}</p></div>
+    </div>
   </figure>
 
   <div class="role-grid">
@@ -56,6 +60,10 @@
   </p>
   <figure class="figure">
     <div class="figure-body scrollable wide">{{resourceHistogram $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu peran; tinggi batang adalah beban hari-orang per hari pada jadwal CPM.</li><li>Garis putus-putus adalah kapasitas - berapa orang yang benar-benar ada.</li><li>Batang merah melewati kapasitas: pekerjaan yang dijadwalkan untuk orang yang tidak ada.</li><li>Angka kanan: total hari-orang dan persen pemakaian kapasitas.</li>{{else}}<li>Each row is one role; bar height is the person-day load per day on the CPM schedule.</li><li>The dashed line is capacity - how many people actually exist.</li><li>Red bars exceed capacity: work scheduled for people who do not exist.</li><li>Right-hand figures: total person-days and capacity utilisation.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{len $a.Resources.Conflicts}} hari-peran melebihi kapasitas. Itulah sebabnya jadwal CPM {{$a.Plan.Duration}} hari menjadi {{$a.Level.Duration}} hari setelah levelling.{{else}}{{len $a.Resources.Conflicts}} role-days exceed capacity. That is why the {{$a.Plan.Duration}}-day CPM schedule becomes {{$a.Level.Duration}} days after levelling.{{end}}</p></div>
+    </div>
   </figure>
 
   <div class="two-col">
@@ -105,6 +113,10 @@
   <div class="two-col grid-and-table">
     <figure class="figure">
       <div class="figure-body scrollable">{{powerInterest $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Sumbu tegak adalah kuasa, mendatar kepentingan.</li><li>Kanan atas: kelola dekat. Kiri atas: jaga kepuasan. Kanan bawah: beri informasi. Kiri bawah: pantau.</li>{{else}}<li>The vertical axis is power, the horizontal interest.</li><li>Top right: manage closely. Top left: keep satisfied. Bottom right: keep informed. Bottom left: monitor.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Pemangku kepentingan di kanan atas menentukan apakah keputusan percepatan dan anggaran disetujui - merekalah penerima halaman Keputusan Sponsor.{{else}}Stakeholders in the top right decide whether acceleration and budget decisions are approved - they are the audience for the Sponsor Decisions page.{{end}}</p></div>
+    </div>
     </figure>
     <table class="data">
       <thead><tr><th></th><th>{{if eq $l "id"}}Pemangku kepentingan{{else}}Stakeholder{{end}}</th><th class="num">K</th><th class="num">I</th><th>{{if eq $l "id"}}Strategi{{else}}Strategy{{end}}</th></tr></thead>

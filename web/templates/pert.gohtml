@@ -43,6 +43,10 @@
   <h2>{{if eq $l "id"}}Sebaran durasi proyek{{else}}Project duration distribution{{end}}</h2>
   <figure class="figure">
     <div class="figure-body scrollable">{{simHistogram $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah jumlah iterasi yang selesai pada durasi itu; kurva menanjak adalah peluang kumulatif.</li><li>Garis tegak menandai rencana, P50, P80, dan P90.</li><li>Rencana di kiri sebagian besar batang berarti rencana itu optimistis.</li>{{else}}<li>Each bar counts iterations finishing at that duration; the rising curve is the cumulative probability.</li><li>Vertical lines mark the plan, P50, P80, and P90.</li><li>A plan left of most bars means the plan is optimistic.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Hanya {{pct $sim.OnTimeProb 1 $l}} iterasi selesai dalam {{$a.Plan.Duration}} hari kerja. Keyakinan 80% butuh {{num $sim.P80 0 $l}} hari - dan itu baru ketidakpastian durasi, tanpa kapasitas atau risiko.{{else}}Only {{pct $sim.OnTimeProb 1 $l}} of iterations finish within {{$a.Plan.Duration}} working days. 80% confidence needs {{num $sim.P80 0 $l}} days - and that is duration uncertainty alone, without capacity or risk.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <caption>{{if eq $l "id"}}Tingkat keyakinan dan tanggal selesai yang menyertainya{{else}}Confidence levels and the finish dates they imply{{end}}</caption>
@@ -100,6 +104,10 @@
   </p>
   <figure class="figure">
     <div class="figure-body scrollable">{{tornado $l 14}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Panjang batang adalah korelasi peringkat durasi aktivitas dengan durasi proyek.</li><li>Batang merah: aktivitas yang berada di jalur kritis pada lebih dari 90% iterasi; biru: hanya sesekali.</li><li>Label kanan: korelasi r dan seberapa sering aktivitas itu kritis.</li><li>Aktivitas teratas adalah tempat perbaikan estimasi atau pengawasan paling berharga.</li>{{else}}<li>Bar length is the rank correlation of an activity's duration with project duration.</li><li>Red bars: activities on the critical path in more than 90% of iterations; blue: only sometimes.</li><li>Right-hand labels: correlation r and how often the activity is critical.</li><li>The top activities are where better estimates or closer oversight pay most.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{with $sim.Sensitivity}}{{$top := index . 0}}Aktivitas yang paling menentukan tanggal selesai adalah {{$top.ID}} {{tx $top.Name $l}} (korelasi {{num $top.Correlation 2 $l}}).{{end}} Aktivitas di bawah daftar hampir tidak menggeser tanggal walau estimasinya meleset.{{else}}{{with $sim.Sensitivity}}{{$top := index . 0}}The activity that most decides the finish date is {{$top.ID}} {{tx $top.Name $l}} (correlation {{num $top.Correlation 2 $l}}).{{end}} Activities lower in the list barely move the date even if their estimates slip.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <thead><tr><th>{{t $l "t.code"}}</th><th>{{t $l "t.activity"}}</th><th class="num">rho</th><th class="num">{{if eq $l "id"}}Porsi iterasi kritis{{else}}Share of iterations critical{{end}}</th><th class="num">{{t $l "t.duration"}}</th><th class="num">O–P</th></tr></thead>

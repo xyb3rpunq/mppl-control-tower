@@ -25,6 +25,10 @@
       <div class="figure-body scrollable">{{riskMatrix $l (printf "%s" (index (dict "id" "Risiko residual - sesudah mitigasi" "en" "Residual risk - after mitigation") $l)) true}}</div>
     </figure>
   </div>
+  <div class="reading-guide standalone">
+    <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Baris adalah dampak (makin atas makin besar), kolom adalah peluang (makin kanan makin tinggi); warna sel menunjukkan keparahan.</li><li>Setiap kode risiko muncul di peta kiri (sebelum mitigasi) dan kanan (sesudah).</li><li>Bandingkan perpindahan setiap kode: itulah ukuran seberapa berguna mitigasinya.</li>{{else}}<li>Rows are impact (higher is bigger), columns probability (further right is likelier); cell colour shows severity.</li><li>Each risk code appears on the left map (before mitigation) and the right (after).</li><li>Compare how far each code moves: that is how useful its mitigation is.</li>{{end}}</ul></div>
+    <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}EMV turun dari {{rp $a.Risk.TotalEMV $l}} ke {{rp $a.Risk.TotalResidualEMV $l}}. Kode yang tetap di sel merah setelah mitigasi butuh rencana yang lebih kuat, bukan cadangan yang lebih besar.{{else}}EMV drops from {{rp $a.Risk.TotalEMV $l}} to {{rp $a.Risk.TotalResidualEMV $l}}. Codes still in red cells after mitigation need a stronger plan, not a bigger reserve.{{end}}</p></div>
+  </div>
 </section>
 
 <section class="band">
@@ -71,6 +75,14 @@
 
 <section class="band">
   <h2>{{if eq $l "id"}}Paparan menurut kategori{{else}}Exposure by category{{end}}</h2>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Berapa rupiah paparan yang dibeli mitigasi{{else}}How much exposure the mitigation buys{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{riskCategoryBars $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang muda adalah EMV sebelum mitigasi, batang pekat setelah mitigasi.</li><li>Selisih panjang keduanya adalah rupiah paparan yang dikurangi rencana mitigasi.</li><li>Persentase di ujung batang adalah seberapa besar paparan itu turun.</li>{{else}}<li>The light bar is EMV before mitigation, the dark bar after.</li><li>The difference in length is the rupiah exposure the mitigation plan removes.</li><li>The percentage at the end of the bar is how much that exposure drops.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Setelah mitigasi masih tersisa {{rp $r.TotalResidualEMV $l}} paparan, sementara cadangan kontinjensi hanya {{rp (contingency) $l}}. Kategori dengan batang pekat terpanjang adalah tempat mitigasi berikutnya paling bernilai.{{else}}After mitigation {{rp $r.TotalResidualEMV $l}} of exposure remains, while the contingency reserve is only {{rp (contingency) $l}}. The category with the longest dark bar is where the next mitigation is worth most.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th>{{t $l "t.category"}}</th><th class="num">{{if eq $l "id"}}Jumlah{{else}}Count{{end}}</th><th class="num">EMV {{if eq $l "id"}}inheren{{else}}inherent{{end}}</th><th class="num">EMV {{if eq $l "id"}}residual{{else}}residual{{end}}</th><th class="num">{{if eq $l "id"}}Porsi paparan{{else}}Share of exposure{{end}}</th></tr></thead>
     <tbody>

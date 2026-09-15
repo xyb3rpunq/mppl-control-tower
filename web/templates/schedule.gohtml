@@ -17,6 +17,10 @@
         <span class="swatch overrun"></span> {{if eq $l "id"}}realisasi melampaui rencana{{else}}actual exceeds plan{{end}}
       </p>
     </figcaption>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu aktivitas; batang biru rencana, merah jalur kritis.</li><li>Perpanjangan abu-abu adalah total float - berapa hari aktivitas boleh telat tanpa menggeser selesai.</li><li>Batang hijau adalah realisasi; jingga bila realisasi melampaui rencana. Garis merah tegak adalah tanggal data.</li>{{else}}<li>Each row is one activity; blue bars are the plan, red the critical path.</li><li>The grey extension is total float - how many days an activity may slip without moving the finish.</li><li>Green bars are actuals; orange when actuals exceed the plan. The red vertical line is the data date.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{len criticalPath}} aktivitas di jalur kritis tidak punya float: satu hari terlambat di mana pun di antaranya menggeser tanggal selesai {{date $a.FinishDatePlan $l}}.{{else}}{{len criticalPath}} activities on the critical path have no float: one day late anywhere among them moves the finish date of {{date $a.FinishDatePlan $l}}.{{end}}</p></div>
+    </div>
   </figure>
 </section>
 
@@ -27,6 +31,10 @@
   </p>
   <figure class="figure">
     <div class="figure-body scrollable wide">{{network $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap kotak adalah aktivitas dengan ES, EF, LS, LF, dan float.</li><li>Panah adalah ketergantungan: aktivitas di ujung panah menunggu pangkalnya.</li><li>Kotak dan panah merah membentuk jalur kritis - rantai terpanjang dari mulai sampai selesai.</li>{{else}}<li>Each box is an activity with ES, EF, LS, LF, and float.</li><li>Arrows are dependencies: the activity at the head waits for the tail.</li><li>Red boxes and arrows form the critical path - the longest chain from start to finish.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Panjang jalur kritis adalah durasi proyek: {{$a.Plan.Duration}} hari kerja. Mempercepat aktivitas di luar jalur ini tidak mempercepat proyek.{{else}}The critical path length is the project duration: {{$a.Plan.Duration}} working days. Speeding up activities off this path does not speed up the project.{{end}}</p></div>
+    </div>
   </figure>
 </section>
 

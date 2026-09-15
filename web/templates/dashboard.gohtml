@@ -66,6 +66,10 @@
       <p>{{if eq $l "id"}}Jarak tegak antara EV dan PV adalah varians jadwal; jarak tegak antara EV dan AC adalah varians biaya. Jarak MENDATAR antara keduanya adalah keterlambatan dalam satuan waktu - itulah yang paling sering terlewat dibaca.{{else}}The vertical gap between EV and PV is schedule variance; between EV and AC, cost variance. The HORIZONTAL gap between them is the delay in time units - the reading most often missed.{{end}}</p>
     </figcaption>
     <div class="figure-body scrollable">{{$svg}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>PV adalah rencana, EV nilai yang benar-benar dikerjakan, AC uang yang keluar.</li><li>EV di bawah PV: terlambat. AC di atas EV: boros.</li><li>Ukur juga jarak mendatar EV ke PV: itu keterlambatan dalam hari.</li>{{else}}<li>PV is the plan, EV the value actually done, AC the money spent.</li><li>EV below PV: late. AC above EV: over cost.</li><li>Also read the horizontal gap EV to PV: that is the delay in days.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Proyek tertinggal {{num (neg $s.SVt) 1 $l}} hari kerja (SPI {{num $s.SPI 3 $l}}) dan boros (CPI {{num $s.CPI 3 $l}}). Dua garis yang menjauh ini adalah alasan situs ini menghitung ulang komitmen dari tanggal data.{{else}}The project is {{num (neg $s.SVt) 1 $l}} working days behind (SPI {{num $s.SPI 3 $l}}) and over cost (CPI {{num $s.CPI 3 $l}}). These two diverging lines are why this site recomputes the commitment from the data date.{{end}}</p></div>
+    </div>
   </figure>
 </section>
 

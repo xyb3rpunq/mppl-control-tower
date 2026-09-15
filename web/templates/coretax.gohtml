@@ -77,6 +77,10 @@
   </div>
   <figure class="figure">
     <div class="figure-body scrollable">{{scenarioBars $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah satu strategi transisi, bertumpuk dua bagian.</li><li>Bagian bawah (biru) adalah tambahan biaya strategi itu - sering setipis garis; bagian atas (merah) adalah kerugian harapan bila cutover gagal.</li><li>Angka di atas batang adalah total biaya harapan. Strategi terbaik adalah batang terpendek, bukan tambahan biaya terkecil.</li>{{else}}<li>Each bar is one transition strategy, stacked in two parts.</li><li>The lower part (blue) is the strategy's extra cost - often as thin as a line; the upper part (red) is the expected loss if cutover fails.</li><li>The figure above the bar is the total expected cost. The best strategy is the shortest bar, not the smallest extra cost.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Potensi penerimaan yang hilang dalam sebulan setara {{ratio $d.ExposureRatio $l}} nilai kontrak. Karena itu strategi yang tampak mahal di muka bisa menjadi yang termurah.{{else}}The revenue at risk in one month is {{ratio $d.ExposureRatio $l}} the contract value. That is why a strategy that looks expensive upfront can be the cheapest.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Strategi{{else}}Strategy{{end}}</th><th>{{t $l "t.assumption"}}</th><th class="num">{{if eq $l "id"}}Tambahan biaya{{else}}Extra cost{{end}}</th><th class="num">{{if eq $l "id"}}Kerugian harapan{{else}}Expected loss{{end}}</th><th class="num">{{if eq $l "id"}}Total biaya harapan{{else}}Total expected cost{{end}}</th></tr></thead>

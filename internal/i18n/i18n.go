@@ -84,6 +84,7 @@ var dict = Dict{
 	"t.example":     {"Contoh dari proyek ini", "Worked example from this project"},
 	"t.meaning":     {"Arti", "Meaning"},
 	"t.reading":     {"Cara membaca", "How to read it"},
+	"t.takeaway":    {"Artinya", "What it means"},
 	"t.finding":     {"Temuan", "Finding"},
 	"t.recommend":   {"Rekomendasi", "Recommendation"},
 	"t.evidence":    {"Bukti", "Evidence"},

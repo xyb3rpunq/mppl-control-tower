@@ -86,6 +86,24 @@ Temuan yang tidak terlihat dari SPI: rasio durasi aktual terhadap rerata PERT pa
 
 Setiap halaman tersedia dalam bahasa Indonesia (akar situs) dan bahasa Inggris (`/en/…`), dengan tautan `hreflang` yang saling menunjuk. Total 32 halaman.
 
+**Setiap grafik punya panduan baca.** Di bawah setiap gambar ada dua kolom: *Cara membaca* (apa arti sumbu, warna, garis, dan penanda pada grafik itu) dan *Artinya* (kesimpulan satu-dua kalimat yang angkanya diambil dari analisis, bukan diketik — mis. "5 dari 7 metrik belum memenuhi target" atau "15 hari tambahan datang dari bentrokan kapasitas dan 13 hari dari periode ujian"). Grafik yang berpasangan (dua peta risiko, dua tangga realisme, diagram tulang ikan) berbagi satu panduan di bagiannya. Selain 25 grafik lama, sebelas **grafik penjelas** menggantikan atau mendampingi tabel yang sulit dibaca:
+
+| Grafik | Halaman | Pertanyaan yang dijawab |
+|---|---|---|
+| Linimasa komitmen | Keputusan, Prakiraan | Seberapa jauh setiap janji tanggal dari tanggal data, dan mana yang masih berlaku? |
+| Peta opsi | Keputusan | Opsi mana yang lebih cepat (kiri) dan lebih mahal (atas), dengan interval bootstrap 90%? |
+| Pita nilai | Keputusan | Pada nilai satu hari lebih cepat berapa setiap opsi menjadi yang terbaik? |
+| Strip skenario | Keputusan | Apakah rekomendasi bertahan bila asumsi diubah? |
+| Jembatan anggaran | Keputusan | Dari pagu piagam ke permintaan anggaran: dari mana setiap rupiah tambahan? |
+| Kurva lembur | Keputusan, Optimasi | Berapa harga setiap hari yang dibeli dengan lembur, dibanding crashing CPM? |
+| Panel kredibilitas | Prakiraan | Apakah realisasi cukup kuat untuk menggeser rencana, atau masih derau? |
+| Garis frontier JCL | Prakiraan | Anggaran minimum untuk peluang 70% pada setiap tanggal selesai. |
+| Linimasa kapasitas | Optimasi | Kapan tim kehilangan kapasitas, berapa banyak, dan untuk peran apa? |
+| Titik SPI/CPI | Biaya | Fase mana yang menarik indeks proyek ke bawah? |
+| Batang berpasangan | Risiko | Seberapa besar mitigasi menurunkan EMV setiap kategori? |
+
+Label ditulis langsung di dalam gambar (bukan legenda terpisah) oleh penempat label yang mencoba posisi makin jauh dari titik setinggi labelnya, lalu memilih tumpang-tindih terkecil bila kanvas penuh.
+
 ### 3.1 Ruang Kendali — `/`
 
 - **Delapan KPI** dengan warna status: SPI, CPI, EAC, peluang tepat waktu, cakupan cadangan risiko, durasi yang bisa dijalankan (dengan status terbukti optimal), JCL, dan P80 prakiraan berjalan (dengan SV(t) dan IEAC(t)).
@@ -317,7 +335,7 @@ Pareto berbobot dengan kelompok *vital few*; peta kendali X-bar dengan konstanta
 Metrik turunan dari fakta bersumber, empat skenario transisi dengan EMV, titik impas peluang kegagalan, dan tabel cermin Coretax ↔ proyek kuliah.
 
 ### `render` — grafik SVG
-Pembangun kanvas SVG dan 25 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, dan sebaran jumlah risiko), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks.
+Pembangun kanvas SVG dan 36 jenis grafik (termasuk batas bawah levelling, kurva time-cost trade-off, sebaran jumlah risiko, dan sebelas grafik penjelas di `explain.go`), semuanya dengan `<title>` dan `<desc>` untuk pembaca layar, warna lewat kelas CSS (tema gelap tanpa gambar ulang), dan escape teks. `labelPlacer` menempatkan label tanpa saling menimpa; `spreadY` menjaga jarak label di ujung garis tanpa keluar dari bidang gambar.
 
 ### `site`, `model`, `i18n`
 Perakit analisis dan penurun temuan; **paket keputusan** (`Decision`: opsi dari tanggal data, lantai terbukti, harga per hari, satu komitmen, satu permintaan anggaran, pita nilai waktu, bootstrap berpasangan, dan skenario asumsi); sumber tunggal kebenaran seluruh data proyek; kamus antarmuka dwibahasa. `cmd/site` juga mengekspor dan mengimpor `realisasi.csv`.
@@ -469,7 +487,7 @@ Buka http://127.0.0.1:8231. Bendera generator:
 
 ## 11. Pengujian
 
-**245 fungsi uji di 18 paket, cakupan pernyataan 94,5%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
+**264 fungsi uji di 18 paket, cakupan pernyataan 94,9%.** Satu-satunya fungsi yang tidak tersentuh uji adalah `main` pada generator situs, yang dijalankan langkah build di CI. Sebagian besar uji tidak sekadar memeriksa fungsi berjalan, tetapi **menjaga klaim yang ditampilkan situs tetap benar**:
 
 **Penjadwalan dan kalender**
 - Durasi jaringan harus 85 hari kerja = 17 minggu piagam; hari kerja ke-85 jatuh 23 Februari 2026.
@@ -530,6 +548,10 @@ Buka http://127.0.0.1:8231. Bendera generator:
 - `metrik.json` harus JSON sah dengan seluruh blok baru; seluruh temuan penutup celah harus diturunkan.
 - Setiap fakta Coretax punya URL sumber yang tertaut di HTML dengan `rel="noopener"`.
 - Setiap SVG utuh, beraksesibilitas, bebas NaN, tanpa warna heksadesimal langsung.
+- **Setiap grafik di 32 halaman punya panduan baca** (di dalam figurnya atau panduan bersama di bagiannya); judul panduan sesuai bahasa, minimal dua butir cara membaca, dan arti berupa kalimat tanpa sisa templat.
+- **Arti grafik mengutip angka analisis**: jumlah metrik gagal, hari tambahan dari kapasitas dan ujian, peluang tepat waktu PERT, konflik kapasitas, P80 L4, penurunan EMV, dan SPI dibandingkan langsung dengan struct.
+- **Grafik penjelas diuji isinya, bukan hanya bentuknya**: tanggal selesai tertulis pada titiknya, panah hanya dari opsi dasar, batas pita di nol tidak digambar, tanda ✓/✗ skenario, delta negatif berkelas turun, pita derau hanya bila derau diketahui, ekor frontier datar dipotong, kelas kepekatan kapasitas dibatasi 1–5, fase tanpa indeks ditandai "belum dimulai", dan kenaikan ditulis "naik" bukan "turun" negatif. Masukan kosong, timpang, atau datar tidak boleh panik.
+- **Penempat label dan penyebar label diuji sifatnya**: delapan label dua baris pada titik yang hampir sama tidak boleh bertabrakan atau keluar kanvas, dan label tetap berurutan berjarak di dalam batas. Kedua uji ini **gagal pada kode lama** (kandidat terlalu rapat untuk label dua baris; satu label di luar batas menumpuk semua label) sebelum diperbaiki.
 - Setiap rumus punya contoh hitung dalam kedua bahasa.
 
 ---

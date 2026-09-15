@@ -47,7 +47,13 @@
       </ul>
     </div>
   </div>
-  <figure class="figure"><div class="figure-body scrollable">{{boundChart $l}}</div></figure>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{boundChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah satu durasi dalam hari kerja; garis tegak adalah jadwal terbaik.</li><li>Empat batang teratas adalah batas bawah bertingkat - durasi yang tidak mungkin dikalahkan jadwal apa pun: CPM, kapasitas solo, penalaran energetik, lalu batas akhir.</li><li>Batang paling bawah adalah heuristik SGS biasa sebagai pembanding.</li><li>Bila batas bawah akhir menyentuh garis jadwal terbaik, tidak ada urutan kerja yang bisa selesai lebih cepat.</li>{{else}}<li>Each bar is one duration in working days; the vertical line is the best schedule.</li><li>The top four bars are layered lower bounds - durations no schedule can beat: CPM, solo capacity, energetic reasoning, then the final bound.</li><li>The bottom bar is a plain SGS heuristic for comparison.</li><li>When the final lower bound touches the best-schedule line, no work order can finish sooner.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{if $opt.Proven}}Jadwal terbaik {{$opt.Best.Duration}} hari sama dengan batas bawah {{$opt.Bound.Value}}: terbukti optimal.{{else}}Jadwal terbaik {{$opt.Best.Duration}} hari, batas bawah {{$opt.Bound.Value}}: celah {{$opt.Gap}} hari belum tertutup.{{end}} Mengubah urutan kerja tidak akan memperpendek proyek; hanya kapasitas yang bisa.{{else}}{{if $opt.Proven}}The best schedule of {{$opt.Best.Duration}} days equals the lower bound of {{$opt.Bound.Value}}: proven optimal.{{else}}The best schedule is {{$opt.Best.Duration}} days, the lower bound {{$opt.Bound.Value}}: a {{$opt.Gap}}-day gap remains.{{end}} Reordering work will not shorten the project; only capacity can.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="note-box">
     {{$pr := (.Analysis.Final).Proof}}
     <h4>{{if eq $l "id"}}Setiap iterasi simulasi juga dibuktikan optimal{{else}}Every simulation iteration is proven optimal too{{end}}</h4>
@@ -58,6 +64,14 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Kalender ketersediaan tim{{else}}Team availability calendar{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Risiko R08 pada register menyebut anggota tim tidak tersedia saat ujian kampus. Di sini risiko itu berhenti menjadi kalimat dan menjadi kapasitas yang dihitung. Seluruh tanggal UTS dan UAS dibaca dari lampiran kalender akademik resmi Universitas Esa Unggul TA 2025/2026. Faktor kapasitas {{pct (examFactor) 0 $l}} adalah asumsi perencanaan - halaman Prakiraan Berjalan mengujinya terhadap realisasi selama UTS. Karena R08 sudah dimodelkan sebagai jendela ketersediaan, dampak jadwalnya tidak dihitung ulang di simulasi terpadu.{{else}}Risk R08 in the register says team members are unavailable during campus exams. Here that risk stops being a sentence and becomes computed capacity. Every midterm and final exam date is read from the appendix of the official Universitas Esa Unggul 2025/2026 academic calendar. The {{pct (examFactor) 0 $l}} capacity factor is a planning assumption - the In-flight Forecast page tests it against actuals during the midterms. Because R08 is modelled as an availability window, its schedule impact is not counted again in the integrated simulation.{{end}}</p>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Kapan tim kehilangan kapasitas{{else}}When the team loses capacity{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{capacityTimeline $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah satu periode ketika kapasitas turun; panjangnya adalah lamanya.</li><li>Makin pekat batangnya, makin sedikit kapasitas yang tersisa.</li><li>Batang bergaris tepi putus-putus memakai tanggal asumsi; sisanya dari kalender akademik resmi.</li><li>Garis merah adalah tanggal data: periode di kirinya sudah terjadi.</li>{{else}}<li>Each bar is one period when capacity drops; its length is the duration.</li><li>The darker the bar, the less capacity is left.</li><li>Bars with a dashed border use assumed dates; the rest come from the official academic calendar.</li><li>The red line is the data date: periods to its left have already happened.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Periode ujian jatuh tepat di tengah fase pengembangan, sehingga kapasitas yang hilang menambah {{sub $a.LevelWhy.WithWindows $a.LevelWhy.CapacityOnly}} hari kerja pada jadwal - bukan karena tim lambat, tetapi karena kalendernya.{{else}}The exam periods land in the middle of development, so the lost capacity adds {{sub $a.LevelWhy.WithWindows $a.LevelWhy.CapacityOnly}} working days to the schedule - not because the team is slow, but because of the calendar.{{end}}</p></div>
+    </div>
+  </figure>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Periode{{else}}Period{{end}}</th><th>{{if eq $l "id"}}Keterangan{{else}}Description{{end}}</th><th class="num">{{if eq $l "id"}}Kapasitas tersisa{{else}}Remaining capacity{{end}}</th><th>{{if eq $l "id"}}Peran{{else}}Roles{{end}}</th><th>{{t $l "t.status"}}</th></tr></thead>
     <tbody>
@@ -94,6 +108,10 @@
         <span class="swatch cause-window"></span> {{if eq $l "id"}}melewati periode ujian{{else}}crosses the exam period{{end}}
       </p>
     </figcaption>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang tipis abu-abu adalah posisi CPM; batang berwarna adalah jadwal yang bisa dijalankan.</li><li>Warna menunjukkan sebab pergeseran: terbawa pendahulu, menunggu orang, peran paruh waktu, atau periode ujian.</li><li>Makin jauh batang berwarna dari batang abu-abu, makin besar janji CPM yang tidak bisa ditepati.</li>{{else}}<li>Thin grey bars are CPM positions; coloured bars are the executable schedule.</li><li>Colour shows why a task moved: carried by a predecessor, waiting for a person, a half-time role, or an exam period.</li><li>The further a coloured bar sits from its grey bar, the bigger the CPM promise that cannot be kept.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{sub $why.CapacityOnly $why.CPM}} hari tambahan datang dari bentrokan kapasitas dan {{sub $why.WithWindows $why.CapacityOnly}} hari dari periode ujian; proyek selesai {{date ($a.FinishISO $lv.Duration) $l}}, bukan {{date $a.FinishDatePlan $l}}.{{else}}{{sub $why.CapacityOnly $why.CPM}} extra days come from capacity clashes and {{sub $why.WithWindows $why.CapacityOnly}} from exam periods; the project finishes {{date ($a.FinishISO $lv.Duration) $l}}, not {{date $a.FinishDatePlan $l}}.{{end}}</p></div>
+    </div>
   </figure>
 </section>
 
@@ -102,6 +120,10 @@
   <p class="section-intro">{{if eq $l "id"}}Histogram yang sama dengan halaman Organisasi, kini untuk jadwal levelling. Tidak ada satu batang pun yang melewati garis kapasitas - itulah syarat jadwal yang bisa dijalankan. Perhatikan garis kapasitas yang turun pada periode ujian.{{else}}The same histogram as the Organisation page, now for the levelled schedule. Not a single bar crosses the capacity line - that is what makes a schedule deliverable. Note how the capacity line drops during the exam period.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable wide">{{levelHistogram $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap baris adalah satu peran; tinggi batang adalah beban hari-orang per hari setelah levelling.</li><li>Garis putus-putus adalah kapasitas harian - turun saat periode ujian.</li><li>Angka kanan: total hari-orang dan persen pemakaian kapasitas.</li><li>Tidak ada batang merah yang melewati garis: jadwal ini benar-benar bisa dijalankan.</li>{{else}}<li>Each row is one role; bar height is the person-day load per day after levelling.</li><li>The dashed line is daily capacity - it drops during exam periods.</li><li>Right-hand figures: total person-days and capacity utilisation.</li><li>No red bar crosses the line: this schedule can actually run.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Harga menghormati kapasitas adalah jadwal {{$lv.Duration}} hari. Peran yang paling sering membuat pekerjaan menunggu adalah {{$a.CriticalRole}} - di sanalah kapasitas tambahan paling berharga.{{else}}The price of respecting capacity is a {{$lv.Duration}}-day schedule. The role that most often makes work wait is {{$a.CriticalRole}} - that is where extra capacity is worth most.{{end}}</p></div>
+    </div>
   </figure>
   <div class="two-col">
     <table class="data">
@@ -164,6 +186,10 @@
   <figure class="figure">
     <div class="figure-body scrollable">{{crashCurve $l}}</div>
     <figcaption class="below"><p class="small">{{if eq $l "id"}}Titik jingga menandai langkah yang harus memotong lebih dari satu aktivitas sekaligus karena ada jalur kritis paralel.{{else}}Orange points mark steps that must cut more than one activity at once because of parallel critical paths.{{end}}</p></figcaption>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap titik adalah satu hari yang dipotong dari jaringan CPM, dengan biaya kumulatifnya.</li><li>Titik jingga harus memotong lebih dari satu aktivitas karena ada jalur kritis paralel.</li><li>Kurva makin curam ke kiri: hari-hari terakhir paling mahal.</li>{{else}}<li>Each point is one day cut from the CPM network, with its cumulative cost.</li><li>Orange points must cut more than one activity because of parallel critical paths.</li><li>The curve steepens to the left: the last days are the most expensive.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Lima hari pertama {{rpShort (index $cr.Steps 4).TotalCost $l}}; memotong sampai {{$cr.MinDuration}} hari menelan {{rpShort (index $cr.Steps (sub (len $cr.Steps) 1)).TotalCost $l}}. Kurva ini untuk jaringan CPM - harga percepatan jadwal nyata ada di bagian lembur di bawah.{{else}}The first five days cost {{rpShort (index $cr.Steps 4).TotalCost $l}}; cutting down to {{$cr.MinDuration}} days costs {{rpShort (index $cr.Steps (sub (len $cr.Steps) 1)).TotalCost $l}}. This curve is for the CPM network - the price of accelerating the real schedule is in the overtime section below.{{end}}</p></div>
+    </div>
   </figure>
   <div class="table-wrap">
     <table class="data sticky">
@@ -194,6 +220,10 @@
   <figure class="figure">
     <div class="figure-body scrollable">{{tradeOffChart $l}}</div>
     <figcaption class="below"><p class="small">{{if eq $l "id"}}Titik jingga adalah biaya serakah yang lebih mahal dari optimum eksak. Titik hijau adalah durasi dengan biaya total terendah.{{else}}Orange points are greedy costs above the exact optimum. The green point is the duration with the lowest total cost.{{end}}</p></figcaption>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Garis crash adalah biaya memotong hari; garis sewa turun karena proyek lebih pendek; garis total adalah jumlahnya.</li><li>Titik hijau adalah durasi dengan biaya total terendah.</li><li>Titik jingga, bila ada, adalah langkah serakah yang lebih mahal dari optimum eksak.</li>{{else}}<li>The crash line is the cost of cutting days; the rental line falls as the project shortens; the total line is their sum.</li><li>The green point is the duration with the lowest total cost.</li><li>Orange points, if any, are greedy steps costlier than the exact optimum.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{if eq $ex.Optimum.Duration $a.Plan.Duration}}Biaya total terendah justru pada durasi normal {{$ex.Optimum.Duration}} hari kerja: setiap hari yang dipercepat menambah biaya crash lebih besar daripada sewa yang dihemat.{{else}}Biaya total terendah pada {{$ex.Optimum.Duration}} hari kerja. Mempercepat lebih dari itu berarti membayar lebih dari sewa yang dihemat.{{end}}{{else}}{{if eq $ex.Optimum.Duration $a.Plan.Duration}}The lowest total cost is at the normal duration of {{$ex.Optimum.Duration}} working days: every day accelerated adds more crash cost than the rentals it saves.{{else}}The lowest total cost is at {{$ex.Optimum.Duration}} working days. Accelerating beyond that means paying more than the rentals saved.{{end}}{{end}}</p></div>
+    </div>
   </figure>
   <div class="table-wrap">
     <table class="data sticky compact">
@@ -223,6 +253,14 @@
     <div class="kpi bad"><p class="kpi-label">{{if eq $l "id"}}Upah lembur{{else}}Overtime pay{{end}} {{$days}} {{t $l "t.days"}}</p><p class="kpi-value">{{rpShort $minp.Cost $l}}</p><p class="kpi-note">{{if eq $l "id"}}bersih{{else}}net{{end}} {{rpShort $minp.Net $l}}</p></div>
     <div class="kpi neutral"><p class="kpi-label">{{if eq $l "id"}}Crashing CPM, hari sama{{else}}CPM crashing, same days{{end}}</p><p class="kpi-value">{{rpShort (exactAt (sub $ex.Normal $days)).CrashCost $l}}</p><p class="kpi-note">{{if eq $l "id"}}hanya sah di atas kertas{{else}}valid only on paper{{end}}</p></div>
   </div>
+  <figure class="figure">
+    <figcaption><h3>{{if eq $l "id"}}Lembur pada jadwal nyata dibanding janji crashing CPM{{else}}Overtime on the real schedule versus the CPM crashing promise{{end}}</h3></figcaption>
+    <div class="figure-body scrollable">{{planningOvertimeCurve $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Garis merah adalah upah lembur untuk memajukan jadwal levelling; garis jingga putus-putus adalah biaya bersih setelah sewa.</li><li>Garis abu-abu titik-titik adalah biaya crashing CPM untuk jumlah hari yang sama - angka yang dulu dikutip, pada jaringan yang tidak bisa dijalankan.</li><li>Titik paling kiri adalah lantai yang terbukti.</li>{{else}}<li>The red line is overtime pay to pull the levelled schedule forward; the dashed orange line is the net cost after rentals.</li><li>The dotted grey line is the CPM crashing cost for the same number of days - the figure once quoted, on a network that cannot run.</li><li>The leftmost point is the proven floor.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Selisih kedua garis adalah harga dari menjanjikan percepatan berdasarkan jaringan yang mengabaikan kapasitas orang. Rencana ini dihitung dari hari pertama; dari tanggal data, pakai halaman Keputusan Sponsor.{{else}}The gap between the two lines is the price of promising acceleration from a network that ignores people's capacity. This plan is computed from day one; from the data date, use the Sponsor Decisions page.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="table-wrap">
     <table class="data compact">
       <thead><tr><th class="num">{{if eq $l "id"}}Durasi{{else}}Duration{{end}}</th><th>{{if eq $l "id"}}Selesai{{else}}Finish{{end}}</th><th>{{if eq $l "id"}}Lembur per peran{{else}}Overtime by role{{end}}</th><th class="num">{{if eq $l "id"}}Hari-peran lembur{{else}}Overtime role-days{{end}}</th><th class="num">{{if eq $l "id"}}Maks/minggu{{else}}Max/week{{end}}</th><th class="num">{{if eq $l "id"}}Upah lembur{{else}}Overtime pay{{end}}</th><th class="num">{{if eq $l "id"}}Sewa dihemat{{else}}Rentals saved{{end}}</th><th class="num">{{if eq $l "id"}}Bersih{{else}}Net{{end}}</th></tr></thead>

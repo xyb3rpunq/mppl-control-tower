@@ -37,6 +37,10 @@
     <figure class="figure"><div class="figure-body scrollable">{{ladderChart "dur" $l}}</div></figure>
     <figure class="figure"><div class="figure-body scrollable">{{ladderChart "cost" $l}}</div></figure>
   </div>
+  <div class="reading-guide standalone">
+    <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah satu lapisan realisme: L0 independen sampai L4 kapasitas dan ujian.</li><li>Batang merentang P50 sampai P90; garis tebal adalah P80. Garis putus-putus adalah target piagam.</li><li>Semua lapisan memakai bilangan acak yang sama, jadi kenaikan antar-batang murni akibat efek yang ditambahkan.</li>{{else}}<li>Each bar is one realism layer: L0 independent up to L4 capacity and exams.</li><li>Bars span P50 to P90; the thick line is P80. The dashed line is the charter target.</li><li>All layers use the same random numbers, so the rise between bars is purely the added effect.</li>{{end}}</ul></div>
+    <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}P80 durasi naik dari {{num (index $lad 0).DurP80 0 $l}} (L0) ke {{num $fin.DurP80 0 $l}} hari kerja (L4), dan P80 biaya dari {{rpShort (index $lad 0).CostP80 $l}} ke {{rpShort $fin.CostP80 $l}}. Setiap anak tangga adalah hal nyata yang diabaikan jadwal titik tunggal.{{else}}The P80 duration rises from {{num (index $lad 0).DurP80 0 $l}} (L0) to {{num $fin.DurP80 0 $l}} working days (L4), and the P80 cost from {{rpShort (index $lad 0).CostP80 $l}} to {{rpShort $fin.CostP80 $l}}. Each rung is something real a single-point schedule ignores.{{end}}</p></div>
+  </div>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Lapisan{{else}}Layer{{end}}</th><th class="num">{{if eq $l "id"}}Rerata durasi{{else}}Mean duration{{end}}</th><th class="num">P50</th><th class="num">P80</th><th class="num">P90</th><th class="num">{{if eq $l "id"}}Rerata biaya{{else}}Mean cost{{end}}</th><th class="num">{{if eq $l "id"}}P80 biaya{{else}}P80 cost{{end}}</th><th class="num">JCL</th><th class="num">{{if eq $l "id"}}Bersama di P80×P80{{else}}Joint at P80×P80{{end}}</th></tr></thead>
     <tbody>
@@ -72,6 +76,10 @@
   </div>
   <figure class="figure">
     <div class="figure-body scrollable">{{jclHeatmap $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap sel adalah kombinasi durasi dan biaya akhir; makin pekat, makin banyak iterasi yang berakhir di sana.</li><li>Garis hijau adalah frontier JCL 70%: anggaran terkecil untuk peluang 70% tepat waktu DAN tepat anggaran.</li><li>Tanda silang merah adalah target piagam; lingkaran adalah P80 durasi × P80 biaya.</li>{{else}}<li>Each cell is a final duration-cost combination; the darker, the more iterations end there.</li><li>The green line is the 70% JCL frontier: the smallest budget for a 70% chance of on time AND on budget.</li><li>The red cross is the charter target; the circle is P80 duration × P80 cost.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Target piagam ({{$a.Plan.Duration}} hari, {{rpShort (totalBudget) $l}}) jatuh di luar awan iterasi: peluang bersamanya {{pct $fin.JCL 1 $l}}. Dari hari pertama, komitmen 70% adalah {{num $a.JCL70.Duration 0 $l}} hari dengan {{rpShort $a.JCL70.Budget $l}}.{{else}}The charter target ({{$a.Plan.Duration}} days, {{rpShort (totalBudget) $l}}) lies outside the iteration cloud: its joint chance is {{pct $fin.JCL 1 $l}}. From day one, the 70% commitment is {{num $a.JCL70.Duration 0 $l}} days with {{rpShort $a.JCL70.Budget $l}}.{{end}}</p></div>
+    </div>
   </figure>
   <div class="two-col">
     <table class="data">
@@ -91,6 +99,10 @@
     <figure class="figure">
       <figcaption><h3>{{if eq $l "id"}}Sebaran biaya akhir (L4){{else}}Final cost distribution (L4){{end}}</h3></figcaption>
       <div class="figure-body scrollable">{{costHistogram $l}}</div>
+      <div class="reading-guide">
+        <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap batang adalah jumlah iterasi dengan biaya akhir pada rentang itu (lapisan L4).</li><li>Garis tegak menandai pagu, P50, dan P80.</li><li>Ekor kanan yang panjang adalah skenario ketika beberapa risiko terjadi bersamaan.</li>{{else}}<li>Each bar counts iterations whose final cost falls in that range (layer L4).</li><li>Vertical lines mark the cap, P50, and P80.</li><li>The long right tail is the scenario where several risks strike together.</li>{{end}}</ul></div>
+        <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Peluang tepat anggaran {{pct $fin.OnBudget 1 $l}}; P80 biaya {{rp $fin.CostP80 $l}}, sementara pagu {{rp (totalBudget) $l}}.{{else}}The chance of staying on budget is {{pct $fin.OnBudget 1 $l}}; the P80 cost is {{rp $fin.CostP80 $l}}, against a cap of {{rp (totalBudget) $l}}.{{end}}</p></div>
+      </div>
     </figure>
   </div>
 </section>
@@ -189,7 +201,13 @@
       </tbody>
     </table>
   </div>
-  <figure class="figure"><div class="figure-body scrollable">{{riskCountBars $l}}</div></figure>
+  <figure class="figure">
+    <div class="figure-body scrollable">{{riskCountBars $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Setiap pasangan batang adalah porsi iterasi dengan tepat k risiko terjadi.</li><li>Batang abu-abu: risiko saling bebas. Batang merah: risiko berbagi penggerak (bergerombol).</li><li>Rerata jumlah risiko sama; yang berubah adalah seberapa sering banyak risiko datang bersamaan.</li>{{else}}<li>Each pair of bars is the share of iterations with exactly k risks occurring.</li><li>Grey bars: independent risks. Red bars: risks sharing drivers (clustered).</li><li>The mean number of risks is the same; what changes is how often many arrive together.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Batang merah lebih tinggi di kedua ujung: lebih sering proyek lolos tanpa risiko, tetapi juga lebih sering banyak risiko datang bersamaan. Ujung kanan itulah alasan cadangan tidak cukup dihitung dari rerata EMV.{{else}}Red bars are taller at both ends: projects escape with no risk more often, but many risks also arrive together more often. That right end is why a reserve cannot be sized from mean EMV alone.{{end}}</p></div>
+    </div>
+  </figure>
   <div class="note-box">
     <p>{{if eq $l "id"}}Perhatikan kolom rerata biaya: praktis sama di setiap baris. Kopula tidak menambah risiko, ia hanya menata ulang KAPAN risiko terjadi. Yang berubah adalah ekor - P95 biaya dan durasi - dan itulah angka yang menentukan apakah cadangan cukup pada tahun yang buruk.{{else}}Look at the mean cost column: practically identical in every row. The copula adds no risk; it only rearranges WHEN risks fire. What changes is the tail - P95 cost and duration - and that is the figure that decides whether the reserve survives a bad year.{{end}}</p>
   </div>

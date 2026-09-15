@@ -164,6 +164,10 @@
   <p class="section-intro">{{if eq $l "id"}}Piagam menetapkan pagu dari atas ke bawah: Rp 16 juta dibagi lima pos. Estimasi rinci berjalan dari bawah ke atas: tarif per peran dikali hari-orang per aktivitas. Keduanya nyaris tidak pernah bertemu persis, dan cara menjembataninya bukan dengan memaksa salah satunya - melainkan dengan menempatkan selisihnya sebagai cadangan yang dinyatakan terbuka.{{else}}The charter sets the cap top-down: IDR 16 million across five lines. The detailed estimate runs bottom-up: role rates times person-days per activity. The two almost never meet exactly, and the way to bridge them is not to force one of them - it is to name the difference openly as reserve.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable">{{budgetWaterfall $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang pertama adalah biaya aktivitas (BAC).</li><li>Batang berikutnya menumpuk cadangan kontinjensi, lalu cadangan manajemen.</li><li>Batang terakhir adalah pagu yang disetujui Project Charter.</li>{{else}}<li>The first bar is activity cost (BAC).</li><li>The next bars stack the contingency reserve, then the management reserve.</li><li>The last bar is the cap approved in the Project Charter.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Biaya aktivitas {{rp $a.BAC $l}} adalah {{pct (div $a.BAC (totalBudget)) 0 $l}} dari pagu; sisanya penyangga risiko. Penyangga itu kecil dibanding paparan risiko residual {{rp $a.Risk.TotalResidualEMV $l}}.{{else}}Activity cost {{rp $a.BAC $l}} is {{pct (div $a.BAC (totalBudget)) 0 $l}} of the cap; the rest is risk buffer. That buffer is small against the residual risk exposure of {{rp $a.Risk.TotalResidualEMV $l}}.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <caption>{{if eq $l "id"}}Tarif harian per peran (basis estimasi bottom-up){{else}}Daily rate per role (bottom-up estimate basis){{end}}</caption>

@@ -6,6 +6,10 @@
   <p class="section-intro">{{if eq $l "id"}}Project Charter menyebut enam standar mutu. Standar yang tidak bisa diukur bukan standar - itu harapan. Tabel di bawah menerjemahkan keenamnya menjadi angka beserta sumber pengukurannya.{{else}}The charter names six quality standards. A standard that cannot be measured is not a standard - it is a hope. The table below turns all six into numbers, each with its measurement source.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable">{{metricBars $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Panjang batang adalah capaian dibanding target Project Charter; garis tegak putus-putus adalah target 100%.</li><li>Hijau: memenuhi. Merah: belum memenuhi - makin pekat, makin jauh (di bawah 60%).</li><li>Label kanan: nilai aktual / target. Metrik tanpa batang berarti capaiannya nol.</li>{{else}}<li>Bar length is attainment against the Project Charter target; the dashed vertical line is the 100% target.</li><li>Green: met. Red: not met - the darker, the further off (below 60%).</li><li>Right-hand label: actual / target. A metric with no bar has zero attainment.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$miss := 0}}{{range $a.Metrics}}{{if not .Met}}{{$miss = add $miss 1}}{{end}}{{end}}{{$miss}} dari {{len $a.Metrics}} metrik belum memenuhi target - janji mutu yang terancam. Periksa penyebabnya pada peta kendali dan Pareto di bawah.{{else}}{{$miss := 0}}{{range $a.Metrics}}{{if not .Met}}{{$miss = add $miss 1}}{{end}}{{end}}{{$miss}} of {{len $a.Metrics}} metrics miss their target - quality promises at risk. Check their causes in the control chart and Pareto below.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Metrik{{else}}Metric{{end}}</th><th class="num">{{t $l "t.target"}}</th><th class="num">{{t $l "t.actual"}}</th><th class="num">{{if eq $l "id"}}Jarak{{else}}Gap{{end}}</th><th>{{t $l "t.status"}}</th><th>{{t $l "t.source"}}</th></tr></thead>
@@ -31,6 +35,10 @@
   </p>
   <figure class="figure">
     <div class="figure-body scrollable">{{controlChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Titik adalah rata-rata waktu respons per sampel; garis tengah adalah rerata proses.</li><li>Garis merah putus-putus adalah batas kendali dari proses; garis jingga adalah batas spesifikasi dari pelanggan.</li><li>Titik bertanda melanggar aturan Nelson - pola yang tidak mungkin terjadi karena kebetulan.</li>{{else}}<li>Points are the mean response time per sample; the centre line is the process mean.</li><li>Red dashed lines are control limits from the process; the orange line is the specification limit from the customer.</li><li>Flagged points break a Nelson rule - a pattern too unlikely to be chance.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{len $cc.Violations}} pelanggaran aturan terdeteksi.{{if $cc.HasSpec}} Semua nilai masih di bawah spesifikasi {{num $cc.Spec 1 $l}} detik, tetapi proses bergeser sistematis - masalah akan muncul sebelum bebannya mencapai skala produksi.{{end}}{{else}}{{len $cc.Violations}} rule violations detected.{{if $cc.HasSpec}} Every value is still under the {{num $cc.Spec 1 $l}}-second specification, but the process is drifting systematically - trouble will arrive before the load reaches production scale.{{end}}{{end}}</p></div>
+    </div>
   </figure>
 
   <div class="two-col">
@@ -71,6 +79,10 @@
   <p class="section-intro">{{if eq $l "id"}}Cacat dibobot menurut keparahan - kritis 5, mayor 3, minor 1 - karena Pareto atas jumlah mentah menyesatkan. Sepuluh cacat kosmetik tidak setara dengan dua cacat yang membuat kuesioner gagal tersimpan.{{else}}Defects are weighted by severity - critical 5, major 3, minor 1 - because a Pareto on raw counts misleads. Ten cosmetic defects do not equal two that lose a submitted questionnaire.{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable">{{paretoChart $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Batang adalah cacat berbobot keparahan per modul, dari yang terbesar.</li><li>Garis menanjak adalah porsi kumulatif; garis putus-putus adalah ambang 80%.</li><li>Batang biru adalah vital few - modul tempat perbaikan memberi hasil terbesar; batang abu-abu adalah sisanya.</li>{{else}}<li>Bars are severity-weighted defects per module, largest first.</li><li>The rising line is the cumulative share; the dashed line is the 80% threshold.</li><li>Blue bars are the vital few - the modules where fixes pay off most; grey bars are the rest.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}{{$a.Pareto.VitalFewCount}} modul ({{pct $a.Pareto.VitalFewShare 0 $l}} dari seluruh modul) menyumbang 80% cacat berbobot. Perbaiki di sana dulu.{{else}}{{$a.Pareto.VitalFewCount}} modules ({{pct $a.Pareto.VitalFewShare 0 $l}} of all modules) account for 80% of weighted defects. Fix there first.{{end}}</p></div>
+    </div>
   </figure>
   <table class="data">
     <thead><tr><th>{{if eq $l "id"}}Modul{{else}}Module{{end}}</th><th class="num">{{if eq $l "id"}}Kritis{{else}}Critical{{end}}</th><th class="num">{{if eq $l "id"}}Mayor{{else}}Major{{end}}</th><th class="num">{{if eq $l "id"}}Minor{{else}}Minor{{end}}</th><th class="num">{{t $l "t.total"}}</th><th class="num">{{if eq $l "id"}}Berbobot{{else}}Weighted{{end}}</th><th class="num">{{if eq $l "id"}}Jam rework{{else}}Rework hours{{end}}</th></tr></thead>
@@ -93,6 +105,10 @@
 <section class="band">
   <h2>{{if eq $l "id"}}Diagram sebab-akibat{{else}}Cause-and-effect diagrams{{end}}</h2>
   <p class="section-intro">{{if eq $l "id"}}Dikenal juga sebagai fishbone atau Ishikawa. Cabangnya memakai 6M yang lazim untuk sektor jasa. Baris terakhir pada tiap diagram adalah akar penyebab setelah menelusuri lima lapis pertanyaan "mengapa".{{else}}Also known as fishbone or Ishikawa. The branches use the 6M framing common in services. The last line under each diagram is the root cause after five rounds of asking "why".{{end}}</p>
+  <div class="reading-guide standalone">
+    <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Kepala ikan di kanan adalah masalahnya; setiap tulang adalah satu kategori penyebab.</li><li>Cabang pada tulang adalah penyebab yang ditemukan di kategori itu.</li><li>Tulang dengan cabang terbanyak belum tentu penyebab utama; akar penyebab dipilih dari data.</li>{{else}}<li>The fish head on the right is the problem; each bone is one cause category.</li><li>Branches on a bone are causes found in that category.</li><li>The bone with the most branches is not necessarily the main cause; the root cause is chosen from data.</li>{{end}}</ul></div>
+    <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Setiap diagram menutup dengan satu akar penyebab. Tindakan perbaikan diarahkan ke akar itu, bukan ke setiap cabang - memperbaiki gejala hanya memindahkan masalah.{{else}}Each diagram ends with one root cause. Corrective action targets that root, not every branch - fixing symptoms only moves the problem.{{end}}</p></div>
+  </div>
   {{range fishbones}}
   <figure class="figure">
     <figcaption><h3>{{tx .Effect $l}}</h3></figcaption>
@@ -109,6 +125,10 @@
   <p class="section-intro">{{if eq $l "id"}}Dua kategori pertama adalah biaya kesesuaian - uang yang dikeluarkan agar cacat tidak terjadi. Dua terakhir adalah biaya ketidaksesuaian - uang yang keluar karena cacat sudah terjadi. Rasio di antaranya menjawab satu pertanyaan: proyek ini lebih banyak mencegah, atau lebih banyak membereskan?{{else}}The first two are conformance costs - money spent so defects do not happen. The last two are non-conformance - money spent because they did. The ratio between them answers one question: does this project prevent more, or clean up more?{{end}}</p>
   <figure class="figure">
     <div class="figure-body scrollable">{{coqBars $l}}</div>
+    <div class="reading-guide">
+      <div><h4>{{t $l "t.reading"}}</h4><ul>{{if eq $l "id"}}<li>Dua batang kiri adalah biaya kesesuaian: pencegahan dan penilaian.</li><li>Dua batang kanan adalah biaya ketidaksesuaian: kegagalan internal dan eksternal.</li><li>Proyek yang sehat membayar lebih banyak di kiri daripada di kanan.</li>{{else}}<li>The two left bars are conformance costs: prevention and appraisal.</li><li>The two right bars are non-conformance costs: internal and external failure.</li><li>A healthy project pays more on the left than on the right.</li>{{end}}</ul></div>
+      <div><h4>{{t $l "t.takeaway"}}</h4><p class="takeaway">{{if eq $l "id"}}Rasio kesesuaian terhadap ketidaksesuaian {{num $coq.Ratio 2 $l}}{{if lt $coq.Ratio 1.0}}: proyek membayar akibat lebih banyak daripada mencegah sebab{{end}}. Biaya kualitas total {{pct $coq.ShareOfBudget 0 $l}} dari BAC.{{else}}The conformance to non-conformance ratio is {{num $coq.Ratio 2 $l}}{{if lt $coq.Ratio 1.0}}: the project pays more for consequences than for prevention{{end}}. Total quality cost is {{pct $coq.ShareOfBudget 0 $l}} of BAC.{{end}}</p></div>
+    </div>
   </figure>
   <div class="two-col">
     <table class="data">

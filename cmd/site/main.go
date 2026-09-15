@@ -529,6 +529,9 @@ func loadTemplates(a *site.Analysis) (*template.Template, error) {
 		},
 	}
 
+	for k, v := range visualFuncs(a) {
+		funcs[k] = v
+	}
 	tmpl := template.New("base").Funcs(funcs)
 	return tmpl.ParseGlob(filepath.Join("web", "templates", "*.gohtml"))
 }
